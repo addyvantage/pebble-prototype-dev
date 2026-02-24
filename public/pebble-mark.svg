@@ -1,0 +1,22 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1128"/>
+      <stop offset="1" stop-color="#050B1E"/>
+    </linearGradient>
+    <linearGradient id="pebble" x1="20" y1="17" x2="43" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2F4677"/>
+      <stop offset="1" stop-color="#1A2F57"/>
+    </linearGradient>
+    <radialGradient id="highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(25.5 24) rotate(42) scale(16.8 14.7)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#bg)"/>
+  <rect x="4.75" y="4.75" width="54.5" height="54.5" rx="15.25" stroke="#94A3B8" stroke-opacity="0.2"/>
+  <ellipse cx="32" cy="33" rx="14.5" ry="15.5" fill="url(#pebble)"/>
+  <ellipse cx="32" cy="33" rx="14.5" ry="15.5" fill="url(#highlight)"/>
+  <ellipse cx="27.5" cy="31" rx="1.9" ry="2.1" fill="#FFFFFF"/>
+  <ellipse cx="36.5" cy="31" rx="1.9" ry="2.1" fill="#FFFFFF"/>
+</svg>

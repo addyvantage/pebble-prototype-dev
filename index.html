@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="/assets/pebble/master/brand/pebble_app_icon_primary_1024.png"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pebble Prototype</title>
+    <script>
+      ;(() => {
+        const storageKey = 'pebble_theme'
+        const root = document.documentElement
+
+        try {
+          const saved = window.localStorage.getItem(storageKey)
+          const systemPrefersLight = window.matchMedia('(prefers-color-scheme: light)').matches
+          const nextTheme =
+            saved === 'dark' || saved === 'light'
+              ? saved
+              : systemPrefersLight
+                ? 'light'
+                : 'dark'
+
+          root.classList.add(nextTheme === 'light' ? 'theme-light' : 'theme-dark')
+          root.style.colorScheme = nextTheme
+        } catch {
+          root.classList.add('theme-dark')
+          root.style.colorScheme = 'dark'
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

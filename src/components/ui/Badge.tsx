@@ -1,0 +1,38 @@
+import type { HTMLAttributes } from 'react'
+
+type BadgeVariant = 'neutral' | 'success' | 'warning'
+
+type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
+  variant?: BadgeVariant
+}
+
+const variantClasses: Record<BadgeVariant, string> = {
+  neutral:
+    'border-pebble-border/40 bg-pebble-overlay/12 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
+  success: 'border-pebble-success/35 bg-pebble-success/15 text-pebble-success',
+  warning: 'border-pebble-warning/35 bg-pebble-warning/15 text-pebble-warning',
+}
+
+function classNames(...values: Array<string | undefined>) {
+  return values.filter(Boolean).join(' ')
+}
+
+export function Badge({
+  className,
+  variant = 'neutral',
+  children,
+  ...props
+}: BadgeProps) {
+  return (
+    <span
+      className={classNames(
+        'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium tracking-[0.01em]',
+        variantClasses[variant],
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </span>
+  )
+}
