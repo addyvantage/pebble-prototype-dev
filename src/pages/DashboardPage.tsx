@@ -4,10 +4,12 @@ import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
 import { Divider } from '../components/ui/Divider'
 import { buttonClass } from '../components/ui/buttonStyles'
+import { taskList } from '../tasks'
 import { getDemoMode } from '../utils/demoMode'
 import { getPebbleMemory, type MemoryLedgerStatus } from '../utils/pebbleMemory'
 import { getSessionInsights } from '../utils/sessionInsights'
-import { getUserProfile } from '../utils/userProfile'
+import { getTaskProgress } from '../utils/taskProgress'
+import { getRequestedLanguageLabel, getRuntimeLanguageLabel, getUserProfile } from '../utils/userProfile'
 
 const chartWidth = 640
 const chartHeight = 220
@@ -22,6 +24,18 @@ const statusToBadge: Record<MemoryLedgerStatus, 'success' | 'warning' | 'neutral
   resolved: 'success',
   guided: 'warning',
   stabilized: 'neutral',
+}
+
+const difficultyBadgeVariant: Record<'easy' | 'medium' | 'hard', 'success' | 'warning' | 'neutral'> = {
+  easy: 'success',
+  medium: 'warning',
+  hard: 'neutral',
+}
+
+const difficultyLabel: Record<'easy' | 'medium' | 'hard', string> = {
+  easy: 'Easy',
+  medium: 'Medium',
+  hard: 'Hard',
 }
 
 function toPath(values: number[]) {
@@ -69,6 +83,7 @@ export function DashboardPage() {
   const demoMode = useMemo(() => getDemoMode(), [])
   const sessionInsights = useMemo(() => getSessionInsights(), [])
   const userProfile = useMemo(() => getUserProfile(), [])
+  const requestedLanguageLabel = useMemo(() => getRequestedLanguageLabel(userProfile), [userProfile])
 
   const flowValues = memory.flowTrend30d.map((point) => point.value)
   const loadValues = memory.cognitiveLoadTrend30d.map((point) => point.value)
@@ -132,6 +147,35 @@ export function DashboardPage() {
         )
       : '0'
   const maxPeakValue = Math.max(1, ...recentPeakTrend)
+  const orderedTasks = useMemo(
+    () => [...taskList].sort((left, right) => Number(left.id) - Number(right.id)),
+    [],
+  )
+  const stringsTasks = useMemo(
+    () => orderedTasks.filter((task) => task.module === 'Strings'),
+    [orderedTasks],
+  )
+  const foundationTasks = useMemo(
+    () => orderedTasks.filter((task) => task.module !== 'Strings'),
+    [orderedTasks],
+  )
+  const taskProgress = useMemo(() => getTaskProgress(), [])
+  const completedTaskIds = useMemo(
+    () => new Set(taskProgress.completedTaskIds),
+    [taskProgress.completedTaskIds],
+  )
+  const completedStringsCount = useMemo(
+    () => stringsTasks.filter((task) => completedTaskIds.has(task.id)).length,
+    [completedTaskIds, stringsTasks],
+  )
+  const nextUnfinishedStringsTask = useMemo(
+    () => stringsTasks.find((task) => !completedTaskIds.has(task.id)) ?? stringsTasks[0] ?? null,
+    [completedTaskIds, stringsTasks],
+  )
+  const stringsCtaLabel = nextUnfinishedStringsTask && completedStringsCount < stringsTasks.length
+    ? 'Continue Strings'
+    : 'Review Strings'
+  const stringsCtaPath = nextUnfinishedStringsTask ? `/session/${nextUnfinishedStringsTask.id}` : '/session/1'
 
   return (
     <section className="page-enter space-y-6">
@@ -253,8 +297,26 @@ export function DashboardPage() {
             </div>
             <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-3">
               <p className="text-xs text-pebble-text-secondary">Primary language</p>
-              <p className="mt-1 text-sm font-medium text-pebble-text-primary">{userProfile.primaryLanguage}</p>
+              <p className="mt-1 text-sm font-medium text-pebble-text-primary">
+                {getRuntimeLanguageLabel()}
+              </p>
             </div>
+            {requestedLanguageLabel && (
+              <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-3 sm:col-span-2">
+                <p className="text-xs text-pebble-text-secondary">Requested language</p>
+                <p className="mt-1 text-sm font-medium text-pebble-text-primary">
+                  {requestedLanguageLabel}
+                </p>
+              </div>
+            )}
+            {!requestedLanguageLabel && (
+              <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-3 sm:col-span-2">
+                <p className="text-xs text-pebble-text-secondary">Runtime</p>
+                <p className="mt-1 text-sm font-medium text-pebble-text-primary">
+                  Lightweight JS simulation active
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4">
@@ -263,6 +325,103 @@ export function DashboardPage() {
             </p>
           </div>
         )}
+      </Card>
+
+      <Card className="space-y-4" padding="md" interactive>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-base font-semibold text-pebble-text-primary">Tasks</p>
+            <p className="text-sm text-pebble-text-secondary">
+              Choose a session task and continue building recovery habits.
+            </p>
+          </div>
+          <Badge variant="neutral">{taskList.length} available</Badge>
+        </div>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-pebble-text-primary">Strings Module</p>
+              <Badge variant="neutral">
+                {completedStringsCount}/{stringsTasks.length} completed
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-pebble-text-secondary">
+              Completion updates automatically when a session is finished.
+            </p>
+            <Link to={stringsCtaPath} className={`${buttonClass('primary', 'sm')} mt-3 inline-flex`}>
+              {stringsCtaLabel}
+            </Link>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {stringsTasks.map((task) => (
+              <Link
+                key={task.id}
+                to={`/session/${task.id}`}
+                className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4 transition hover:border-pebble-accent/30 hover:bg-pebble-overlay/[0.1]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-pebble-text-primary">{task.title}</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="success">Task {task.id}</Badge>
+                    {completedTaskIds.has(task.id) ? (
+                      <Badge variant="success">Completed</Badge>
+                    ) : (
+                      <Badge variant="neutral">Not started</Badge>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-pebble-text-secondary">
+                  {task.description}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Badge variant="neutral">{task.topic}</Badge>
+                  <Badge variant={difficultyBadgeVariant[task.difficulty]}>
+                    {difficultyLabel[task.difficulty]}
+                  </Badge>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {foundationTasks.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-[0.05em] text-pebble-text-muted">
+                Foundations
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {foundationTasks.map((task) => (
+                  <Link
+                    key={task.id}
+                    to={`/session/${task.id}`}
+                    className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4 transition hover:border-pebble-accent/30 hover:bg-pebble-overlay/[0.1]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-pebble-text-primary">{task.title}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="success">Task {task.id}</Badge>
+                        {completedTaskIds.has(task.id) ? (
+                          <Badge variant="success">Completed</Badge>
+                        ) : (
+                          <Badge variant="neutral">Not started</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-pebble-text-secondary">
+                      {task.description}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Badge variant="neutral">{task.topic}</Badge>
+                      <Badge variant={difficultyBadgeVariant[task.difficulty]}>
+                        {difficultyLabel[task.difficulty]}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

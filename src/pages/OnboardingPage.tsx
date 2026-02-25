@@ -5,15 +5,17 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Divider } from '../components/ui/Divider'
 import {
+  getLanguageSelectionForProfile,
+  getRuntimeLanguageLabel,
   getUserProfile,
   setUserProfile,
   userBackgrounds,
   userGoals,
-  userLanguages,
+  userLanguageOptions,
   userSkillLevels,
   type UserBackground,
   type UserGoal,
-  type UserLanguage,
+  type UserLanguageSelection,
   type UserSkillLevel,
 } from '../utils/userProfile'
 
@@ -38,9 +40,14 @@ export function OnboardingPage() {
   const [background, setBackground] = useState<UserBackground>(
     existingProfile?.background ?? 'Student',
   )
-  const [primaryLanguage, setPrimaryLanguage] = useState<UserLanguage>(
-    existingProfile?.primaryLanguage ?? 'Python',
+  const [primaryLanguage, setPrimaryLanguage] = useState<UserLanguageSelection>(
+    getLanguageSelectionForProfile(existingProfile),
   )
+  const selectedLanguage = useMemo(
+    () => userLanguageOptions.find((option) => option.id === primaryLanguage) ?? userLanguageOptions[0],
+    [primaryLanguage],
+  )
+  const isComingSoonSelection = !selectedLanguage.isActiveRuntime
 
   function handleStartSession() {
     setUserProfile({
@@ -125,18 +132,31 @@ export function OnboardingPage() {
                 Primary language focus
               </legend>
               <div className="grid gap-2">
-                {userLanguages.map((option) => (
+                {userLanguageOptions.map((option) => (
                   <button
-                    key={option}
+                    key={option.id}
                     type="button"
-                    aria-pressed={primaryLanguage === option}
-                    onClick={() => setPrimaryLanguage(option)}
-                    className={segmentClass(primaryLanguage === option)}
+                    aria-pressed={primaryLanguage === option.id}
+                    onClick={() => setPrimaryLanguage(option.id)}
+                    className={segmentClass(primaryLanguage === option.id)}
                   >
-                    {option}
+                    {option.label}
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-pebble-text-muted">
+                Runtime is currently a lightweight simulated JavaScript editor. More languages
+                coming soon.
+              </p>
+              {isComingSoonSelection && (
+                <p className="text-xs text-pebble-text-secondary">
+                  {selectedLanguage.label} is not active yet. Sessions run on{' '}
+                  <span className="font-medium text-pebble-text-primary">
+                    {getRuntimeLanguageLabel()}
+                  </span>
+                  .
+                </p>
+              )}
             </fieldset>
           </div>
         </div>

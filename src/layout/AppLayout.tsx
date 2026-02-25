@@ -9,6 +9,7 @@ import {
   clearLocalUserData,
   getLocalUserProfile,
 } from '../utils/storageKeys'
+import { clearTaskProgress } from '../utils/taskProgress'
 
 const navItems = [
   { to: '/', label: 'Home' },
@@ -107,6 +108,7 @@ export function AppLayout() {
   }
 
   function handleResetLocalData() {
+    clearTaskProgress()
     clearAppLocalData()
     window.location.reload()
   }

@@ -12,6 +12,37 @@ type SettingsModalProps = {
 
 type SegmentTone = 'default' | 'accent' | 'neutral'
 
+const BODY_LOCK_COUNT_ATTR = 'data-pebble-scroll-lock-count'
+const BODY_PREVIOUS_OVERFLOW_ATTR = 'data-pebble-scroll-lock-overflow'
+
+function lockBodyScroll() {
+  const body = document.body
+  const lockCount = Number(body.getAttribute(BODY_LOCK_COUNT_ATTR) ?? '0')
+
+  if (lockCount === 0) {
+    body.setAttribute(BODY_PREVIOUS_OVERFLOW_ATTR, body.style.overflow || '')
+    body.style.overflow = 'hidden'
+  }
+
+  body.setAttribute(BODY_LOCK_COUNT_ATTR, String(lockCount + 1))
+}
+
+function unlockBodyScroll() {
+  const body = document.body
+  const lockCount = Number(body.getAttribute(BODY_LOCK_COUNT_ATTR) ?? '0')
+  const nextCount = Math.max(0, lockCount - 1)
+
+  if (nextCount === 0) {
+    const previousOverflow = body.getAttribute(BODY_PREVIOUS_OVERFLOW_ATTR) ?? ''
+    body.style.overflow = previousOverflow
+    body.removeAttribute(BODY_LOCK_COUNT_ATTR)
+    body.removeAttribute(BODY_PREVIOUS_OVERFLOW_ATTR)
+    return
+  }
+
+  body.setAttribute(BODY_LOCK_COUNT_ATTR, String(nextCount))
+}
+
 function segmentButtonClass(isActive: boolean, tone: SegmentTone = 'default') {
   const activeClass =
     tone === 'accent'
@@ -41,11 +72,10 @@ export function SettingsModal({
       return
     }
 
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    lockBodyScroll()
 
     return () => {
-      document.body.style.overflow = previousOverflow
+      unlockBodyScroll()
     }
   }, [open])
 

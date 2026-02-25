@@ -3,6 +3,7 @@ export const storageKeys = {
   demoMode: 'pebble_demo_mode',
   memory: 'pebble_memory_v1',
   sessionInsights: 'pebble_session_insights',
+  taskProgress: 'pebble_task_progress_v1',
   userProfile: 'pebble_user_profile',
   userName: 'pebble_user_name',
   personaSummary: 'pebble_persona_summary',
@@ -11,6 +12,7 @@ export const storageKeys = {
 const localUserKeys = [
   storageKeys.memory,
   storageKeys.sessionInsights,
+  storageKeys.taskProgress,
   storageKeys.userProfile,
   storageKeys.userName,
   storageKeys.personaSummary,

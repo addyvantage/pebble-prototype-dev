@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { PebbleMascot } from '../components/mascot/PebbleMascot'
 import { CodeEditor } from '../components/session/CodeEditor'
 import { GuidedFixPanel } from '../components/session/GuidedFixPanel'
 import { Badge } from '../components/ui/Badge'
@@ -7,25 +8,25 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Divider } from '../components/ui/Divider'
 import { buttonClass } from '../components/ui/buttonStyles'
+import { getTaskById } from '../tasks'
+import type { GuidedStep } from '../tasks/types'
 import { getDemoMode } from '../utils/demoMode'
 import { updatePebbleMemoryAfterSession } from '../utils/pebbleMemory'
 import { appendSessionInsight } from '../utils/sessionInsights'
-import { runTask, type RunErrorKey, type TaskRunResult } from '../utils/taskHarness'
+import { type RunErrorKey, type TaskRunResult } from '../utils/taskHarness'
+import { markTaskCompleted } from '../utils/taskProgress'
 import { computeStruggleScore, type TelemetrySnapshot } from '../utils/telemetry'
-import { getUserProfile, type UserSkillLevel } from '../utils/userProfile'
+import {
+  getRequestedLanguageLabel,
+  getRuntimeLanguageLabel,
+  getUserProfile,
+  type UserSkillLevel,
+} from '../utils/userProfile'
 
 type Scene = 'struggle' | 'recovery' | 'complete'
 type RunStatus = 'idle' | 'error' | 'success'
 type RecoveryMode = 'none' | 'guided'
 type DecisionChoice = 'show_me' | 'not_now' | null
-
-type GuidedStep = {
-  title: string
-  detail: string
-  runMessage: string
-  highlightedLines: number[]
-  proposedLines: number[]
-}
 
 type GuidedContent = {
   nudgeCopy: string
@@ -78,6 +79,32 @@ type SimulationState = {
   recoveryStableSince: number | null
 }
 
+type DemoStep =
+  | 'idle'
+  | 'init'
+  | 'run_first'
+  | 'type_partial_fix'
+  | 'run_second'
+  | 'wait_nudge'
+  | 'show_me'
+  | 'guided_progress'
+  | 'apply_fix'
+  | 'run_success'
+  | 'finish'
+  | 'pause'
+  | 'replay'
+
+type HandlerOptions = {
+  fromDemo?: boolean
+}
+
+type DemoTypingOptions = {
+  nextStep: DemoStep
+  startDelayMs?: number
+  pauseAfterTypingMs?: number
+  key: string
+}
+
 const AFK_THRESHOLD_MS = 20_000
 const AFK_THRESHOLD_MS_DEMO = 7_000
 const ACTIVITY_THROTTLE_MS = 500
@@ -88,133 +115,39 @@ const BACKSPACE_BURST_WINDOW_MS = 700
 const BACKSPACE_BURST_THRESHOLD = 4
 const ERROR_HISTORY_SIZE = 5
 
-const initialCodeText = `function sumEven(nums: number[]) {
-  let total = 0;
-  for (const n of nums) {
-    if (n % 2 = 0) {
-      total += nums;
-    }
-  }
-  return total
-}`
+const DEMO_PACING = {
+  typeCharMs: 45,
+  typeChunk: 1,
+  pauseAfterTypingMs: 800,
+  pauseAfterRunMs: 1400,
+  pauseOnNudgeMs: 2200,
+  pauseOnGuidedStepMs: 2000,
+  pauseBeforeApplyMs: 1500,
+  pauseAfterApplyMs: 1200,
+  pauseOnSuccessMs: 1600,
+  pauseBeforeFinishMs: 1200,
+  pauseBeforeReplayMs: 2500,
+  pollMs: 350,
+} as const
 
-const fixedCodeText = `function sumEven(nums: number[]) {
-  let total = 0;
-  for (const n of nums) {
-    if (n % 2 === 0) {
-      total += n;
-    }
-  }
-  return total;
-}`
-
-const defaultNudgeCopy =
-  'You are close. Validate parity first, then add the current number into your running total.'
-
-const defaultGuidedSteps: GuidedStep[] = [
-  {
-    title: 'Identify the failing parity condition',
-    detail: 'The failing branch comes from an invalid parity comparison operator on line 4.',
-    runMessage: 'Step 1/3: inspecting the parity condition.',
-    highlightedLines: [4],
-    proposedLines: [4],
-  },
-  {
-    title: 'Confirm accumulation target',
-    detail: 'After parity passes, total should add the current value n instead of the source array.',
-    runMessage: 'Step 2/3: validating accumulation target.',
-    highlightedLines: [5],
-    proposedLines: [5],
-  },
-  {
-    title: 'Apply the minimal safe edit',
-    detail: 'Apply strict parity and accumulator corrections, then rerun to confirm stability.',
-    runMessage: 'Step 3/3: ready to apply the fix.',
-    highlightedLines: [4, 5],
-    proposedLines: [4, 5],
-  },
-]
-
-const guidedContentByErrorKey: Record<RunErrorKey, GuidedContent> = {
-  PARITY_CHECK: {
-    nudgeCopy:
-      'Parity validation is unstable. Lock the condition to n % 2 === 0 before accumulating.',
-    guidedSteps: [
-      {
-        title: 'Stabilize parity condition',
-        detail: 'Your branch condition needs strict equality to filter only even values.',
-        runMessage: 'Step 1/3: verifying parity condition syntax.',
-        highlightedLines: [4],
-        proposedLines: [4],
-      },
-      {
-        title: 'Confirm branch intent',
-        detail: 'This branch should run only when the number is even.',
-        runMessage: 'Step 2/3: confirming branch behavior.',
-        highlightedLines: [4],
-        proposedLines: [4],
-      },
-      {
-        title: 'Apply strict parity check',
-        detail: 'Apply the minimal operator fix and rerun.',
-        runMessage: 'Step 3/3: ready to apply parity correction.',
-        highlightedLines: [4],
-        proposedLines: [4],
-      },
-    ],
-  },
-  ACCUMULATOR_TARGET: {
-    nudgeCopy: 'Accumulator target is off. Add the current value n, not the source collection.',
-    guidedSteps: [
-      {
-        title: 'Trace accumulation line',
-        detail: 'The total update line is pulling from the wrong source.',
-        runMessage: 'Step 1/3: locating accumulator target.',
-        highlightedLines: [5],
-        proposedLines: [5],
-      },
-      {
-        title: 'Align accumulation intent',
-        detail: 'Only the current loop value should be added to total.',
-        runMessage: 'Step 2/3: validating accumulator logic.',
-        highlightedLines: [5],
-        proposedLines: [5],
-      },
-      {
-        title: 'Apply accumulator correction',
-        detail: 'Swap accumulator input to n and rerun.',
-        runMessage: 'Step 3/3: ready to apply accumulator fix.',
-        highlightedLines: [5],
-        proposedLines: [5],
-      },
-    ],
-  },
-  OUTPUT_MISMATCH: {
-    nudgeCopy: 'Output still mismatches. Tighten the final return path after parity and accumulation.',
-    guidedSteps: [
-      {
-        title: 'Re-check output path',
-        detail: 'Final output needs to return the stabilized total.',
-        runMessage: 'Step 1/3: checking output path.',
-        highlightedLines: [8],
-        proposedLines: [8],
-      },
-      {
-        title: 'Validate full function flow',
-        detail: 'Parity branch + accumulation should feed directly into return total.',
-        runMessage: 'Step 2/3: validating full flow.',
-        highlightedLines: [4, 5, 8],
-        proposedLines: [8],
-      },
-      {
-        title: 'Apply output-safe cleanup',
-        detail: 'Apply the minimal return cleanup and rerun.',
-        runMessage: 'Step 3/3: ready to apply output correction.',
-        highlightedLines: [8],
-        proposedLines: [8],
-      },
-    ],
-  },
+const fallbackGuidedContent: GuidedContent = {
+  nudgeCopy: 'Validate the failing condition first, then rerun with a minimal fix.',
+  guidedSteps: [
+    {
+      title: 'Inspect the failing line',
+      detail: 'Focus on the highlighted line and verify the intended condition.',
+      runMessage: 'Step 1/2: inspecting issue.',
+      highlightedLines: [],
+      proposedLines: [],
+    },
+    {
+      title: 'Apply the smallest safe fix',
+      detail: 'Patch the issue, then rerun to confirm behavior.',
+      runMessage: 'Step 2/2: ready to apply fix.',
+      highlightedLines: [],
+      proposedLines: [],
+    },
+  ],
 }
 
 const defaultRecoveryState: RecoveryState = {
@@ -225,48 +158,50 @@ const defaultRecoveryState: RecoveryState = {
   startedAtSimSecond: 0,
 }
 
-const initialState: SimulationState = {
-  simSecond: 0,
-  scene: 'struggle',
-  codeText: initialCodeText,
-  highlightedLines: [],
-  proposedLines: [],
-  runStatus: 'idle',
-  runMessage: 'Edit the function, then run to validate output.',
-  lastErrorKey: null,
-  currentErrorKey: null,
-  guidedErrorKey: null,
-  errorKeyHistory: [],
-  sameErrorStreak: 0,
-  telemetry: {
-    keysPerSecond: 0,
-    idleSeconds: 0,
-    backspaceBurstCount: 0,
-    runAttempts: 0,
-    repeatErrorCount: 0,
-  },
-  struggleScore: 24,
-  thresholdStreak: 0,
-  firstStruggleAt: null,
-  firstRecoveryAt: null,
-  recoveryTimeSec: null,
-  nudgeVisible: false,
-  nudgeEverShown: false,
-  nudgeShownAtSimSecond: null,
-  snoozeUntil: 0,
-  snoozeCount: 0,
-  recovery: defaultRecoveryState,
-  recoveryEffectivenessScore: 0,
-  struggleScorePeak: 24,
-  flowRecovered: false,
-  sessionComplete: false,
-  usedHint: false,
-  decisionChoice: null,
-  timeToDecisionSec: 0,
-  guidedFixStartedAtSimSecond: null,
-  timeInGuidedFixSec: 0,
-  applyFixUsed: false,
-  recoveryStableSince: null,
+function createInitialState(starterCode: string): SimulationState {
+  return {
+    simSecond: 0,
+    scene: 'struggle',
+    codeText: starterCode,
+    highlightedLines: [],
+    proposedLines: [],
+    runStatus: 'idle',
+    runMessage: 'Edit the function, then run to validate output.',
+    lastErrorKey: null,
+    currentErrorKey: null,
+    guidedErrorKey: null,
+    errorKeyHistory: [],
+    sameErrorStreak: 0,
+    telemetry: {
+      keysPerSecond: 0,
+      idleSeconds: 0,
+      backspaceBurstCount: 0,
+      runAttempts: 0,
+      repeatErrorCount: 0,
+    },
+    struggleScore: 24,
+    thresholdStreak: 0,
+    firstStruggleAt: null,
+    firstRecoveryAt: null,
+    recoveryTimeSec: null,
+    nudgeVisible: false,
+    nudgeEverShown: false,
+    nudgeShownAtSimSecond: null,
+    snoozeUntil: 0,
+    snoozeCount: 0,
+    recovery: defaultRecoveryState,
+    recoveryEffectivenessScore: 0,
+    struggleScorePeak: 24,
+    flowRecovered: false,
+    sessionComplete: false,
+    usedHint: false,
+    decisionChoice: null,
+    timeToDecisionSec: 0,
+    guidedFixStartedAtSimSecond: null,
+    timeInGuidedFixSec: 0,
+    applyFixUsed: false,
+    recoveryStableSince: null,
+  }
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -308,22 +243,6 @@ function isGuidedRecoveryInProgress(state: SimulationState) {
   return state.scene === 'struggle' && state.recovery.mode === 'guided' && !state.recovery.fixApplied
 }
 
-function getGuidedContent(errorKey: RunErrorKey | null): GuidedContent {
-  if (!errorKey) {
-    return {
-      nudgeCopy: defaultNudgeCopy,
-      guidedSteps: defaultGuidedSteps,
-    }
-  }
-
-  return (
-    guidedContentByErrorKey[errorKey] ?? {
-      nudgeCopy: defaultNudgeCopy,
-      guidedSteps: defaultGuidedSteps,
-    }
-  )
-}
-
 function recomputeStruggle(state: SimulationState, isAfk: boolean) {
   const nextScore = computeStruggleScore(state.telemetry, {
     runStatus: state.runStatus,
@@ -352,43 +271,6 @@ function buildGuidedSnippetLines(codeText: string, lineNumbers: number[]) {
     .map((line, index) => `${firstLine + index}. ${line}`)
 }
 
-function applyGuidedPatch(codeText: string) {
-  const lines = codeText.split('\n')
-  const nextLines = [...lines]
-
-  let parityPatched = false
-  let accumulatorPatched = false
-
-  for (let index = 0; index < nextLines.length; index += 1) {
-    const line = nextLines[index]
-
-    if (!parityPatched && line.includes('if') && line.includes('%') && line.includes('2')) {
-      const indent = line.match(/^\s*/)?.[0] ?? ''
-      nextLines[index] = `${indent}if (n % 2 === 0) {`
-      parityPatched = true
-      continue
-    }
-
-    if (!accumulatorPatched && line.includes('total') && line.includes('+=')) {
-      const indent = line.match(/^\s*/)?.[0] ?? ''
-      nextLines[index] = `${indent}total += n;`
-      accumulatorPatched = true
-    }
-  }
-
-  const returnLineIndex = nextLines.findIndex((line) => line.trimStart().startsWith('return total'))
-  if (returnLineIndex >= 0) {
-    const indent = nextLines[returnLineIndex].match(/^\s*/)?.[0] ?? ''
-    nextLines[returnLineIndex] = `${indent}return total;`
-  }
-
-  if (!parityPatched || !accumulatorPatched) {
-    return fixedCodeText
-  }
-
-  return nextLines.join('\n')
-}
-
 function completeSession(state: SimulationState) {
   if (state.sessionComplete) {
     return state
@@ -413,27 +295,34 @@ function completeSession(state: SimulationState) {
 export function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const demoMode = useMemo(() => getDemoMode(), [])
+  const task = useMemo(() => getTaskById(sessionId), [sessionId])
+  const autoplayDemoEnabled = demoMode && task.id === '1'
   const userProfile = useMemo(() => getUserProfile(), [])
   const afkThresholdMs = useMemo(
-    () => (demoMode ? AFK_THRESHOLD_MS_DEMO : AFK_THRESHOLD_MS),
-    [demoMode],
+    () => (autoplayDemoEnabled ? AFK_THRESHOLD_MS_DEMO : AFK_THRESHOLD_MS),
+    [autoplayDemoEnabled],
   )
   const nudgeScoreThreshold = useMemo(
     () => getNudgeThreshold(userProfile?.skillLevel ?? null),
     [userProfile],
   )
 
-  const [sim, setSim] = useState<SimulationState>(initialState)
+  const [sim, setSim] = useState<SimulationState>(() => createInitialState(task.starterCode))
   const [isAfk, setIsAfk] = useState(false)
   const [isShowMeTooltipOpen, setIsShowMeTooltipOpen] = useState(false)
   const [showMeTooltipPosition, setShowMeTooltipPosition] = useState<{
     top: number
     left: number
   } | null>(null)
+  const [demoStep, setDemoStep] = useState<DemoStep>(autoplayDemoEnabled ? 'init' : 'idle')
+  const [demoStoppedByUser, setDemoStoppedByUser] = useState(false)
+  const [demoRunId, setDemoRunId] = useState(0)
+  const demoPartialFixCode = task.demoScript?.partialFixCode ?? task.starterCode
 
   const memoryUpdatedRef = useRef(false)
   const showMeButtonRef = useRef<HTMLButtonElement | null>(null)
   const showMeTooltipId = useId()
+  const sessionSectionRef = useRef<HTMLElement | null>(null)
 
   const lastActivityAtRef = useRef(Date.now())
   const lastMouseMoveAtRef = useRef(0)
@@ -444,6 +333,17 @@ export function SessionPage() {
   const lastEditAtRef = useRef(Date.now())
   const editEventTimesRef = useRef<number[]>([])
   const deleteBurstRef = useRef({ count: 0, lastAt: 0 })
+  const demoTimerRef = useRef<number | null>(null)
+  const demoTypingTimerRef = useRef<number | null>(null)
+  const demoTypingInProgressRef = useRef(false)
+  const userInteractedRef = useRef(false)
+  const demoInternalActionRef = useRef(false)
+  const demoScheduleKeyRef = useRef<string | null>(null)
+  const demoStepActionDoneRef = useRef<DemoStep | null>(null)
+  const simRef = useRef(sim)
+  const isAfkRef = useRef(isAfk)
+  const demoStoppedByUserRef = useRef(demoStoppedByUser)
+  const loadedTaskIdRef = useRef(task.id)
 
   const decisionGateOpen = isDecisionGateOpen(sim)
   const guidedRecoveryOpen = isGuidedRecoveryInProgress(sim)
@@ -451,6 +351,29 @@ export function SessionPage() {
   useEffect(() => {
     guidedRecoveryOpenRef.current = guidedRecoveryOpen
   }, [guidedRecoveryOpen])
+
+  const getGuidedContent = useCallback(
+    (errorKey: RunErrorKey | null): GuidedContent => {
+      const primaryConfig = errorKey ? task.errorKeyConfig[errorKey] : undefined
+      if (primaryConfig) {
+        return {
+          nudgeCopy: primaryConfig.nudgeCopy,
+          guidedSteps: primaryConfig.guidedSteps,
+        }
+      }
+
+      const firstConfig = Object.values(task.errorKeyConfig)[0]
+      if (firstConfig) {
+        return {
+          nudgeCopy: firstConfig.nudgeCopy,
+          guidedSteps: firstConfig.guidedSteps,
+        }
+      }
+
+      return fallbackGuidedContent
+    },
+    [task],
+  )
 
   const getShowMeTooltipPosition = useCallback((buttonRect: DOMRect) => {
     const tooltipWidth = 320
@@ -496,6 +419,232 @@ export function SessionPage() {
   const hideShowMeTooltip = useCallback(() => {
     setIsShowMeTooltipOpen(false)
   }, [])
+
+  useEffect(() => {
+    simRef.current = sim
+  }, [sim])
+
+  useEffect(() => {
+    isAfkRef.current = isAfk
+  }, [isAfk])
+
+  useEffect(() => {
+    demoStoppedByUserRef.current = demoStoppedByUser
+  }, [demoStoppedByUser])
+
+  const clearDemoTimer = useCallback(() => {
+    if (demoTimerRef.current !== null) {
+      window.clearTimeout(demoTimerRef.current)
+      demoTimerRef.current = null
+    }
+    demoScheduleKeyRef.current = null
+  }, [])
+
+  const clearDemoTypingTimer = useCallback(() => {
+    if (demoTypingTimerRef.current !== null) {
+      window.clearTimeout(demoTypingTimerRef.current)
+      demoTypingTimerRef.current = null
+    }
+    demoTypingInProgressRef.current = false
+  }, [])
+
+  const runDemoInternalAction = useCallback((action: () => void) => {
+    demoInternalActionRef.current = true
+    try {
+      action()
+    } finally {
+      demoInternalActionRef.current = false
+    }
+  }, [])
+
+  const runDemoStepActionOnce = useCallback(
+    (step: DemoStep, action: () => void) => {
+      if (demoStepActionDoneRef.current === step) {
+        return false
+      }
+
+      demoStepActionDoneRef.current = step
+      runDemoInternalAction(action)
+      return true
+    },
+    [runDemoInternalAction],
+  )
+
+  const scheduleDemoAction = useCallback(
+    (delayMs: number, key: string, action: () => void) => {
+      if (demoTimerRef.current !== null && demoScheduleKeyRef.current === key) {
+        return
+      }
+
+      clearDemoTimer()
+      demoScheduleKeyRef.current = key
+      demoTimerRef.current = window.setTimeout(() => {
+        demoTimerRef.current = null
+        demoScheduleKeyRef.current = null
+
+        if (!autoplayDemoEnabled || demoStoppedByUserRef.current || isAfkRef.current) {
+          return
+        }
+
+        runDemoInternalAction(action)
+      }, delayMs)
+    },
+    [autoplayDemoEnabled, clearDemoTimer, runDemoInternalAction],
+  )
+
+  const scheduleDemoNext = useCallback(
+    (
+      nextStep: DemoStep,
+      delayMs: number,
+      key = `${demoStep}->${nextStep}`,
+      action?: () => void,
+    ) => {
+      scheduleDemoAction(delayMs, key, () => {
+        action?.()
+        demoStepActionDoneRef.current = null
+        setDemoStep(nextStep)
+      })
+    },
+    [demoStep, scheduleDemoAction],
+  )
+
+  const markUserInteraction = useCallback(() => {
+    if (!autoplayDemoEnabled || demoInternalActionRef.current || userInteractedRef.current) {
+      return
+    }
+
+    userInteractedRef.current = true
+    setDemoStoppedByUser(true)
+    clearDemoTimer()
+    clearDemoTypingTimer()
+  }, [autoplayDemoEnabled, clearDemoTimer, clearDemoTypingTimer])
+
+  const runDemoTyping = useCallback(
+    (targetText: string, speedMs: number, chunk: number, onComplete: () => void) => {
+      clearDemoTypingTimer()
+      demoTypingInProgressRef.current = true
+
+      const startText = simRef.current.codeText
+      const baseText = targetText.startsWith(startText) ? startText : ''
+      let cursor = baseText.length
+
+      if (baseText !== startText) {
+        setSim((prev) => ({
+          ...prev,
+          codeText: '',
+        }))
+      }
+
+      const tick = () => {
+        if (!autoplayDemoEnabled || demoStoppedByUserRef.current) {
+          clearDemoTypingTimer()
+          return
+        }
+
+        if (isAfkRef.current) {
+          demoTypingTimerRef.current = window.setTimeout(tick, 250)
+          return
+        }
+
+        cursor = Math.min(targetText.length, cursor + chunk)
+        const nextValue = targetText.slice(0, cursor)
+        const now = Date.now()
+        lastEditAtRef.current = now
+        editEventTimesRef.current.push(now)
+        editEventTimesRef.current = editEventTimesRef.current.filter(
+          (timestamp) => now - timestamp <= EDIT_WINDOW_MS,
+        )
+
+        setSim((prev) => ({
+          ...prev,
+          codeText: nextValue,
+        }))
+
+        if (cursor >= targetText.length) {
+          clearDemoTypingTimer()
+          onComplete()
+          return
+        }
+
+        demoTypingTimerRef.current = window.setTimeout(tick, speedMs)
+      }
+
+      demoTypingTimerRef.current = window.setTimeout(tick, speedMs)
+    },
+    [autoplayDemoEnabled, clearDemoTypingTimer],
+  )
+
+  const scheduleDemoTyping = useCallback(
+    (targetText: string, options: DemoTypingOptions) => {
+      scheduleDemoAction(options.startDelayMs ?? 0, options.key, () => {
+        runDemoTyping(targetText, DEMO_PACING.typeCharMs, DEMO_PACING.typeChunk, () => {
+          scheduleDemoNext(
+            options.nextStep,
+            options.pauseAfterTypingMs ?? DEMO_PACING.pauseAfterTypingMs,
+            `${options.key}:after-typing`,
+          )
+        })
+      })
+    },
+    [runDemoTyping, scheduleDemoAction, scheduleDemoNext],
+  )
+
+  const resetSessionState = useCallback(() => {
+    const now = Date.now()
+    memoryUpdatedRef.current = false
+    lastEditAtRef.current = now
+    editEventTimesRef.current = []
+    deleteBurstRef.current = { count: 0, lastAt: 0 }
+    lastActivityAtRef.current = now
+    lastMouseMoveAtRef.current = 0
+    isWindowFocusedRef.current = typeof document === 'undefined' ? true : document.hasFocus()
+    wasAfkRef.current = false
+    isAfkRef.current = false
+    guidedRecoveryOpenRef.current = false
+    setIsAfk(false)
+    setIsShowMeTooltipOpen(false)
+    setShowMeTooltipPosition(null)
+    setSim(createInitialState(task.starterCode))
+  }, [task.starterCode])
+
+  const resetDemoController = useCallback(
+    (restartAutoplay: boolean) => {
+      clearDemoTimer()
+      clearDemoTypingTimer()
+      demoStepActionDoneRef.current = null
+      demoScheduleKeyRef.current = null
+      userInteractedRef.current = false
+      demoInternalActionRef.current = false
+      demoStoppedByUserRef.current = false
+      setDemoStoppedByUser(false)
+      setDemoStep(restartAutoplay ? 'init' : 'idle')
+      if (restartAutoplay) {
+        setDemoRunId((value) => value + 1)
+      }
+    },
+    [clearDemoTimer, clearDemoTypingTimer],
+  )
+
+  const forceDemoNudgeIfNeeded = useCallback(() => {
+    setSim((prev) => {
+      if (prev.nudgeVisible) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        nudgeVisible: true,
+        nudgeEverShown: true,
+        nudgeShownAtSimSecond: prev.simSecond,
+        thresholdStreak: Math.max(prev.thresholdStreak, NUDGE_STREAK_THRESHOLD),
+        firstStruggleAt: prev.firstStruggleAt ?? prev.simSecond,
+      }
+    })
+  }, [])
+
+  const handleSessionInteractionCapture = useCallback(() => {
+    markUserInteraction()
+  }, [markUserInteraction])
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -633,7 +782,7 @@ export function SessionPage() {
   }, [isAfk])
 
   useEffect(() => {
-    const tickMs = demoMode ? 750 : 1000
+    const tickMs = autoplayDemoEnabled ? 750 : 1000
 
     const timer = window.setInterval(() => {
       setSim((prev) => {
@@ -699,7 +848,7 @@ export function SessionPage() {
           }
         }
 
-        const stableSeconds = demoMode ? 3 : 6
+        const stableSeconds = autoplayDemoEnabled ? 3 : 6
         if (
           next.scene === 'recovery' &&
           next.runStatus === 'success' &&
@@ -714,7 +863,7 @@ export function SessionPage() {
     }, tickMs)
 
     return () => window.clearInterval(timer)
-  }, [demoMode, isAfk, nudgeScoreThreshold])
+  }, [autoplayDemoEnabled, isAfk, nudgeScoreThreshold])
 
   useEffect(() => {
     if (!sim.sessionComplete || sim.recoveryTimeSec === null || memoryUpdatedRef.current) {
@@ -722,6 +871,7 @@ export function SessionPage() {
     }
 
     memoryUpdatedRef.current = true
+    markTaskCompleted(task.id)
     const flowStability = clamp(
       Math.round(100 - sim.struggleScore * 0.72 + (sim.usedHint ? 4 : 8)),
       58,
@@ -749,7 +899,7 @@ export function SessionPage() {
       applyFixUsed: sim.applyFixUsed,
       timestamp: Date.now(),
     })
-  }, [sessionId, sim])
+  }, [sessionId, sim, task.id])
 
   useEffect(() => {
     if (!isShowMeTooltipOpen || isAfk) {
@@ -774,7 +924,211 @@ export function SessionPage() {
     }
   }, [getShowMeTooltipPosition, isAfk, isShowMeTooltipOpen])
 
+  useEffect(() => {
+    resetDemoController(autoplayDemoEnabled)
+  }, [autoplayDemoEnabled, resetDemoController])
+
+  useEffect(() => {
+    if (loadedTaskIdRef.current === task.id) {
+      return
+    }
+
+    loadedTaskIdRef.current = task.id
+    resetSessionState()
+    resetDemoController(autoplayDemoEnabled)
+  }, [autoplayDemoEnabled, resetDemoController, resetSessionState, task.id])
+
+  useEffect(() => {
+    if (!autoplayDemoEnabled || demoStoppedByUser) {
+      clearDemoTimer()
+      clearDemoTypingTimer()
+      return
+    }
+
+    if (isAfk) {
+      clearDemoTimer()
+      return
+    }
+
+    if (demoStep === 'idle') {
+      scheduleDemoNext('init', 0, 'idle->init')
+      return
+    }
+
+    if (demoStep === 'init') {
+      if (!runDemoStepActionOnce('init', () => onReplay({ fromDemo: true }))) {
+        return
+      }
+      scheduleDemoNext('run_first', DEMO_PACING.pauseAfterTypingMs, 'init->run_first')
+      return
+    }
+
+    if (demoStep === 'run_first') {
+      if (!runDemoStepActionOnce('run_first', () => onRun({ fromDemo: true }))) {
+        return
+      }
+      scheduleDemoNext('type_partial_fix', DEMO_PACING.pauseAfterRunMs, 'run_first->type_partial_fix')
+      return
+    }
+
+    if (demoStep === 'type_partial_fix') {
+      if (demoTypingInProgressRef.current) {
+        return
+      }
+
+      if (!runDemoStepActionOnce('type_partial_fix', () => undefined)) {
+        return
+      }
+      scheduleDemoTyping(demoPartialFixCode, {
+        key: 'type_partial_fix',
+        nextStep: 'run_second',
+      })
+      return
+    }
+
+    if (demoStep === 'run_second') {
+      if (!runDemoStepActionOnce('run_second', () => onRun({ fromDemo: true }))) {
+        return
+      }
+      scheduleDemoNext('wait_nudge', DEMO_PACING.pauseAfterRunMs, 'run_second->wait_nudge')
+      return
+    }
+
+    if (demoStep === 'wait_nudge') {
+      if (sim.nudgeVisible) {
+        scheduleDemoNext('show_me', DEMO_PACING.pauseOnNudgeMs, 'wait_nudge:visible')
+        return
+      }
+
+      scheduleDemoNext('show_me', DEMO_PACING.pauseOnNudgeMs, 'wait_nudge:force-show', () => {
+        if (!simRef.current.nudgeVisible) {
+          forceDemoNudgeIfNeeded()
+        }
+      })
+      return
+    }
+
+    if (demoStep === 'show_me') {
+      if (!sim.nudgeVisible) {
+        scheduleDemoNext('wait_nudge', DEMO_PACING.pollMs, 'show_me:wait_for_nudge')
+        return
+      }
+
+      if (!runDemoStepActionOnce('show_me', () => onShowMe({ fromDemo: true }))) {
+        return
+      }
+      scheduleDemoNext('guided_progress', DEMO_PACING.pauseOnGuidedStepMs, 'show_me->guided_progress')
+      return
+    }
+
+    if (demoStep === 'guided_progress') {
+      if (sim.recovery.mode !== 'guided' || sim.recovery.fixApplied) {
+        scheduleDemoNext('apply_fix', DEMO_PACING.pauseBeforeApplyMs, 'guided_progress->apply_fix')
+        return
+      }
+
+      if (sim.recovery.step < sim.recovery.totalSteps) {
+        scheduleDemoNext(
+          'guided_progress',
+          DEMO_PACING.pauseOnGuidedStepMs,
+          `guided_progress:step-${sim.recovery.step}`,
+          () => {
+            onGuidedNextStep({ fromDemo: true })
+          },
+        )
+        return
+      }
+
+      scheduleDemoNext(
+        'apply_fix',
+        DEMO_PACING.pauseBeforeApplyMs,
+        'guided_progress:last-step->apply_fix',
+      )
+      return
+    }
+
+    if (demoStep === 'apply_fix') {
+      if (!runDemoStepActionOnce('apply_fix', () => onGuidedApplyFix({ fromDemo: true }))) {
+        return
+      }
+      scheduleDemoNext('run_success', DEMO_PACING.pauseAfterApplyMs, 'apply_fix->run_success')
+      return
+    }
+
+    if (demoStep === 'run_success') {
+      if (sim.scene === 'recovery' && sim.runStatus === 'success') {
+        scheduleDemoNext('finish', DEMO_PACING.pauseOnSuccessMs, 'run_success->finish')
+        return
+      }
+
+      scheduleDemoNext('run_success', DEMO_PACING.pollMs, 'run_success:wait-for-success')
+      return
+    }
+
+    if (demoStep === 'finish') {
+      if (sim.scene === 'recovery' && sim.runStatus === 'success') {
+        scheduleDemoNext('pause', DEMO_PACING.pauseBeforeFinishMs, 'finish->pause', () => {
+          onFinishSession({ fromDemo: true })
+        })
+        return
+      }
+
+      if (sim.sessionComplete) {
+        scheduleDemoNext('pause', 0, 'finish:already-complete->pause')
+      }
+      return
+    }
+
+    if (demoStep === 'pause') {
+      if (!sim.sessionComplete) {
+        scheduleDemoNext('pause', DEMO_PACING.pollMs, 'pause:wait-for-complete')
+        return
+      }
+
+      scheduleDemoNext('replay', DEMO_PACING.pauseBeforeReplayMs, 'pause->replay')
+      return
+    }
+
+    if (demoStep === 'replay') {
+      if (!runDemoStepActionOnce('replay', () => onReplay({ fromDemo: true }))) {
+        return
+      }
+      scheduleDemoNext('run_first', DEMO_PACING.pauseAfterTypingMs, 'replay->run_first')
+    }
+  }, [
+    clearDemoTimer,
+    clearDemoTypingTimer,
+    autoplayDemoEnabled,
+    demoPartialFixCode,
+    demoRunId,
+    demoStep,
+    demoStoppedByUser,
+    forceDemoNudgeIfNeeded,
+    isAfk,
+    runDemoStepActionOnce,
+    scheduleDemoNext,
+    scheduleDemoTyping,
+    sim.nudgeVisible,
+    sim.recovery.fixApplied,
+    sim.recovery.mode,
+    sim.recovery.step,
+    sim.recovery.totalSteps,
+    sim.runStatus,
+    sim.scene,
+    sim.sessionComplete,
+    task.id,
+  ])
+
+  useEffect(() => {
+    return () => {
+      clearDemoTimer()
+      clearDemoTypingTimer()
+    }
+  }, [clearDemoTimer, clearDemoTypingTimer])
+
   function onEditorChange(nextValue: string) {
+    markUserInteraction()
+
     const now = Date.now()
     lastEditAtRef.current = now
     editEventTimesRef.current.push(now)
@@ -902,7 +1256,11 @@ export function SessionPage() {
     return next
   }
 
-  function onRun() {
+  function onRun(options: HandlerOptions = {}) {
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
     if (isAfk || decisionGateOpen || isGuidedRecoveryInProgress(sim)) {
       return
     }
@@ -912,12 +1270,16 @@ export function SessionPage() {
         return prev
       }
 
-      const result = runTask(prev.codeText)
+      const result = task.run(prev.codeText)
       return processRunResult(prev, result)
     })
   }
 
-  function onShowMe() {
+  function onShowMe(options: HandlerOptions = {}) {
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
     setIsShowMeTooltipOpen(false)
 
     setSim((prev) => {
@@ -925,7 +1287,7 @@ export function SessionPage() {
         prev.nudgeShownAtSimSecond === null ? 0 : Math.max(1, prev.simSecond - prev.nudgeShownAtSimSecond)
 
       const guidedContent = getGuidedContent(prev.currentErrorKey)
-      const firstStep = guidedContent.guidedSteps[0] ?? defaultGuidedSteps[0]
+      const firstStep = guidedContent.guidedSteps[0] ?? fallbackGuidedContent.guidedSteps[0]
 
       return {
         ...prev,
@@ -950,7 +1312,11 @@ export function SessionPage() {
     })
   }
 
-  function onNotNow() {
+  function onNotNow(options: HandlerOptions = {}) {
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
     setIsShowMeTooltipOpen(false)
 
     setSim((prev) => {
@@ -975,7 +1341,11 @@ export function SessionPage() {
     })
   }
 
-  function onGuidedNextStep() {
+  function onGuidedNextStep(options: HandlerOptions = {}) {
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
     setSim((prev) => {
       if (!isGuidedRecoveryInProgress(prev)) {
         return prev
@@ -999,7 +1369,11 @@ export function SessionPage() {
     })
   }
 
-  function onGuidedBackStep() {
+  function onGuidedBackStep(options: HandlerOptions = {}) {
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
     setSim((prev) => {
       if (!isGuidedRecoveryInProgress(prev)) {
         return prev
@@ -1023,14 +1397,19 @@ export function SessionPage() {
     })
   }
 
-  function onGuidedApplyFix() {
+  function onGuidedApplyFix(options: HandlerOptions = {}) {
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
     setSim((prev) => {
       if (!isGuidedRecoveryInProgress(prev)) {
         return prev
       }
 
-      const patchedCode = applyGuidedPatch(prev.codeText)
-      const runResult = runTask(patchedCode)
+      const activeErrorConfig = prev.guidedErrorKey ? task.errorKeyConfig[prev.guidedErrorKey] : null
+      const patchedCode = activeErrorConfig?.applyPatch?.(prev.codeText) ?? task.solutionCode
+      const runResult = task.run(patchedCode)
       const guidedDuration =
         prev.guidedFixStartedAtSimSecond === null
           ? 0
@@ -1078,7 +1457,11 @@ export function SessionPage() {
     })
   }
 
-  function onGuidedExit() {
+  function onGuidedExit(options: HandlerOptions = {}) {
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
     setSim((prev) => {
       if (!isGuidedRecoveryInProgress(prev)) {
         return prev
@@ -1103,7 +1486,11 @@ export function SessionPage() {
     })
   }
 
-  function onFinishSession() {
+  function onFinishSession(options: HandlerOptions = {}) {
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
     setSim((prev) => {
       if (prev.scene !== 'recovery' || prev.runStatus !== 'success') {
         return prev
@@ -1113,14 +1500,23 @@ export function SessionPage() {
     })
   }
 
-  function onReplay() {
-    memoryUpdatedRef.current = false
-    lastEditAtRef.current = Date.now()
-    editEventTimesRef.current = []
-    deleteBurstRef.current = { count: 0, lastAt: 0 }
-    setIsShowMeTooltipOpen(false)
-    setSim(initialState)
+  function onReplay(options: HandlerOptions = {}) {
+    if (autoplayDemoEnabled && !options.fromDemo) {
+      resetDemoController(true)
+      resetSessionState()
+      return
+    }
+
+    if (!options.fromDemo) {
+      markUserInteraction()
+    }
+
+    resetSessionState()
   }
+
+  const debugStatusLine = import.meta.env.DEV
+    ? `Debug · task=${task.id} · demoStep=${autoplayDemoEnabled ? demoStep : 'off'} · stopped=${demoStoppedByUser ? 'yes' : 'no'} · nudge=${sim.nudgeVisible ? 'on' : 'off'} · guided=${sim.recovery.mode === 'guided' ? `${sim.recovery.step}/${sim.recovery.totalSteps}` : 'none'}`
+    : null
 
   const phaseLabel =
     isGuidedRecoveryInProgress(sim)
@@ -1131,21 +1527,25 @@ export function SessionPage() {
           ? 'Recovery'
           : 'Complete'
 
-  const nudgeGuidance = useMemo(() => getGuidedContent(sim.currentErrorKey), [sim.currentErrorKey])
+  const nudgeGuidance = useMemo(
+    () => getGuidedContent(sim.currentErrorKey),
+    [getGuidedContent, sim.currentErrorKey],
+  )
   const personalizedNudgeCopy = useMemo(
     () => personalizeNudgeCopy(nudgeGuidance.nudgeCopy, userProfile?.skillLevel ?? null),
     [nudgeGuidance.nudgeCopy, userProfile],
   )
+  const requestedLanguageLabel = useMemo(() => getRequestedLanguageLabel(userProfile), [userProfile])
   const profileLabel = useMemo(() => {
     if (!userProfile) {
       return 'Profile not set'
     }
 
-    return `${userProfile.skillLevel} • ${userProfile.goal} • ${userProfile.primaryLanguage}`
+    return `${userProfile.skillLevel} • ${userProfile.goal} • ${getRuntimeLanguageLabel()}`
   }, [userProfile])
   const activeGuidedSteps = useMemo(
     () => getGuidedContent(sim.guidedErrorKey).guidedSteps,
-    [sim.guidedErrorKey],
+    [getGuidedContent, sim.guidedErrorKey],
   )
 
   const currentGuidedStep =
@@ -1160,9 +1560,29 @@ export function SessionPage() {
 
   const runBadgeVariant =
     sim.runStatus === 'success' ? 'success' : sim.runStatus === 'error' ? 'warning' : 'neutral'
+  const mascotData = useMemo(
+    () => ({
+      phase:
+        sim.scene === 'struggle' ? 'Struggle' : sim.scene === 'recovery' ? 'Recovery' : 'Complete',
+      runStatus: sim.runStatus,
+      nudgeVisible: sim.nudgeVisible,
+      guidedStep:
+        sim.recovery.mode === 'guided' && !sim.recovery.fixApplied
+          ? { current: sim.recovery.step, total: sim.recovery.totalSteps }
+          : undefined,
+      isAfk,
+      demoMode: autoplayDemoEnabled,
+    }),
+    [autoplayDemoEnabled, isAfk, sim.nudgeVisible, sim.recovery, sim.runStatus, sim.scene],
+  )
 
   return (
-    <section className="page-enter grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
+    <section
+      ref={sessionSectionRef}
+      className="page-enter grid gap-6 lg:grid-cols-[1.35fr_0.65fr]"
+      onPointerDownCapture={handleSessionInteractionCapture}
+      onKeyDownCapture={handleSessionInteractionCapture}
+    >
       <Card className="min-h-[520px] space-y-4" padding="md" interactive>
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-2">
@@ -1170,24 +1590,33 @@ export function SessionPage() {
             <h1 className="text-2xl font-semibold tracking-[-0.015em] text-pebble-text-primary">
               Session {sessionId ?? '1'}
             </h1>
+            <p className="text-xs text-pebble-text-muted">{task.title}</p>
             <Badge variant="neutral" className="max-w-full truncate">
               {profileLabel}
             </Badge>
+            {requestedLanguageLabel && (
+              <p className="text-xs text-pebble-text-muted">
+                Requested language: {requestedLanguageLabel}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {autoplayDemoEnabled && !demoStoppedByUser && <Badge variant="success">Autoplay demo</Badge>}
+            {autoplayDemoEnabled && !demoStoppedByUser && <Badge variant="neutral">Speed: Slow</Badge>}
+            {autoplayDemoEnabled && demoStoppedByUser && <Badge variant="neutral">Demo paused</Badge>}
             <Badge variant={runBadgeVariant}>{sim.runStatus === 'idle' ? phaseLabel : sim.runStatus}</Badge>
             {sim.flowRecovered && <Badge variant="success">Flow recovered</Badge>}
             {isAfk && <Badge variant="neutral">AFK</Badge>}
             <Button
               size="sm"
               variant="primary"
-              onClick={onRun}
+              onClick={() => onRun()}
               disabled={isAfk || decisionGateOpen || isGuidedRecoveryInProgress(sim)}
             >
               Run
             </Button>
-            <Button size="sm" variant="secondary" onClick={onReplay}>
-              Replay
+            <Button size="sm" variant="secondary" onClick={() => onReplay()}>
+              {autoplayDemoEnabled ? 'Replay demo' : 'Replay'}
             </Button>
           </div>
         </header>
@@ -1270,7 +1699,7 @@ export function SessionPage() {
                 ref={showMeButtonRef}
                 type="button"
                 className={buttonClass('primary', 'sm')}
-                onClick={onShowMe}
+                onClick={() => onShowMe()}
                 onMouseEnter={showShowMeTooltip}
                 onMouseLeave={hideShowMeTooltip}
                 onFocus={showShowMeTooltip}
@@ -1282,7 +1711,7 @@ export function SessionPage() {
               <button
                 type="button"
                 className={buttonClass('secondary', 'sm')}
-                onClick={onNotNow}
+                onClick={() => onNotNow()}
               >
                 Not now
               </button>
@@ -1342,7 +1771,7 @@ export function SessionPage() {
         )}
 
         {sim.scene === 'recovery' && sim.runStatus === 'success' && !sim.sessionComplete && (
-          <Button size="sm" variant="primary" onClick={onFinishSession}>
+          <Button size="sm" variant="primary" onClick={() => onFinishSession()}>
             Finish session
           </Button>
         )}
@@ -1350,16 +1779,24 @@ export function SessionPage() {
         <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4">
           <p className="text-xs text-pebble-text-secondary">Demo pacing</p>
           <p className="mt-1 text-sm font-medium text-pebble-text-primary">
-            {demoMode
-              ? 'Demo mode On. AFK + pacing windows are shortened.'
+            {autoplayDemoEnabled
+              ? 'Demo mode On. Session autoplay loops until you interact.'
+              : demoMode
+                ? 'Demo mode On. Autoplay is available for Session 1.'
               : 'Demo mode Off. Standard pacing and AFK windows are active.'}
           </p>
+          {autoplayDemoEnabled && demoStoppedByUser && (
+            <p className="mt-1 text-xs text-pebble-text-muted">Demo paused. You took over.</p>
+          )}
+          {debugStatusLine && <p className="mt-1 text-[11px] text-pebble-text-muted">{debugStatusLine}</p>}
         </div>
 
         <Link to="/dashboard" className={buttonClass('secondary', 'sm')}>
           Open insights
         </Link>
       </Card>
+
+      <PebbleMascot data={mascotData} />
 
       {isShowMeTooltipOpen &&
         showMeTooltipPosition &&

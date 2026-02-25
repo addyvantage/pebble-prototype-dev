@@ -1,4 +1,16 @@
-export type RunErrorKey = 'PARITY_CHECK' | 'ACCUMULATOR_TARGET' | 'OUTPUT_MISMATCH'
+export type RunErrorKey =
+  | 'PARITY_CHECK'
+  | 'ACCUMULATOR_TARGET'
+  | 'OUTPUT_MISMATCH'
+  | 'MISSING_HASHMAP'
+  | 'WRONG_RETURN'
+  | 'LENGTH_MISMATCH_IGNORED'
+  | 'MISSING_SLIDING_WINDOW'
+  | 'WRONG_WINDOW_UPDATE'
+  | 'TRIM_NOT_HANDLED'
+  | 'WRONG_JOIN'
+  | 'CASE_NOT_NORMALIZED'
+  | 'NON_ALPHANUMERIC_NOT_FILTERED'
 
 export type TaskRunResult = {
   status: 'success' | 'error'
