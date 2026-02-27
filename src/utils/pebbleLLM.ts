@@ -1,4 +1,4 @@
-import { PEBBLE_SYSTEM_PROMPT } from '../../shared/pebblePromptRules'
+import { PEBBLE_SYSTEM_PROMPT } from '../shared/pebblePromptRules'
 
 type PebbleLLMContext = {
   taskTitle: string

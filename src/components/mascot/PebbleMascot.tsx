@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { PEBBLE_CLARIFY_RULE, PEBBLE_OUTPUT_RULE } from '../../../shared/pebblePromptRules'
+import { PEBBLE_CLARIFY_RULE, PEBBLE_OUTPUT_RULE } from '../../shared/pebblePromptRules'
 import { askPebble } from '../../utils/pebbleLLM'
 
 export type MascotContextData = {
