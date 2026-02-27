@@ -95,6 +95,29 @@ function applyLongestSubstringPatch(codeText: string) {
   return `${codeText.trim()}\n\n${solutionCode}`
 }
 
+const lesson: NonNullable<TaskDefinition['lesson']> = {
+  objectives: [
+    'Use a sliding window with left/right pointers.',
+    'Track each character’s most recent index.',
+    'Advance the left pointer safely on duplicates.',
+    'Update max window length after each step.',
+  ],
+  constraints: [
+    'Do not move the left pointer backward.',
+    'Prefer O(n) traversal with a map.',
+  ],
+  hints: [
+    'Store seen positions in a `Map<string, number>`.',
+    'Use `left = Math.max(left, seenAt + 1)` when a duplicate appears.',
+    'Window size is always `right - left + 1`.',
+  ],
+  commonMistakes: [
+    'Resetting the whole window on every duplicate.',
+    'Updating left without `Math.max`, which can move it backward.',
+    'Forgetting to update `maxLength` each loop iteration.',
+  ],
+}
+
 export const task4LongestSubstring: TaskDefinition = {
   id: '4',
   title: 'Longest Substring Without Repeating Characters',
@@ -102,6 +125,7 @@ export const task4LongestSubstring: TaskDefinition = {
   topic: 'Sliding window',
   difficulty: 'medium',
   module: 'Strings',
+  lesson,
   starterCode,
   solutionCode,
   languageRuntime: 'javascript_sim',

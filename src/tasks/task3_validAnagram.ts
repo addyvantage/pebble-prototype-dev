@@ -94,6 +94,29 @@ function applyValidAnagramPatch(codeText: string) {
   return `${codeText.trim()}\n\n${solutionCode}`
 }
 
+const lesson: NonNullable<TaskDefinition['lesson']> = {
+  objectives: [
+    'Reject strings with different lengths immediately.',
+    'Build a frequency map from the first string.',
+    'Consume counts while scanning the second string.',
+    'Return true only after all checks pass.',
+  ],
+  constraints: [
+    'Keep time complexity linear in string length.',
+    'Avoid sorting, which adds extra complexity.',
+  ],
+  hints: [
+    'Length check is the fastest early exit.',
+    'Increment counts in pass one, decrement in pass two.',
+    'Fail fast when any count drops below zero.',
+  ],
+  commonMistakes: [
+    'Skipping the length guard and over-processing impossible pairs.',
+    'Forgetting to decrement counts in the second pass.',
+    'Returning true too early before all characters are checked.',
+  ],
+}
+
 export const task3ValidAnagram: TaskDefinition = {
   id: '3',
   title: 'Valid Anagram',
@@ -101,6 +124,7 @@ export const task3ValidAnagram: TaskDefinition = {
   topic: 'Frequency map comparison',
   difficulty: 'easy',
   module: 'Strings',
+  lesson,
   starterCode,
   solutionCode,
   languageRuntime: 'javascript_sim',

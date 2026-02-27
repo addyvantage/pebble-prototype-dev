@@ -73,6 +73,28 @@ function applyReverseWordsPatch(codeText: string) {
   return `${codeText.trim()}\n\n${solutionCode}`
 }
 
+const lesson: NonNullable<TaskDefinition['lesson']> = {
+  objectives: [
+    'Trim outer whitespace first.',
+    'Split words using whitespace-aware parsing.',
+    'Reverse word order, then join with a single space.',
+  ],
+  constraints: [
+    'Preserve word content, only change word order.',
+    'Normalize repeated spaces into single separators.',
+  ],
+  hints: [
+    'A chained transform is enough: `trim -> split -> reverse -> join`.',
+    'Regex `/\\s+/` handles multiple spaces cleanly.',
+    "The join separator should be exactly `' '`.",
+  ],
+  commonMistakes: [
+    'Skipping `trim()` and keeping stray leading/trailing spaces.',
+    'Using default join (comma) instead of a single space.',
+    'Reversing characters instead of whole words.',
+  ],
+}
+
 export const task5ReverseWords: TaskDefinition = {
   id: '5',
   title: 'Reverse Words in a String',
@@ -80,6 +102,7 @@ export const task5ReverseWords: TaskDefinition = {
   topic: 'Trim / split / reverse / join',
   difficulty: 'easy',
   module: 'Strings',
+  lesson,
   starterCode,
   solutionCode,
   languageRuntime: 'javascript_sim',

@@ -105,6 +105,28 @@ function applyFirstUniquePatch(codeText: string) {
   return `${codeText.trim()}\n\n${solutionCode}`
 }
 
+const lesson: NonNullable<TaskDefinition['lesson']> = {
+  objectives: [
+    'Count each character frequency first.',
+    'Run a second pass in original order to find the first unique index.',
+    'Return `-1` when no unique character exists.',
+  ],
+  constraints: [
+    'Keep order-sensitive scanning so the first index is correct.',
+    'Use deterministic two-pass logic.',
+  ],
+  hints: [
+    'A frequency map should store number counts by character key.',
+    'In pass two, check count equals exactly `1` before returning.',
+    'Return index, not character value.',
+  ],
+  commonMistakes: [
+    'Trying to solve in one pass and losing first-index ordering.',
+    'Returning the character instead of its index.',
+    'Missing the final `return -1` fallback.',
+  ],
+}
+
 export const task2FirstUnique: TaskDefinition = {
   id: '2',
   title: 'First Non-Repeating Character',
@@ -112,6 +134,7 @@ export const task2FirstUnique: TaskDefinition = {
   topic: 'Strings + hash map',
   difficulty: 'medium',
   module: 'Foundations',
+  lesson,
   starterCode,
   solutionCode,
   languageRuntime: 'javascript_sim',

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PebbleMascot } from '../components/mascot/PebbleMascot'
 import { CodeEditor } from '../components/session/CodeEditor'
 import { GuidedFixPanel } from '../components/session/GuidedFixPanel'
@@ -8,13 +8,13 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Divider } from '../components/ui/Divider'
 import { buttonClass } from '../components/ui/buttonStyles'
-import { getTaskById } from '../tasks'
-import type { GuidedStep } from '../tasks/types'
+import { getTaskById, taskList } from '../tasks'
+import type { GuidedStep, TaskLesson } from '../tasks/types'
 import { getDemoMode } from '../utils/demoMode'
 import { updatePebbleMemoryAfterSession } from '../utils/pebbleMemory'
 import { appendSessionInsight } from '../utils/sessionInsights'
 import { type RunErrorKey, type TaskRunResult } from '../utils/taskHarness'
-import { markTaskCompleted } from '../utils/taskProgress'
+import { getTaskProgress, markTaskCompleted } from '../utils/taskProgress'
 import { computeStruggleScore, type TelemetrySnapshot } from '../utils/telemetry'
 import {
   getRequestedLanguageLabel,
@@ -94,6 +94,8 @@ type DemoStep =
   | 'pause'
   | 'replay'
 
+type LessonTab = 'objectives' | 'hints' | 'mistakes'
+
 type HandlerOptions = {
   fromDemo?: boolean
 }
@@ -147,6 +149,24 @@ const fallbackGuidedContent: GuidedContent = {
       highlightedLines: [],
       proposedLines: [],
     },
+  ],
+}
+
+const fallbackLesson: TaskLesson = {
+  objectives: [
+    'Understand the expected behavior before coding.',
+    'Make one small fix, then run again.',
+    'Use run output and guidance to validate progress.',
+  ],
+  hints: [
+    'Start with the line most tied to correctness.',
+    'Prefer minimal edits over large rewrites.',
+    'Re-run quickly after each meaningful change.',
+  ],
+  commonMistakes: [
+    'Editing too many lines at once.',
+    'Ignoring run output details.',
+    'Skipping validation after changes.',
   ],
 }
 
@@ -210,6 +230,13 @@ function clamp(value: number, min: number, max: number) {
 
 function computeRecoveryEffectivenessScore(timeToRecovery: number) {
   return clamp(Math.round(100 - timeToRecovery * 12), 0, 100)
+}
+
+function getDefaultLessonTab(skillLevel: UserSkillLevel | null): LessonTab {
+  if (skillLevel === 'Newbie' || skillLevel === 'Beginner') {
+    return 'objectives'
+  }
+  return 'hints'
 }
 
 function getNudgeThreshold(skillLevel: UserSkillLevel | null) {
@@ -293,6 +320,7 @@ function completeSession(state: SimulationState) {
 }
 
 export function SessionPage() {
+  const navigate = useNavigate()
   const { sessionId } = useParams<{ sessionId: string }>()
   const demoMode = useMemo(() => getDemoMode(), [])
   const task = useMemo(() => getTaskById(sessionId), [sessionId])
@@ -317,9 +345,14 @@ export function SessionPage() {
   const [demoStep, setDemoStep] = useState<DemoStep>(autoplayDemoEnabled ? 'init' : 'idle')
   const [demoStoppedByUser, setDemoStoppedByUser] = useState(false)
   const [demoRunId, setDemoRunId] = useState(0)
+  const [lessonTab, setLessonTab] = useState<LessonTab>(() =>
+    getDefaultLessonTab(userProfile?.skillLevel ?? null),
+  )
+  const [isReviewSolutionOpen, setIsReviewSolutionOpen] = useState(false)
   const demoPartialFixCode = task.demoScript?.partialFixCode ?? task.starterCode
 
   const memoryUpdatedRef = useRef(false)
+  const reviewCodeBeforeSolutionRef = useRef<string | null>(null)
   const showMeButtonRef = useRef<HTMLButtonElement | null>(null)
   const showMeTooltipId = useId()
   const sessionSectionRef = useRef<HTMLElement | null>(null)
@@ -351,6 +384,10 @@ export function SessionPage() {
   useEffect(() => {
     guidedRecoveryOpenRef.current = guidedRecoveryOpen
   }, [guidedRecoveryOpen])
+
+  useEffect(() => {
+    setLessonTab(getDefaultLessonTab(userProfile?.skillLevel ?? null))
+  }, [task.id, userProfile])
 
   const getGuidedContent = useCallback(
     (errorKey: RunErrorKey | null): GuidedContent => {
@@ -592,6 +629,7 @@ export function SessionPage() {
   const resetSessionState = useCallback(() => {
     const now = Date.now()
     memoryUpdatedRef.current = false
+    reviewCodeBeforeSolutionRef.current = null
     lastEditAtRef.current = now
     editEventTimesRef.current = []
     deleteBurstRef.current = { count: 0, lastAt: 0 }
@@ -602,6 +640,7 @@ export function SessionPage() {
     isAfkRef.current = false
     guidedRecoveryOpenRef.current = false
     setIsAfk(false)
+    setIsReviewSolutionOpen(false)
     setIsShowMeTooltipOpen(false)
     setShowMeTooltipPosition(null)
     setSim(createInitialState(task.starterCode))
@@ -1510,6 +1549,34 @@ export function SessionPage() {
     resetSessionState()
   }
 
+  function onToggleReviewSolution() {
+    if (!sim.sessionComplete) {
+      return
+    }
+
+    if (isReviewSolutionOpen) {
+      const restoreCode = reviewCodeBeforeSolutionRef.current
+      reviewCodeBeforeSolutionRef.current = null
+      setIsReviewSolutionOpen(false)
+      if (restoreCode !== null) {
+        setSim((prev) => ({
+          ...prev,
+          codeText: restoreCode,
+        }))
+      }
+      return
+    }
+
+    reviewCodeBeforeSolutionRef.current = sim.codeText
+    setIsReviewSolutionOpen(true)
+    setSim((prev) => ({
+      ...prev,
+      codeText: task.solutionCode,
+      highlightedLines: [],
+      proposedLines: [],
+    }))
+  }
+
   const debugStatusLine = import.meta.env.DEV
     ? `Debug · task=${task.id} · demoStep=${autoplayDemoEnabled ? demoStep : 'off'} · stopped=${demoStoppedByUser ? 'yes' : 'no'} · nudge=${sim.nudgeVisible ? 'on' : 'off'} · guided=${sim.recovery.mode === 'guided' ? `${sim.recovery.step}/${sim.recovery.totalSteps}` : 'none'}`
     : null
@@ -1539,6 +1606,49 @@ export function SessionPage() {
 
     return `${userProfile.skillLevel} • ${userProfile.goal} • ${getRuntimeLanguageLabel()}`
   }, [userProfile])
+  const taskLesson = task.lesson ?? fallbackLesson
+  const lessonItems = useMemo(() => {
+    if (lessonTab === 'objectives') {
+      return taskLesson.objectives
+    }
+    if (lessonTab === 'hints') {
+      return taskLesson.hints
+    }
+    return taskLesson.commonMistakes
+  }, [lessonTab, taskLesson.commonMistakes, taskLesson.hints, taskLesson.objectives])
+  const moduleTasks = useMemo(() => {
+    return taskList
+      .filter((entry) => entry.module === task.module)
+      .slice()
+      .sort((left, right) => {
+        const leftNumericId = Number(left.id)
+        const rightNumericId = Number(right.id)
+        const leftSortValue = Number.isNaN(leftNumericId) ? Number.MAX_SAFE_INTEGER : leftNumericId
+        const rightSortValue = Number.isNaN(rightNumericId) ? Number.MAX_SAFE_INTEGER : rightNumericId
+        if (leftSortValue !== rightSortValue) {
+          return leftSortValue - rightSortValue
+        }
+        return left.id.localeCompare(right.id)
+      })
+  }, [task.module])
+  const completedModuleTaskIds = useMemo(() => {
+    const completedIds = new Set(getTaskProgress().completedTaskIds)
+    if (sim.sessionComplete) {
+      completedIds.add(task.id)
+    }
+    return completedIds
+  }, [sim.sessionComplete, task.id])
+  const moduleCompletedCount = useMemo(
+    () => moduleTasks.filter((entry) => completedModuleTaskIds.has(entry.id)).length,
+    [completedModuleTaskIds, moduleTasks],
+  )
+  const moduleTotalCount = moduleTasks.length
+  const nextUnfinishedModuleTask = useMemo(
+    () => moduleTasks.find((entry) => !completedModuleTaskIds.has(entry.id)) ?? null,
+    [completedModuleTaskIds, moduleTasks],
+  )
+  const completionCtaPath = nextUnfinishedModuleTask ? `/session/${nextUnfinishedModuleTask.id}` : '/dashboard'
+  const completionCtaLabel = nextUnfinishedModuleTask ? 'Next task' : 'Back to Dashboard'
   const activeGuidedSteps = useMemo(
     () => getGuidedContent(sim.guidedErrorKey).guidedSteps,
     [getGuidedContent, sim.guidedErrorKey],
@@ -1556,20 +1666,65 @@ export function SessionPage() {
 
   const runBadgeVariant =
     sim.runStatus === 'success' ? 'success' : sim.runStatus === 'error' ? 'warning' : 'neutral'
+  const mascotLine = useMemo(() => {
+    if (sim.scene === 'complete') {
+      return 'Want the next task?'
+    }
+    if (sim.scene === 'recovery') {
+      return 'Nice, stabilize then finish.'
+    }
+    if (sim.recovery.mode === 'guided' && !sim.recovery.fixApplied) {
+      return `Step ${sim.recovery.step}/${sim.recovery.totalSteps} - focus here.`
+    }
+    if (sim.nudgeVisible) {
+      return 'Want a guided fix?'
+    }
+    return 'You are making progress. Try one small edit and run.'
+  }, [sim.nudgeVisible, sim.recovery.fixApplied, sim.recovery.mode, sim.recovery.step, sim.recovery.totalSteps, sim.scene])
   const mascotData = useMemo(
     () => ({
       phase:
         sim.scene === 'struggle' ? 'Struggle' : sim.scene === 'recovery' ? 'Recovery' : 'Complete',
+      currentTaskTitle: task.title,
       runStatus: sim.runStatus,
+      runMessage: sim.runMessage,
+      moduleProgress: {
+        completedCount: moduleCompletedCount,
+        totalCount: moduleTotalCount,
+      },
+      mascotLine,
       nudgeVisible: sim.nudgeVisible,
       guidedStep:
         sim.recovery.mode === 'guided' && !sim.recovery.fixApplied
           ? { current: sim.recovery.step, total: sim.recovery.totalSteps }
           : undefined,
+      guidedActive: sim.recovery.mode === 'guided' && !sim.recovery.fixApplied,
+      currentErrorKey: sim.currentErrorKey,
+      codeText: sim.codeText,
+      struggleScore: sim.struggleScore,
+      repeatErrorCount: sim.telemetry.repeatErrorCount,
+      errorHistory: sim.errorKeyHistory,
       isAfk,
       demoMode: autoplayDemoEnabled,
     }),
-    [autoplayDemoEnabled, isAfk, sim.nudgeVisible, sim.recovery, sim.runStatus, sim.scene],
+    [
+      autoplayDemoEnabled,
+      isAfk,
+      mascotLine,
+      sim.codeText,
+      sim.currentErrorKey,
+      sim.errorKeyHistory,
+      moduleCompletedCount,
+      moduleTotalCount,
+      sim.nudgeVisible,
+      sim.recovery,
+      sim.runMessage,
+      sim.runStatus,
+      sim.scene,
+      sim.struggleScore,
+      sim.telemetry.repeatErrorCount,
+      task.title,
+    ],
   )
 
   return (
@@ -1607,7 +1762,7 @@ export function SessionPage() {
               size="sm"
               variant="primary"
               onClick={() => onRun()}
-              disabled={isAfk || decisionGateOpen || isGuidedRecoveryInProgress(sim)}
+              disabled={isAfk || decisionGateOpen || isGuidedRecoveryInProgress(sim) || isReviewSolutionOpen}
             >
               Run
             </Button>
@@ -1659,7 +1814,7 @@ export function SessionPage() {
           onChange={onEditorChange}
           highlightedLines={sim.highlightedLines}
           proposedLines={sim.proposedLines}
-          readOnly={sim.sessionComplete || isGuidedRecoveryInProgress(sim)}
+          readOnly={sim.sessionComplete || isGuidedRecoveryInProgress(sim) || isReviewSolutionOpen}
           onRunRequested={onRun}
           onEscape={isGuidedRecoveryInProgress(sim) ? onGuidedExit : undefined}
         />
@@ -1681,6 +1836,55 @@ export function SessionPage() {
         </div>
 
         <Divider />
+
+        <div className="space-y-3 rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium text-pebble-text-primary">Lesson</p>
+            <Badge variant="neutral">{task.module}</Badge>
+          </div>
+          <div className="inline-flex rounded-xl border border-pebble-border/40 bg-pebble-overlay/[0.08] p-1">
+            <button
+              type="button"
+              className={buttonClass(lessonTab === 'objectives' ? 'primary' : 'secondary', 'sm')}
+              onClick={() => setLessonTab('objectives')}
+            >
+              Objectives
+            </button>
+            <button
+              type="button"
+              className={buttonClass(lessonTab === 'hints' ? 'primary' : 'secondary', 'sm')}
+              onClick={() => setLessonTab('hints')}
+            >
+              Hints
+            </button>
+            <button
+              type="button"
+              className={buttonClass(lessonTab === 'mistakes' ? 'primary' : 'secondary', 'sm')}
+              onClick={() => setLessonTab('mistakes')}
+            >
+              Mistakes
+            </button>
+          </div>
+          <ul className="space-y-1.5 pl-4 text-sm text-pebble-text-secondary">
+            {lessonItems.map((item) => (
+              <li key={item} className="list-disc leading-relaxed">
+                {item}
+              </li>
+            ))}
+          </ul>
+          {lessonTab === 'objectives' && taskLesson.constraints && taskLesson.constraints.length > 0 && (
+            <div className="rounded-lg border border-pebble-border/28 bg-pebble-overlay/[0.05] p-3">
+              <p className="text-xs font-medium text-pebble-text-secondary">Constraints</p>
+              <ul className="mt-1 space-y-1 pl-4 text-xs text-pebble-text-muted">
+                {taskLesson.constraints.map((constraint) => (
+                  <li key={constraint} className="list-disc">
+                    {constraint}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
 
         {sim.nudgeVisible && (
           <div
@@ -1770,6 +1974,22 @@ export function SessionPage() {
           <Button size="sm" variant="primary" onClick={() => onFinishSession()}>
             Finish session
           </Button>
+        )}
+
+        {sim.sessionComplete && (
+          <div className="space-y-3 rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4">
+            <p className="text-sm text-pebble-text-secondary">
+              {moduleCompletedCount}/{moduleTotalCount} tasks completed in {task.module}.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="primary" onClick={() => navigate(completionCtaPath)}>
+                {completionCtaLabel}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={onToggleReviewSolution}>
+                {isReviewSolutionOpen ? 'Back to your code' : 'Review solution'}
+              </Button>
+            </div>
+          </div>
         )}
 
         <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4">

@@ -153,6 +153,29 @@ const errorKeyConfig: TaskDefinition['errorKeyConfig'] = {
   },
 }
 
+const lesson: NonNullable<TaskDefinition['lesson']> = {
+  objectives: [
+    'Filter only even numbers with a strict parity check.',
+    'Accumulate the current value, not the full array.',
+    'Return the final numeric total cleanly.',
+  ],
+  constraints: [
+    'Keep a single pass through the array.',
+    'Avoid mutating the input array.',
+    'Use lightweight loop logic with no extra helpers.',
+  ],
+  hints: [
+    'Look at the condition line first: parity should be a boolean expression.',
+    'Inside the branch, add `n` because `n` is the current loop value.',
+    'A tiny operator fix often resolves the main bug quickly.',
+  ],
+  commonMistakes: [
+    'Using `=` instead of `===` in the parity condition.',
+    'Adding `nums` instead of `n` in the accumulator.',
+    'Forgetting the semicolon or return cleanup after edits.',
+  ],
+}
+
 export const task1SumEven: TaskDefinition = {
   id: '1',
   title: 'Sum Even Numbers',
@@ -160,6 +183,7 @@ export const task1SumEven: TaskDefinition = {
   topic: 'Arrays & loops',
   difficulty: 'easy',
   module: 'Strings',
+  lesson,
   starterCode,
   solutionCode,
   languageRuntime: 'javascript_sim',

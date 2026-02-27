@@ -84,6 +84,29 @@ function applyPalindromePatch(codeText: string) {
   return `${codeText.trim()}\n\n${solutionCode}`
 }
 
+const lesson: NonNullable<TaskDefinition['lesson']> = {
+  objectives: [
+    'Normalize case before comparison.',
+    'Remove non-alphanumeric characters.',
+    'Use two pointers moving inward from both ends.',
+    'Return false on first mismatch, true otherwise.',
+  ],
+  constraints: [
+    'Compare normalized content only.',
+    'Keep pointer movement deterministic and symmetric.',
+  ],
+  hints: [
+    'Prepare a clean string once, then compare on that string.',
+    'Initialize `left = 0` and `right = normalized.length - 1`.',
+    'Increment/decrement pointers only after a successful comparison.',
+  ],
+  commonMistakes: [
+    'Comparing raw input without lowercasing.',
+    'Ignoring punctuation and spaces in palindrome checks.',
+    'Forgetting to move both pointers in the loop.',
+  ],
+}
+
 export const task6Palindrome: TaskDefinition = {
   id: '6',
   title: 'Palindrome Check',
@@ -91,6 +114,7 @@ export const task6Palindrome: TaskDefinition = {
   topic: 'Normalization + two pointers',
   difficulty: 'easy',
   module: 'Strings',
+  lesson,
   starterCode,
   solutionCode,
   languageRuntime: 'javascript_sim',

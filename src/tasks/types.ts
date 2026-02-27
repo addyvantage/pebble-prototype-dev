@@ -16,6 +16,13 @@ export type TaskErrorConfig = {
   applyPatch?: (codeText: string) => string
 }
 
+export type TaskLesson = {
+  objectives: string[]
+  constraints?: string[]
+  hints: string[]
+  commonMistakes: string[]
+}
+
 export type TaskDefinition = {
   id: TaskId
   title: string
@@ -23,6 +30,7 @@ export type TaskDefinition = {
   topic: string
   difficulty: 'easy' | 'medium' | 'hard'
   module: string
+  lesson?: TaskLesson
   starterCode: string
   solutionCode: string
   languageRuntime: 'javascript_sim'
