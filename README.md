@@ -17,6 +17,24 @@ npm run dev
 
 Open the local URL shown in your terminal, usually `http://localhost:5173`.
 
+## Local full-stack dev
+
+```bash
+npm install
+npm run dev:full
+```
+
+Open `http://localhost:5173/session/1`.
+
+`/api/*` is proxied by Vite to the local backend on `http://localhost:3001`, so frontend calls stay as `/api/pebble`.
+
+### Smoke test
+
+```bash
+curl -sS http://localhost:5173/api/pebble
+curl -sS -X POST http://localhost:5173/api/pebble -H "Content-Type: application/json" -d '{"prompt":"Say hi in 1 line","context":{}}'
+```
+
 ## Step 1 status
 
 The current build includes:
