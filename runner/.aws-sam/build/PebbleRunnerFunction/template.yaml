@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Pebble Python sandbox runner (Lambda)
+
+Globals:
+  Function:
+    Runtime: python3.11
+    MemorySize: 512
+    Timeout: 10
+    Tracing: Active
+
+Resources:
+  PebbleRunnerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - arm64
+      FunctionName: pebble-python-runner
+      Handler: handler.handler
+      CodeUri: ./
+      FunctionUrlConfig:
+        AuthType: AWS_IAM
+        InvokeMode: BUFFERED
+      # Optional VPC isolation:
+      # 1) Place function in private subnets with no NAT gateway.
+      # 2) Add only required VPC endpoints if needed.
+      # This blocks outbound internet access from the runner by default.
+
+Outputs:
+  RunnerFunctionName:
+    Description: Lambda function name for /api/run/python invoke proxy
+    Value: !Ref PebbleRunnerFunction
+  RunnerFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt PebbleRunnerFunction.Arn
+  RunnerFunctionUrl:
+    Description: IAM-protected Function URL
+    Value: !GetAtt PebbleRunnerFunctionUrl.FunctionUrl

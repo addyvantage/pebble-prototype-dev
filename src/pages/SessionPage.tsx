@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { PythonIDE, type PythonRunResponse } from '../components/ide/PythonIDE'
 import { PebbleMascot } from '../components/mascot/PebbleMascot'
 import { CodeEditor } from '../components/session/CodeEditor'
 import { GuidedFixPanel } from '../components/session/GuidedFixPanel'
@@ -27,6 +28,7 @@ type Scene = 'struggle' | 'recovery' | 'complete'
 type RunStatus = 'idle' | 'error' | 'success'
 type RecoveryMode = 'none' | 'guided'
 type DecisionChoice = 'show_me' | 'not_now' | null
+type RuntimeMode = 'python' | 'js_demo'
 
 type GuidedContent = {
   nudgeCopy: string
@@ -52,7 +54,7 @@ type SimulationState = {
   lastErrorKey: RunErrorKey | null
   currentErrorKey: RunErrorKey | null
   guidedErrorKey: RunErrorKey | null
-  errorKeyHistory: RunErrorKey[]
+  errorKeyHistory: string[]
   sameErrorStreak: number
   telemetry: TelemetrySnapshot
   struggleScore: number
@@ -116,6 +118,14 @@ const EDIT_WINDOW_MS = 5_000
 const BACKSPACE_BURST_WINDOW_MS = 700
 const BACKSPACE_BURST_THRESHOLD = 4
 const ERROR_HISTORY_SIZE = 5
+const PYTHON_ERROR_HISTORY_SIZE = 3
+const RUN_MESSAGE_MAX_CHARS = 1_400
+const RUN_ERROR_ENTRY_MAX_CHARS = 420
+const PYTHON_STARTER_CODE = `def add_numbers(a, b):
+    return a + b
+
+print("Sum:", add_numbers(4, 8))
+`
 
 const DEMO_PACING = {
   typeCharMs: 45,
@@ -228,6 +238,13 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
 }
 
+function trimText(value: string, maxChars: number) {
+  if (value.length <= maxChars) {
+    return value
+  }
+  return `${value.slice(0, maxChars)}...`
+}
+
 function computeRecoveryEffectivenessScore(timeToRecovery: number) {
   return clamp(Math.round(100 - timeToRecovery * 12), 0, 100)
 }
@@ -324,7 +341,8 @@ export function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const demoMode = useMemo(() => getDemoMode(), [])
   const task = useMemo(() => getTaskById(sessionId), [sessionId])
-  const autoplayDemoEnabled = demoMode && task.id === '1'
+  const [runtimeMode, setRuntimeMode] = useState<RuntimeMode>('python')
+  const autoplayDemoEnabled = demoMode && task.id === '1' && runtimeMode === 'js_demo'
   const userProfile = useMemo(() => getUserProfile(), [])
   const afkThresholdMs = useMemo(
     () => (autoplayDemoEnabled ? AFK_THRESHOLD_MS_DEMO : AFK_THRESHOLD_MS),
@@ -335,7 +353,7 @@ export function SessionPage() {
     [userProfile],
   )
 
-  const [sim, setSim] = useState<SimulationState>(() => createInitialState(task.starterCode))
+  const [sim, setSim] = useState<SimulationState>(() => createInitialState(PYTHON_STARTER_CODE))
   const [isAfk, setIsAfk] = useState(false)
   const [isShowMeTooltipOpen, setIsShowMeTooltipOpen] = useState(false)
   const [showMeTooltipPosition, setShowMeTooltipPosition] = useState<{
@@ -643,8 +661,9 @@ export function SessionPage() {
     setIsReviewSolutionOpen(false)
     setIsShowMeTooltipOpen(false)
     setShowMeTooltipPosition(null)
-    setSim(createInitialState(task.starterCode))
-  }, [task.starterCode])
+    const starterCode = runtimeMode === 'python' ? PYTHON_STARTER_CODE : task.starterCode
+    setSim(createInitialState(starterCode))
+  }, [runtimeMode, task.starterCode])
 
   const resetDemoController = useCallback(
     (restartAutoplay: boolean) => {
@@ -1292,6 +1311,10 @@ export function SessionPage() {
   }
 
   function onRun(options: HandlerOptions = {}) {
+    if (runtimeMode !== 'js_demo') {
+      return
+    }
+
     if (!options.fromDemo) {
       markUserInteraction()
     }
@@ -1308,6 +1331,65 @@ export function SessionPage() {
       const result = task.run(prev.codeText)
       return processRunResult(prev, result)
     })
+  }
+
+  function onPythonRunComplete(result: PythonRunResponse, currentCode: string) {
+    setSim((prev) => {
+      const nextRunStatus: RunStatus = result.ok ? 'success' : 'error'
+      const outputSource = nextRunStatus === 'error' ? result.stderr : result.stdout
+      const fallbackMessage =
+        nextRunStatus === 'error'
+          ? result.timedOut
+            ? 'Execution timed out.'
+            : 'Execution failed with no stderr output.'
+          : 'Execution succeeded with no stdout output.'
+      const nextRunMessage = trimText((outputSource || fallbackMessage).trim(), RUN_MESSAGE_MAX_CHARS)
+      const nextErrorHistory =
+        nextRunStatus === 'error'
+          ? [...prev.errorKeyHistory, trimText(nextRunMessage, RUN_ERROR_ENTRY_MAX_CHARS)].slice(
+              -PYTHON_ERROR_HISTORY_SIZE,
+            )
+          : prev.errorKeyHistory
+      const repeatErrorCount =
+        nextRunStatus === 'error' ? clamp(prev.telemetry.repeatErrorCount + 1, 0, 14) : 0
+
+      let next: SimulationState = {
+        ...prev,
+        codeText: currentCode,
+        runStatus: nextRunStatus,
+        runMessage: nextRunMessage,
+        scene: nextRunStatus === 'success' ? 'recovery' : 'struggle',
+        flowRecovered: nextRunStatus === 'success',
+        recoveryStableSince: nextRunStatus === 'success' ? prev.simSecond : null,
+        highlightedLines: [],
+        proposedLines: [],
+        currentErrorKey: null,
+        lastErrorKey: null,
+        sameErrorStreak: 0,
+        errorKeyHistory: nextErrorHistory,
+        telemetry: {
+          ...prev.telemetry,
+          runAttempts: prev.telemetry.runAttempts + 1,
+          repeatErrorCount,
+        },
+        nudgeVisible: nextRunStatus === 'success' ? false : prev.nudgeVisible,
+        nudgeShownAtSimSecond: nextRunStatus === 'success' ? null : prev.nudgeShownAtSimSecond,
+        thresholdStreak: nextRunStatus === 'success' ? 0 : prev.thresholdStreak,
+        recovery: nextRunStatus === 'success' ? defaultRecoveryState : prev.recovery,
+      }
+
+      next = recomputeStruggle(next, isAfk)
+      return next
+    })
+  }
+
+  function onSelectRuntimeMode(nextMode: RuntimeMode) {
+    setRuntimeMode(nextMode)
+    setIsShowMeTooltipOpen(false)
+    setShowMeTooltipPosition(null)
+    setIsReviewSolutionOpen(false)
+    const starterCode = nextMode === 'python' ? PYTHON_STARTER_CODE : task.starterCode
+    setSim(createInitialState(starterCode))
   }
 
   function onShowMe(options: HandlerOptions = {}) {
@@ -1752,22 +1834,40 @@ export function SessionPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-xl border border-pebble-border/40 bg-pebble-overlay/[0.08] p-1">
+              <button
+                type="button"
+                className={buttonClass(runtimeMode === 'python' ? 'primary' : 'secondary', 'sm')}
+                onClick={() => onSelectRuntimeMode('python')}
+              >
+                Python IDE
+              </button>
+              <button
+                type="button"
+                className={buttonClass(runtimeMode === 'js_demo' ? 'primary' : 'secondary', 'sm')}
+                onClick={() => onSelectRuntimeMode('js_demo')}
+              >
+                JS demo
+              </button>
+            </div>
             {autoplayDemoEnabled && !demoStoppedByUser && <Badge variant="success">Autoplay demo</Badge>}
             {autoplayDemoEnabled && !demoStoppedByUser && <Badge variant="neutral">Speed: Slow</Badge>}
             {autoplayDemoEnabled && demoStoppedByUser && <Badge variant="neutral">Demo paused</Badge>}
             <Badge variant={runBadgeVariant}>{sim.runStatus === 'idle' ? phaseLabel : sim.runStatus}</Badge>
             {sim.flowRecovered && <Badge variant="success">Flow recovered</Badge>}
             {isAfk && <Badge variant="neutral">AFK</Badge>}
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => onRun()}
-              disabled={isAfk || decisionGateOpen || isGuidedRecoveryInProgress(sim) || isReviewSolutionOpen}
-            >
-              Run
-            </Button>
+            {runtimeMode === 'js_demo' && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => onRun()}
+                disabled={isAfk || decisionGateOpen || isGuidedRecoveryInProgress(sim) || isReviewSolutionOpen}
+              >
+                Run
+              </Button>
+            )}
             <Button size="sm" variant="secondary" onClick={() => onReplay()}>
-              {autoplayDemoEnabled ? 'Replay demo' : 'Replay'}
+              {runtimeMode === 'js_demo' && autoplayDemoEnabled ? 'Replay demo' : 'Replay'}
             </Button>
           </div>
         </header>
@@ -1809,20 +1909,32 @@ export function SessionPage() {
           </div>
         </div>
 
-        <CodeEditor
-          value={sim.codeText}
-          onChange={onEditorChange}
-          highlightedLines={sim.highlightedLines}
-          proposedLines={sim.proposedLines}
-          readOnly={sim.sessionComplete || isGuidedRecoveryInProgress(sim) || isReviewSolutionOpen}
-          onRunRequested={onRun}
-          onEscape={isGuidedRecoveryInProgress(sim) ? onGuidedExit : undefined}
-        />
+        {runtimeMode === 'python' ? (
+          <PythonIDE
+            key={`python-ide-${task.id}`}
+            initialCode={sim.codeText}
+            readOnly={isAfk || isReviewSolutionOpen}
+            onCodeChange={onEditorChange}
+            onRunComplete={onPythonRunComplete}
+          />
+        ) : (
+          <>
+            <CodeEditor
+              value={sim.codeText}
+              onChange={onEditorChange}
+              highlightedLines={sim.highlightedLines}
+              proposedLines={sim.proposedLines}
+              readOnly={sim.sessionComplete || isGuidedRecoveryInProgress(sim) || isReviewSolutionOpen}
+              onRunRequested={onRun}
+              onEscape={isGuidedRecoveryInProgress(sim) ? onGuidedExit : undefined}
+            />
 
-        <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4">
-          <p className="text-xs text-pebble-text-secondary">Run output</p>
-          <p className="mt-1 text-sm text-pebble-text-primary">{sim.runMessage}</p>
-        </div>
+            <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.06] p-4">
+              <p className="text-xs text-pebble-text-secondary">Run output</p>
+              <p className="mt-1 text-sm text-pebble-text-primary">{sim.runMessage}</p>
+            </div>
+          </>
+        )}
       </Card>
 
       <Card className="space-y-4" padding="md" interactive>
