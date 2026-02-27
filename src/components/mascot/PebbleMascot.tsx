@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { PEBBLE_CLARIFY_RULE, PEBBLE_OUTPUT_RULE } from '../../shared/pebblePromptRules'
 import { askPebble } from '../../utils/pebbleLLM'
 
 export type MascotContextData = {
@@ -35,7 +36,7 @@ type MemoryTurn = {
 }
 
 const STORAGE_KEY = 'pebble_mascot_position_v1'
-const MASCOT_SIZE = 58
+const MASCOT_SIZE = 72
 const VIEWPORT_PADDING = 24
 const RESET_OUTSIDE_THRESHOLD = 200
 const TYPEWRITER_MIN_CHARS = 1
@@ -177,7 +178,7 @@ function formatMemory(memory: MemoryTurn[]) {
     }
     return `Pebble: ${turn.content}`
   })
-  return ['Conversation so far:', ...lines, ''].join('\n')
+  return lines.join('\n')
 }
 
 function getLastUserQuestion(memory: MemoryTurn[]) {
@@ -227,24 +228,19 @@ function classifyAssistantKind(answer: string): MemoryTurn['kind'] {
 function buildPebblePrompt(question: string, data: MascotContextData, memory: MemoryTurn[]) {
   const recentErrors = data.errorHistory.slice(-3)
   const lastUserQuestion = getLastUserQuestion(memory)
+  const memoryBlock = formatMemory(memory)
+  const includeLastQuestion = lastUserQuestion && lastUserQuestion !== question
 
   return [
-    formatMemory(memory),
     `Current user question: ${question}`,
-    '',
-    'Context snapshot:',
-    `- struggleScore: ${data.struggleScore}`,
-    `- repeatErrorCount: ${data.repeatErrorCount}`,
-    `- errorHistory: [${recentErrors.join(', ')}]`,
-    `- guidedActive: ${data.guidedActive ? 'true' : 'false'}`,
-    `- guidedStep: ${data.guidedStep ? `${data.guidedStep.current}/${data.guidedStep.total}` : 'none'}`,
-    `- nudgeVisible: ${data.nudgeVisible ? 'true' : 'false'}`,
-    `- runStatus: ${data.runStatus}`,
-    `- currentErrorKey: ${data.currentErrorKey ?? 'none'}`,
-    ...(lastUserQuestion ? [`- lastUserQuestion: "${lastUserQuestion}"`] : []),
-    'If struggleScore > 75 OR repeatErrorCount > 3: ask exactly ONE clarifying question.',
-    'Output MUST be <= 6 lines. If more is needed, ask 1 short question.',
-  ].join('\n')
+    memoryBlock ? `Recent memory:\n${memoryBlock}` : '',
+    `Context: struggleScore=${data.struggleScore}; repeatErrorCount=${data.repeatErrorCount}; guidedActive=${data.guidedActive ? 'true' : 'false'}; guidedStep=${data.guidedStep ? `${data.guidedStep.current}/${data.guidedStep.total}` : 'none'}; nudgeVisible=${data.nudgeVisible ? 'true' : 'false'}; runStatus=${data.runStatus}; currentErrorKey=${data.currentErrorKey ?? 'none'}; errorHistory=[${recentErrors.join(',')}]`,
+    ...(includeLastQuestion ? [`lastUserQuestion: "${lastUserQuestion}"`] : []),
+    PEBBLE_CLARIFY_RULE,
+    PEBBLE_OUTPUT_RULE,
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 export function PebbleMascot({ data }: { data: MascotContextData }) {
@@ -269,6 +265,8 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
   const typingTimerRef = useRef<number | null>(null)
   const celebrateTimerRef = useRef<number | null>(null)
   const successPulseTimerRef = useRef<number | null>(null)
+  const settleRafRef = useRef<number | null>(null)
+  const settleStateRef = useRef<{ y: number; v: number } | null>(null)
   const activeAbortRef = useRef<AbortController | null>(null)
   const askRequestIdRef = useRef(0)
   const previousRunStatusRef = useRef(data.runStatus)
@@ -298,6 +296,92 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
     activeAbortRef.current?.abort()
     activeAbortRef.current = null
   }, [])
+
+  const cancelSettle = useCallback(() => {
+    if (typeof window === 'undefined') {
+      settleRafRef.current = null
+      settleStateRef.current = null
+      return
+    }
+
+    if (settleRafRef.current !== null) {
+      window.cancelAnimationFrame(settleRafRef.current)
+      settleRafRef.current = null
+    }
+    settleStateRef.current = null
+  }, [])
+
+  const settleToBottomWithBounce = useCallback(
+    (startPosition: Position) => {
+      if (typeof window === 'undefined') {
+        return
+      }
+
+      cancelSettle()
+
+      const initialBounds = getViewportBounds()
+      const fixedX = clamp(startPosition.x, initialBounds.minX, initialBounds.maxX)
+      const startY = clamp(startPosition.y, initialBounds.minY, initialBounds.maxY)
+      settleStateRef.current = {
+        y: startY,
+        v: 0,
+      }
+      setPosition({ x: fixedX, y: startY })
+
+      const spring = 0.15
+      const damping = 0.86
+      const bounceFactor = 0.3
+      const settleDistanceThreshold = 0.5
+      const settleVelocityThreshold = 0.12
+      let lastTimestamp: number | null = null
+
+      const step = (timestamp: number) => {
+        const state = settleStateRef.current
+        if (!state) {
+          settleRafRef.current = null
+          return
+        }
+
+        const frameBounds = getViewportBounds()
+        const targetY = frameBounds.maxY
+        const x = clamp(fixedX, frameBounds.minX, frameBounds.maxX)
+        const dtMs = lastTimestamp === null ? 16.67 : clamp(timestamp - lastTimestamp, 1, 34)
+        lastTimestamp = timestamp
+        const dt = dtMs / 16.67
+
+        state.v += (targetY - state.y) * spring * dt
+        state.v *= Math.pow(damping, dt)
+        state.y += state.v * dt
+
+        if (state.y > targetY) {
+          state.y = targetY
+          state.v *= -bounceFactor
+        }
+
+        state.y = clamp(state.y, frameBounds.minY, targetY)
+
+        const nextPosition = { x, y: state.y }
+        setPosition(nextPosition)
+
+        if (
+          Math.abs(targetY - state.y) < settleDistanceThreshold &&
+          Math.abs(state.v) < settleVelocityThreshold
+        ) {
+          const finalPosition = { x, y: targetY }
+          setPosition(finalPosition)
+          persistPosition(finalPosition)
+          settleStateRef.current = null
+          settleRafRef.current = null
+          return
+        }
+
+        settleRafRef.current = window.requestAnimationFrame(step)
+      }
+
+      settleRafRef.current = window.requestAnimationFrame(step)
+    },
+    [cancelSettle],
+  )
 
   const startTypewriter = useCallback(
     (answer: string, requestId: number, kind: MemoryTurn['kind']) => {
@@ -349,11 +433,12 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
   useEffect(() => {
     return () => {
       abortActiveRequest()
+      cancelSettle()
       clearTypingTimer()
       clearCelebrateTimer()
       clearSuccessPulseTimer()
     }
-  }, [abortActiveRequest, clearCelebrateTimer, clearSuccessPulseTimer, clearTypingTimer])
+  }, [abortActiveRequest, cancelSettle, clearCelebrateTimer, clearSuccessPulseTimer, clearTypingTimer])
 
   useEffect(() => {
     const normalizePosition = (candidate: Partial<Position> | null | undefined) => {
@@ -550,6 +635,7 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
   }
 
   function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    cancelSettle()
     dragRef.current = {
       active: true,
       pointerId: event.pointerId,
@@ -585,6 +671,10 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
       return
     }
 
+    const releasePosition = clampPosition({
+      x: dragRef.current.start.x + (event.clientX - dragRef.current.origin.x),
+      y: dragRef.current.start.y + (event.clientY - dragRef.current.origin.y),
+    })
     const dragged = dragRef.current.moved
     dragRef.current.active = false
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -592,15 +682,14 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
     }
     dragRef.current = null
 
-    setPosition((prev) => {
-      const next = clampPosition(prev)
-      persistPosition(next)
-      return next
-    })
-
-    if (!dragged) {
-      setExpanded((prev) => !prev)
+    if (dragged) {
+      settleToBottomWithBounce(releasePosition)
+      return
     }
+
+    setPosition(releasePosition)
+    persistPosition(releasePosition)
+    setExpanded((prev) => !prev)
   }
 
   function onPointerCancel(event: ReactPointerEvent<HTMLButtonElement>) {
@@ -664,52 +753,52 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
         onLostPointerCapture={onLostPointerCapture}
-        className={`relative flex h-[58px] w-[58px] items-center justify-center rounded-full border border-pebble-accent/35 bg-pebble-panel/95 shadow-[0_16px_28px_rgba(2,8,23,0.38)] backdrop-blur-md transition hover:border-pebble-accent/50 ${pulseClass}`}
+        className={`relative flex h-[72px] w-[72px] items-center justify-center rounded-full border border-pebble-accent/35 bg-pebble-panel/95 shadow-[0_16px_28px_rgba(2,8,23,0.38)] backdrop-blur-md transition hover:border-pebble-accent/50 ${pulseClass}`}
         style={{ touchAction: 'none', cursor: 'grab' }}
         aria-label="Toggle Pebble mascot"
       >
         <div
-          className="relative h-9 w-9 rounded-[14px] bg-gradient-to-br from-[#60a5fa] via-[#3b82f6] to-[#1d4ed8] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+          className="relative h-11 w-11 rounded-[16px] bg-gradient-to-br from-[#60a5fa] via-[#3b82f6] to-[#1d4ed8] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
           style={isPanicExpression ? { animation: 'pebble-mascot-shake 0.35s ease-in-out infinite' } : undefined}
         >
           {isProudExpression && (
-            <span className="absolute -inset-1 rounded-[16px] border border-white/40 shadow-[0_0_14px_rgba(96,165,250,0.9)]" />
+            <span className="absolute -inset-1 rounded-[18px] border border-white/40 shadow-[0_0_14px_rgba(96,165,250,0.9)]" />
           )}
           {isConcernedExpression && (
             <>
-              <span className="absolute left-[8px] top-[8px] h-[2px] w-[8px] rounded bg-white/90" style={{ transform: 'rotate(-22deg)' }} />
-              <span className="absolute right-[8px] top-[8px] h-[2px] w-[8px] rounded bg-white/90" style={{ transform: 'rotate(22deg)' }} />
+              <span className="absolute left-[10px] top-[10px] h-[2px] w-[10px] rounded bg-white/90" style={{ transform: 'rotate(-22deg)' }} />
+              <span className="absolute right-[10px] top-[10px] h-[2px] w-[10px] rounded bg-white/90" style={{ transform: 'rotate(22deg)' }} />
             </>
           )}
           <span
-            className="absolute left-[9px] rounded-full bg-white/95"
+            className="absolute left-[11px] rounded-full bg-white/95"
             style={{
-              top: isThinkingExpression ? '10px' : '12px',
-              width: isPanicExpression ? '6px' : isAfkExpression ? '8px' : '5px',
-              height: isAfkExpression ? '2px' : isPanicExpression ? '6px' : '5px',
+              top: isThinkingExpression ? '12px' : '14px',
+              width: isPanicExpression ? '7px' : isAfkExpression ? '10px' : '6px',
+              height: isAfkExpression ? '2px' : isPanicExpression ? '7px' : '6px',
             }}
           />
           <span
-            className="absolute right-[9px] rounded-full bg-white/95"
+            className="absolute right-[11px] rounded-full bg-white/95"
             style={{
-              top: isThinkingExpression ? '10px' : '12px',
-              width: isPanicExpression ? '6px' : isAfkExpression ? '8px' : '5px',
-              height: isAfkExpression ? '2px' : isPanicExpression ? '6px' : '5px',
+              top: isThinkingExpression ? '12px' : '14px',
+              width: isPanicExpression ? '7px' : isAfkExpression ? '10px' : '6px',
+              height: isAfkExpression ? '2px' : isPanicExpression ? '7px' : '6px',
             }}
           />
           {!isAfkExpression && !isThinkingExpression && (
             <span
               className="absolute left-1/2 -translate-x-1/2 bg-white/90"
               style={{
-                top: '21px',
-                width: isProudExpression ? '14px' : '12px',
-                height: isConcernedExpression ? '2px' : '3px',
+                top: '26px',
+                width: isProudExpression ? '17px' : '15px',
+                height: isConcernedExpression ? '2px' : '4px',
                 borderRadius: isConcernedExpression ? '2px' : '999px',
               }}
             />
           )}
           {isThinkingExpression && (
-            <div className="absolute left-1/2 top-[21px] flex -translate-x-1/2 items-center gap-1">
+            <div className="absolute left-1/2 top-[26px] flex -translate-x-1/2 items-center gap-1">
               <span className="h-[2px] w-[2px] rounded-full bg-white/90" style={{ animation: 'pebble-mascot-dot 0.9s ease-in-out infinite' }} />
               <span className="h-[2px] w-[2px] rounded-full bg-white/90" style={{ animation: 'pebble-mascot-dot 0.9s ease-in-out infinite 0.15s' }} />
               <span className="h-[2px] w-[2px] rounded-full bg-white/90" style={{ animation: 'pebble-mascot-dot 0.9s ease-in-out infinite 0.3s' }} />

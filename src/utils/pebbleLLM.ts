@@ -1,3 +1,5 @@
+import { PEBBLE_SYSTEM_PROMPT } from '../shared/pebblePromptRules'
+
 type PebbleLLMContext = {
   taskTitle: string
   codeText: string
@@ -20,16 +22,6 @@ type AskPebbleInput = {
 
 const REQUEST_TIMEOUT_MS = 18_000
 const DEFAULT_MODEL = 'gpt-4.1-mini'
-const PEBBLE_TONE_RULES = `Tone rules:
-- If struggleScore > 70: stabilize and simplify.
-- If struggleScore > 75 OR repeatErrorCount > 3, ask ONE clarifying question instead of giving steps.
-- If repeatErrorCount > 2: narrow attention to one small fix.
-- If guidedActive: explain only current step.
-- If success: reinforce and suggest next micro-step.
-- Never rewrite full solutions unless explicitly asked.
-- Max 6 lines.
-- Short sentences.
-- No fluff.`
 
 function withTimeout(timeoutMs: number) {
   const controller = new AbortController()
@@ -169,15 +161,11 @@ async function askUnsafeClient(input: AskPebbleInput) {
         input: [
           {
             role: 'system',
-            content: `You are Pebble, a focused coding mentor embedded inside a live IDE.
-You can see real-time struggle signals, error history, guided state, and run telemetry.
-Your job is to restore momentum with minimal cognitive overload.
-
-${PEBBLE_TONE_RULES}`,
+            content: PEBBLE_SYSTEM_PROMPT,
           },
           {
             role: 'user',
-            content: `${input.prompt}\n\nContext JSON:\n${JSON.stringify(input.context, null, 2)}`,
+            content: `${input.prompt}\nContext:${JSON.stringify(input.context)}`,
           },
         ],
       }),

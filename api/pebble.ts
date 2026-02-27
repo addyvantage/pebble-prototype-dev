@@ -1,3 +1,6 @@
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
+import { PEBBLE_CLARIFY_RULE, PEBBLE_OUTPUT_RULE, PEBBLE_SYSTEM_PROMPT } from '../src/shared/pebblePromptRules'
+
 type PebbleContext = {
   taskTitle?: unknown
   codeText?: unknown
@@ -17,18 +20,9 @@ type PebbleRequestBody = {
   context?: PebbleContext
 }
 
-const DEFAULT_MODEL = 'gpt-4.1-mini'
 const REQUEST_TIMEOUT_MS = 20_000
-const PEBBLE_TONE_RULES = `Tone rules:
-- If struggleScore > 70: stabilize and simplify.
-- If struggleScore > 75 OR repeatErrorCount > 3, ask ONE clarifying question instead of giving steps.
-- If repeatErrorCount > 2: narrow attention to one small fix.
-- If guidedActive: explain only current step.
-- If success: reinforce and suggest next micro-step.
-- Never rewrite full solutions unless explicitly asked.
-- Max 6 lines.
-- Short sentences.
-- No fluff.`
+const RUN_MESSAGE_MAX_CHARS = 360
+const CODE_TEXT_MAX_CHARS = 1800
 
 function sendJson(res: { status: (code: number) => unknown; json: (payload: unknown) => void }, status: number, payload: unknown) {
   res.status(status)
@@ -69,42 +63,144 @@ function isContextValid(context: unknown) {
   return Boolean(context && typeof context === 'object')
 }
 
-function getResponsesText(payload: unknown) {
-  if (!payload || typeof payload !== 'object') {
+function decodeBedrockBody(body: Uint8Array | undefined) {
+  if (!body) {
+    return ''
+  }
+  return new TextDecoder().decode(body)
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function asOptionalString(value: unknown) {
+  return typeof value === 'string' ? value : ''
+}
+
+function asOptionalBoolean(value: unknown) {
+  return typeof value === 'boolean' ? value : false
+}
+
+function asOptionalNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function trimValue(value: string, maxChars: number) {
+  if (value.length <= maxChars) {
+    return value
+  }
+  return `${value.slice(0, maxChars)}...`
+}
+
+function trimCodeForModel(codeText: string, maxChars: number) {
+  if (codeText.length <= maxChars) {
+    return codeText
+  }
+
+  const marker = '\n...[code trimmed for model]...\n'
+  const remaining = Math.max(0, maxChars - marker.length)
+  const headSize = Math.floor(remaining / 2)
+  const tailSize = remaining - headSize
+  return `${codeText.slice(0, headSize)}${marker}${codeText.slice(codeText.length - tailSize)}`
+}
+
+type CompactModelContext = {
+  taskTitle: string
+  runStatus: string
+  runMessage: string
+  currentErrorKey: string
+  guidedActive: boolean
+  guidedStep: string
+  nudgeVisible: boolean
+  struggleScore: number
+  repeatErrorCount: number
+  errorHistory: string[]
+  codeText: string
+}
+
+function compactContextForModel(context: PebbleContext): CompactModelContext {
+  const errorHistory = Array.isArray(context.errorHistory)
+    ? context.errorHistory
+        .filter((item): item is string => typeof item === 'string' && item.length > 0)
+        .slice(-3)
+    : []
+
+  const guidedStepRaw = context.guidedStep
+  let guidedStep = 'none'
+  if (isRecord(guidedStepRaw)) {
+    const current = guidedStepRaw.current
+    const total = guidedStepRaw.total
+    if (typeof current === 'number' && Number.isFinite(current) && typeof total === 'number' && Number.isFinite(total)) {
+      guidedStep = `${current}/${total}`
+    }
+  }
+
+  return {
+    taskTitle: trimValue(asOptionalString(context.taskTitle), 120),
+    runStatus: trimValue(asOptionalString(context.runStatus), 40),
+    runMessage: trimValue(asOptionalString(context.runMessage), RUN_MESSAGE_MAX_CHARS),
+    currentErrorKey: trimValue(asOptionalString(context.currentErrorKey), 80) || 'none',
+    guidedActive: asOptionalBoolean(context.guidedActive),
+    guidedStep,
+    nudgeVisible: asOptionalBoolean(context.nudgeVisible),
+    struggleScore: asOptionalNumber(context.struggleScore),
+    repeatErrorCount: asOptionalNumber(context.repeatErrorCount),
+    errorHistory,
+    codeText: trimCodeForModel(asOptionalString(context.codeText), CODE_TEXT_MAX_CHARS),
+  }
+}
+
+function buildBedrockUserMessage(prompt: string, context: CompactModelContext) {
+  return [
+    prompt,
+    `Model context: ${JSON.stringify({
+      taskTitle: context.taskTitle,
+      runStatus: context.runStatus,
+      runMessage: context.runMessage,
+      currentErrorKey: context.currentErrorKey,
+      guidedActive: context.guidedActive,
+      guidedStep: context.guidedStep,
+      nudgeVisible: context.nudgeVisible,
+      struggleScore: context.struggleScore,
+      repeatErrorCount: context.repeatErrorCount,
+      errorHistory: context.errorHistory,
+    })}`,
+    context.codeText ? `Code excerpt:\n${context.codeText}` : '',
+    `Constraints: ${PEBBLE_CLARIFY_RULE} ${PEBBLE_OUTPUT_RULE}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+function getBedrockText(payload: unknown) {
+  if (!isRecord(payload)) {
     return ''
   }
 
-  const candidate = payload as {
-    output_text?: unknown
-    output?: Array<{
-      content?: Array<{ type?: string; text?: string }>
-    }>
-    choices?: Array<{
-      message?: { content?: string }
-    }>
+  const content = payload.content
+  if (!Array.isArray(content)) {
+    return ''
   }
 
-  if (typeof candidate.output_text === 'string' && candidate.output_text.trim()) {
-    return candidate.output_text.trim()
+  const lines: string[] = []
+  for (const item of content) {
+    if (!isRecord(item) || item.type !== 'text') {
+      continue
+    }
+
+    const text = item.text
+    if (typeof text !== 'string') {
+      continue
+    }
+
+    const normalized = text.trim()
+    if (normalized) {
+      lines.push(normalized)
+    }
   }
 
-  const outputText = (candidate.output ?? [])
-    .flatMap((item) => item.content ?? [])
-    .filter((item) => item?.type === 'output_text' && typeof item.text === 'string')
-    .map((item) => item.text?.trim() ?? '')
-    .filter(Boolean)
-    .join('\n')
-
-  if (outputText) {
-    return outputText
-  }
-
-  const choiceText = candidate.choices?.[0]?.message?.content
-  if (typeof choiceText === 'string' && choiceText.trim()) {
-    return choiceText.trim()
-  }
-
-  return ''
+  return lines.join('\n')
 }
 
 export default async function handler(
@@ -116,11 +212,29 @@ export default async function handler(
     return
   }
 
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    sendJson(res, 500, { error: 'Server missing OPENAI_API_KEY.' })
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
+  const region = process.env.AWS_REGION
+  const modelId = process.env.BEDROCK_MODEL_ID
+  const missingVars = [
+    ['AWS_REGION', region],
+    ['BEDROCK_MODEL_ID', modelId],
+  ]
+    .filter(([, value]) => !value)
+    .map(([key]) => key)
+
+  if (missingVars.length > 0) {
+    sendJson(res, 500, { error: `Server missing required env vars: ${missingVars.join(', ')}.` })
     return
   }
+
+  if ((accessKeyId && !secretAccessKey) || (!accessKeyId && secretAccessKey)) {
+    sendJson(res, 500, { error: 'Set both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY, or neither.' })
+    return
+  }
+
+  const awsRegion = region as string
+  const bedrockModelId = modelId as string
 
   const rawBody = await readBody(req)
   let body: PebbleRequestBody
@@ -140,68 +254,94 @@ export default async function handler(
     sendJson(res, 400, { error: 'Field "context" must be an object.' })
     return
   }
+  const compactContext = compactContextForModel(body.context)
 
-  const model = process.env.OPENAI_MODEL || DEFAULT_MODEL
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  let timedOut = false
+  const timeout = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, REQUEST_TIMEOUT_MS)
+  const clientConfig: ConstructorParameters<typeof BedrockRuntimeClient>[0] = {
+    region: awsRegion,
+  }
+  if (accessKeyId && secretAccessKey) {
+    clientConfig.credentials = {
+      accessKeyId,
+      secretAccessKey,
+    }
+  }
+  const client = new BedrockRuntimeClient(clientConfig)
 
   try {
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          {
-            role: 'system',
-            content: `You are Pebble, a focused coding mentor embedded inside a live IDE.
-You can see real-time struggle signals, error history, guided state, and run telemetry.
-Your job is to restore momentum with minimal cognitive overload.
+    const userMessage = buildBedrockUserMessage(body.prompt, compactContext)
+    if (process.env.PEBBLE_DEBUG_COST === '1') {
+      const totalChars = PEBBLE_SYSTEM_PROMPT.length + userMessage.length
+      const estimatedTokens = Math.ceil(totalChars / 4)
+      console.log(
+        `[pebble-cost] systemChars=${PEBBLE_SYSTEM_PROMPT.length} userChars=${userMessage.length} totalChars=${totalChars} estTokens=${estimatedTokens}`,
+      )
+    }
 
-${PEBBLE_TONE_RULES}`,
-          },
+    const command = new InvokeModelCommand({
+      modelId: bedrockModelId,
+      contentType: 'application/json',
+      accept: 'application/json',
+      body: JSON.stringify({
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: 240,
+        temperature: 0.35,
+        system: PEBBLE_SYSTEM_PROMPT,
+        messages: [
           {
             role: 'user',
-            content: `${body.prompt}\n\nContext JSON:\n${JSON.stringify(body.context, null, 2)}`,
+            content: [
+              {
+                type: 'text',
+                text: userMessage,
+              },
+            ],
           },
         ],
       }),
-      signal: controller.signal,
     })
 
-    let payload: unknown = null
-    try {
-      payload = await response.json()
-    } catch {
-      payload = null
-    }
-
-    if (!response.ok) {
-      const errorMessage =
-        payload && typeof payload === 'object' && 'error' in payload
-          ? String((payload as { error?: { message?: string } }).error?.message ?? '')
-          : ''
-      sendJson(res, 502, { error: errorMessage || 'OpenAI request failed.' })
+    const response = await client.send(command, { abortSignal: controller.signal })
+    const rawResponse = decodeBedrockBody(response.body)
+    if (!rawResponse) {
+      sendJson(res, 502, { error: 'Bedrock returned an empty response body.' })
       return
     }
 
-    const text = getResponsesText(payload)
+    let payload: unknown
+    try {
+      payload = JSON.parse(rawResponse) as unknown
+    } catch {
+      sendJson(res, 502, { error: 'Bedrock returned malformed JSON.' })
+      return
+    }
+
+    const text = getBedrockText(payload)
     if (!text) {
-      sendJson(res, 502, { error: 'OpenAI returned no text output.' })
+      sendJson(res, 502, { error: 'Bedrock returned no text output.' })
       return
     }
 
     sendJson(res, 200, { text })
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      sendJson(res, 504, { error: 'Pebble request timed out.' })
+    if (controller.signal.aborted) {
+      if (timedOut) {
+        sendJson(res, 504, { error: 'Pebble request timed out.' })
+      } else {
+        sendJson(res, 200, { text: 'Stopped.' })
+      }
       return
     }
-    sendJson(res, 500, { error: 'Unexpected server error while contacting OpenAI.' })
+
+    const message = error instanceof Error && error.message ? error.message : 'Bedrock request failed.'
+    sendJson(res, 502, { error: message })
   } finally {
     clearTimeout(timeout)
+    client.destroy()
   }
 }
