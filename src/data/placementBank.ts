@@ -30,10 +30,10 @@ export type PlacementQuestionSet = {
 type RawPlacementMcqQuestion = Omit<PlacementMcqQuestion, 'type'>
 type RawPlacementCodingQuestion = Omit<PlacementCodingQuestion, 'type'>
 
-const rawPlacementBank: Record<PlacementLanguage, {
+const rawPlacementBank: Partial<Record<PlacementLanguage, {
   mcq: RawPlacementMcqQuestion[]
   coding: RawPlacementCodingQuestion[]
-}> = {
+}>> = {
   "python": {
     "mcq": [
       {
@@ -2860,16 +2860,16 @@ const rawPlacementBank: Record<PlacementLanguage, {
   }
 }
 
-const placementBank: Record<PlacementLanguage, { mcq: PlacementMcqQuestion[]; coding: PlacementCodingQuestion[] }> =
+const placementBank: Partial<Record<PlacementLanguage, { mcq: PlacementMcqQuestion[]; coding: PlacementCodingQuestion[] }>> =
   Object.fromEntries(
     (Object.keys(rawPlacementBank) as PlacementLanguage[]).map((language) => [
       language,
       {
-        mcq: rawPlacementBank[language].mcq.map((item) => ({ ...item, type: 'mcq' })),
-        coding: rawPlacementBank[language].coding.map((item) => ({ ...item, type: 'coding' })),
+        mcq: rawPlacementBank[language]!.mcq.map((item) => ({ ...item, type: 'mcq' })),
+        coding: rawPlacementBank[language]!.coding.map((item) => ({ ...item, type: 'coding' })),
       },
     ]),
-  ) as Record<PlacementLanguage, { mcq: PlacementMcqQuestion[]; coding: PlacementCodingQuestion[] }>
+  ) as Partial<Record<PlacementLanguage, { mcq: PlacementMcqQuestion[]; coding: PlacementCodingQuestion[] }>>
 
 function hashString(value: string) {
   let hash = 2166136261
@@ -2915,7 +2915,7 @@ function getWeekBucket(now = Date.now()) {
 }
 
 export function getPlacementBank(language: PlacementLanguage) {
-  return placementBank[language]
+  return placementBank[language] ?? placementBank.cpp ?? { mcq: [], coding: [] }
 }
 
 export function buildWeeklyPlacementSet(language: PlacementLanguage, level: PlacementLevel, now = Date.now()): PlacementQuestionSet {
@@ -2924,7 +2924,7 @@ export function buildWeeklyPlacementSet(language: PlacementLanguage, level: Plac
   const mcqRng = mulberry32(seedBase ^ 0xa5a5a5a5)
   const codingRng = mulberry32(seedBase ^ 0x5f5f5f5f)
 
-  const bank = placementBank[language]
+  const bank = getPlacementBank(language)
   const mcq = pickStable(bank.mcq, 4, mcqRng, level)
   const coding = pickStable(bank.coding, 3, codingRng, level)
 

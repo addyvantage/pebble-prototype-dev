@@ -16,7 +16,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "variables-sum",
@@ -34,7 +34,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "conditional-max",
@@ -52,7 +52,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "loops-sum-n",
@@ -70,7 +70,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "arrays-max",
@@ -88,7 +88,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "strings-reverse",
@@ -106,7 +106,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "dsa-two-sum",
@@ -124,7 +124,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "dsa-palindrome",
@@ -142,7 +142,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "prefix-sum-range",
@@ -160,7 +160,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "sliding-window-max-sum-k",
@@ -178,7 +178,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "recursion-factorial",
@@ -196,7 +196,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     },
     {
       "id": "dp-climb-stairs",
@@ -214,7 +214,7 @@
         }
       ],
       "hints": [],
-      "starterCode": "class Solution {}\n"
+      "starterCode": "#include <stdio.h>\n\n/* solution stub */\n"
     }
   ]
 }

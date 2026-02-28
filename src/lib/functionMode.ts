@@ -225,7 +225,7 @@ export function buildSingleCaseFunctionModeRunnable(input: {
     return buildJavascriptSingleCase(input)
   }
 
-  if (input.language === 'cpp') {
+  if (input.language === 'cpp' || input.language === 'c') {
     return buildCppSingleCase(input)
   }
 

@@ -24,6 +24,7 @@ const pathUrls: Record<PlacementLanguage, string> = {
   javascript: new URL('./paths/javascript.json', import.meta.url).href,
   cpp: new URL('./paths/cpp.json', import.meta.url).href,
   java: new URL('./paths/java.json', import.meta.url).href,
+  c: new URL('./paths/c.json', import.meta.url).href,
 }
 
 const pathCache = new Map<PlacementLanguage, CurriculumUnit[]>()

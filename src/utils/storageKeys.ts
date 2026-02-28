@@ -1,5 +1,5 @@
 export const storageKeys = {
-  theme: 'pebble_theme',
+  theme: 'pebble.theme.v1',
   demoMode: 'pebble_demo_mode',
   memory: 'pebble_memory_v1',
   sessionInsights: 'pebble_session_insights',

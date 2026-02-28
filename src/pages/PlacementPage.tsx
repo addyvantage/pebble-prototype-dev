@@ -184,13 +184,14 @@ export function PlacementPage() {
         let payload: unknown = null
 
         try {
+          const runtimeLanguage = language === 'c' ? 'cpp' : language
           const response = await fetch('/api/run', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              language,
+              language: runtimeLanguage,
               code: current.code,
               stdin: test.stdin,
               timeoutMs: question.timeoutMs,

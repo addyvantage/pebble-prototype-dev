@@ -11,11 +11,12 @@
     <title>Pebble Prototype</title>
     <script>
       ;(() => {
-        const storageKey = 'pebble_theme'
+        const storageKey = 'pebble.theme.v1'
+        const legacyStorageKey = 'pebble_theme'
         const root = document.documentElement
 
         try {
-          const saved = window.localStorage.getItem(storageKey)
+          const saved = window.localStorage.getItem(storageKey) ?? window.localStorage.getItem(legacyStorageKey)
           const systemPrefersLight = window.matchMedia('(prefers-color-scheme: light)').matches
           const nextTheme =
             saved === 'dark' || saved === 'light'
@@ -26,6 +27,7 @@
 
           root.classList.add(nextTheme === 'light' ? 'theme-light' : 'theme-dark')
           root.style.colorScheme = nextTheme
+          window.localStorage.setItem(storageKey, nextTheme)
         } catch {
           root.classList.add('theme-dark')
           root.style.colorScheme = 'dark'

@@ -132,28 +132,19 @@ function FieldBlock({
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] uppercase tracking-[0.06em] text-white/55">{label}</p>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => void navigator.clipboard.writeText(value)}
-            className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-white/75 transition hover:bg-white/[0.1]"
+        {status && (
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] ${
+              status === 'pass'
+                ? 'border-pebble-success/35 bg-pebble-success/15 text-pebble-success'
+                : status === 'fail'
+                  ? 'border-pebble-warning/35 bg-pebble-warning/15 text-pebble-warning'
+                  : 'border-white/10 bg-white/[0.04] text-white/65'
+            }`}
           >
-            Copy
-          </button>
-          {status && (
-            <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] ${
-                status === 'pass'
-                  ? 'border-pebble-success/35 bg-pebble-success/15 text-pebble-success'
-                  : status === 'fail'
-                    ? 'border-pebble-warning/35 bg-pebble-warning/15 text-pebble-warning'
-                    : 'border-white/10 bg-white/[0.04] text-white/65'
-              }`}
-            >
-              {status}
-            </span>
-          )}
-        </div>
+            {status}
+          </span>
+        )}
       </div>
       <div
         className={`rounded-lg border px-2 py-1.5 font-mono text-[12px] leading-relaxed ${

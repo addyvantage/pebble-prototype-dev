@@ -4,7 +4,7 @@
       "id": "hello-world",
       "title": "Hello World",
       "concept": "stdout basics",
-      "prompt": "Print exactly: Hello, Pebble!",
+      "prompt": "Return exactly: Hello, Pebble!",
       "tests": [
         {
           "input": "",
@@ -15,17 +15,14 @@
           "expected": "Hello, Pebble!"
         }
       ],
-      "hints": [
-        "Use one print statement.",
-        "Match punctuation and spacing exactly."
-      ],
-      "starterCode": "print(\"Hello\")\n"
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
     },
     {
       "id": "variables-sum",
       "title": "Variables and Input",
       "concept": "parse + sum",
-      "prompt": "Read two integers from stdin and print their sum.",
+      "prompt": "Given two integers a and b, return their sum.",
       "tests": [
         {
           "input": "4 8\n",
@@ -36,17 +33,32 @@
           "expected": "7"
         }
       ],
-      "hints": [
-        "Split stdin by whitespace.",
-        "Convert values to numbers before adding."
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
+    },
+    {
+      "id": "conditional-max",
+      "title": "Conditionals - Max of Two",
+      "concept": "branching",
+      "prompt": "Given two integers a and b, return the larger value.",
+      "tests": [
+        {
+          "input": "9 2\n",
+          "expected": "9"
+        },
+        {
+          "input": "-4 -1\n",
+          "expected": "-1"
+        }
       ],
-      "starterCode": "import sys\n\nparts = sys.stdin.read().strip().split()\na = int(parts[0]) if len(parts) > 0 else 0\nb = int(parts[1]) if len(parts) > 1 else 0\n# TODO: print the real sum\nprint(0)\n"
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
     },
     {
       "id": "loops-sum-n",
-      "title": "Loops",
+      "title": "Loops - Sum to N",
       "concept": "accumulation",
-      "prompt": "Read n and print the sum of numbers from 1 to n.",
+      "prompt": "Given n, return the sum from 1 to n.",
       "tests": [
         {
           "input": "5\n",
@@ -57,38 +69,14 @@
           "expected": "55"
         }
       ],
-      "hints": [
-        "Use a running total.",
-        "Loop from 1 through n inclusive."
-      ],
-      "starterCode": "import sys\n\nraw = sys.stdin.read().strip()\nn = int(raw) if raw else 0\n# TODO: compute 1..n\nprint(0)\n"
-    },
-    {
-      "id": "functions-even",
-      "title": "Functions",
-      "concept": "function decomposition",
-      "prompt": "Create is_even(x) and print true if x is even, else false.",
-      "tests": [
-        {
-          "input": "6\n",
-          "expected": "true"
-        },
-        {
-          "input": "7\n",
-          "expected": "false"
-        }
-      ],
-      "hints": [
-        "Return a boolean from your function.",
-        "Use modulo 2."
-      ],
-      "starterCode": "import sys\n\ndef is_even(x: int) -> bool:\n    # TODO\n    return False\n\nraw = sys.stdin.read().strip()\nvalue = int(raw) if raw else 0\nprint('true' if is_even(value) else 'false')\n"
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
     },
     {
       "id": "arrays-max",
-      "title": "Arrays",
-      "concept": "iteration over collections",
-      "prompt": "Read space-separated integers and print the maximum value.",
+      "title": "Arrays - Maximum",
+      "concept": "iteration over arrays",
+      "prompt": "Given an integer array, return its maximum value.",
       "tests": [
         {
           "input": "3 7 2 9\n",
@@ -99,17 +87,14 @@
           "expected": "-2"
         }
       ],
-      "hints": [
-        "Initialize with the first element.",
-        "Update max while iterating."
-      ],
-      "starterCode": "import sys\n\nnums = [int(x) for x in sys.stdin.read().strip().split()]\nif not nums:\n    print(0)\nelse:\n    # TODO\n    print(0)\n"
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
     },
     {
       "id": "strings-reverse",
-      "title": "Strings",
-      "concept": "string transformation",
-      "prompt": "Read one line and print it reversed.",
+      "title": "Strings - Reverse",
+      "concept": "string manipulation",
+      "prompt": "Given a string, return it reversed.",
       "tests": [
         {
           "input": "pebble\n",
@@ -120,17 +105,14 @@
           "expected": "edoc"
         }
       ],
-      "hints": [
-        "Watch trailing newlines in stdin.",
-        "Use built-in reverse helpers if available."
-      ],
-      "starterCode": "import sys\n\ntext = sys.stdin.read().rstrip('\\n')\n# TODO\nprint(text)\n"
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
     },
     {
       "id": "dsa-two-sum",
-      "title": "Basic DSA - Two Sum",
+      "title": "Hashing - Two Sum",
       "concept": "hash map lookup",
-      "prompt": "Line 1: space-separated ints, line 2: target. Print two indices i j that sum to target.",
+      "prompt": "Given nums and target, return indices i j where nums[i] + nums[j] = target.",
       "tests": [
         {
           "input": "2 7 11 15\n9\n",
@@ -141,17 +123,14 @@
           "expected": "1 2"
         }
       ],
-      "hints": [
-        "Store seen value -> index.",
-        "At each element, look for target - value."
-      ],
-      "starterCode": "import sys\n\nlines = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]\nnums = [int(x) for x in lines[0].split()] if lines else []\ntarget = int(lines[1]) if len(lines) > 1 else 0\n\n# TODO: two sum\nprint('-1 -1')\n"
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
     },
     {
       "id": "dsa-palindrome",
-      "title": "Basic DSA - Palindrome",
+      "title": "Two Pointers - Palindrome",
       "concept": "two pointers",
-      "prompt": "Read one string and print true if it is a palindrome, else false.",
+      "prompt": "Given a string, return true if palindrome else false.",
       "tests": [
         {
           "input": "racecar\n",
@@ -162,11 +141,80 @@
           "expected": "false"
         }
       ],
-      "hints": [
-        "Compare left and right characters.",
-        "Move both pointers inward."
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
+    },
+    {
+      "id": "prefix-sum-range",
+      "title": "Prefix Sum - Range Query",
+      "concept": "prefix sums",
+      "prompt": "Given nums and l r, return sum(nums[l..r]).",
+      "tests": [
+        {
+          "input": "1 2 3 4 5\n1 3\n",
+          "expected": "9"
+        },
+        {
+          "input": "5 10 15 20\n0 2\n",
+          "expected": "30"
+        }
       ],
-      "starterCode": "import sys\n\ntext = sys.stdin.read().strip()\n\n# TODO\nprint('false')\n"
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
+    },
+    {
+      "id": "sliding-window-max-sum-k",
+      "title": "Sliding Window - Max Sum K",
+      "concept": "fixed window",
+      "prompt": "Given nums and k, return maximum sum of any contiguous subarray of size k.",
+      "tests": [
+        {
+          "input": "1 4 2 10 2 3 1\n3\n",
+          "expected": "16"
+        },
+        {
+          "input": "5 2 -1 0 3\n2\n",
+          "expected": "7"
+        }
+      ],
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
+    },
+    {
+      "id": "recursion-factorial",
+      "title": "Recursion - Factorial",
+      "concept": "base case + recursion",
+      "prompt": "Given n, return n factorial.",
+      "tests": [
+        {
+          "input": "5\n",
+          "expected": "120"
+        },
+        {
+          "input": "1\n",
+          "expected": "1"
+        }
+      ],
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
+    },
+    {
+      "id": "dp-climb-stairs",
+      "title": "DP 1D - Climb Stairs",
+      "concept": "bottom-up DP",
+      "prompt": "You can climb 1 or 2 steps. Return ways to reach step n.",
+      "tests": [
+        {
+          "input": "4\n",
+          "expected": "5"
+        },
+        {
+          "input": "6\n",
+          "expected": "13"
+        }
+      ],
+      "hints": [],
+      "starterCode": "class Solution:\n    pass\n"
     }
   ]
 }

@@ -1,5 +1,5 @@
 export type PlacementLevel = 'beginner' | 'intermediate' | 'pro'
-export type PlacementLanguage = 'python' | 'javascript' | 'cpp' | 'java'
+export type PlacementLanguage = 'python' | 'javascript' | 'cpp' | 'java' | 'c'
 export type StartUnit = '1' | 'mid' | 'advanced'
 
 export type LanguageMetadata = {
@@ -29,6 +29,11 @@ export const languageMetadata: LanguageMetadata[] = [
     label: 'Java',
     purpose: 'backend, Android, interviews',
   },
+  {
+    id: 'c',
+    label: 'C',
+    purpose: 'systems basics + low-level foundations',
+  },
 ]
 
 export function isPlacementLevel(value: string | null): value is PlacementLevel {
@@ -36,7 +41,7 @@ export function isPlacementLevel(value: string | null): value is PlacementLevel 
 }
 
 export function isPlacementLanguage(value: string | null): value is PlacementLanguage {
-  return value === 'python' || value === 'javascript' || value === 'cpp' || value === 'java'
+  return value === 'python' || value === 'javascript' || value === 'cpp' || value === 'java' || value === 'c'
 }
 
 export function getLanguageMetadata(language: PlacementLanguage) {

@@ -32,6 +32,11 @@ function resolveInitialTheme(): Theme {
     return storedTheme
   }
 
+  const legacyTheme = window.localStorage.getItem('pebble_theme')
+  if (isTheme(legacyTheme)) {
+    return legacyTheme
+  }
+
   return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
 }
 

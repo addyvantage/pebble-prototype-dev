@@ -14,7 +14,6 @@ type ProblemStatementPanelProps = {
   concept: string
   prompt: string
   constraints: string[]
-  hints: string[]
   tests: ProblemTest[]
   difficultyLabel: string
   tags: string[]
@@ -37,6 +36,7 @@ const LANGUAGE_LABELS: Record<PlacementLanguage, string> = {
   javascript: 'JavaScript',
   cpp: 'C++',
   java: 'Java',
+  c: 'C',
 }
 
 export function ProblemStatementPanel({
@@ -45,7 +45,6 @@ export function ProblemStatementPanel({
   concept,
   prompt,
   constraints,
-  hints,
   tests,
   difficultyLabel,
   tags,
@@ -54,7 +53,7 @@ export function ProblemStatementPanel({
   submissions,
   className,
 }: ProblemStatementPanelProps) {
-  const [activeTab, setActiveTab] = useState<'problem' | 'solutions' | 'hints' | 'submissions'>('problem')
+  const [activeTab, setActiveTab] = useState<'problem' | 'solutions' | 'submissions'>('problem')
   const [solutionLanguage, setSolutionLanguage] = useState<PlacementLanguage>(language)
   const [copied, setCopied] = useState(false)
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
@@ -78,13 +77,32 @@ export function ProblemStatementPanel({
   }, [copied])
 
   const availableSolutionLanguages = useMemo(() => {
-    if (!solution || !solution.implementations[language]) {
+    if (!solution) {
       return [] as PlacementLanguage[]
     }
-    return [language]
+    const languages: PlacementLanguage[] = []
+    if (solution.implementations[language]) {
+      languages.push(language)
+    }
+    if (!languages.includes('python') && solution.implementations.python) {
+      languages.push('python')
+    }
+    return languages
   }, [language, solution])
 
-  const selectedSolutionCode = solution?.implementations[solutionLanguage]
+  const selectedSolutionCode =
+    solution?.implementations[solutionLanguage] ??
+    solution?.implementations.python ??
+    null
+
+  useEffect(() => {
+    if (availableSolutionLanguages.length === 0) {
+      return
+    }
+    if (!availableSolutionLanguages.includes(solutionLanguage)) {
+      setSolutionLanguage(availableSolutionLanguages[0])
+    }
+  }, [availableSolutionLanguages, solutionLanguage])
   const lastAcceptedSubmission = useMemo(
     () => submissions.find((submission) => submission.status === 'accepted') ?? null,
     [submissions],
@@ -126,11 +144,6 @@ export function ProblemStatementPanel({
           active={activeTab === 'solutions'}
           onClick={() => setActiveTab('solutions')}
           label="Solutions"
-        />
-        <TabButton
-          active={activeTab === 'hints'}
-          onClick={() => setActiveTab('hints')}
-          label="Hints"
         />
         <TabButton
           active={activeTab === 'submissions'}
@@ -266,6 +279,12 @@ export function ProblemStatementPanel({
                     </button>
                   </div>
 
+                  {!solution?.implementations[language] && solution?.implementations.python ? (
+                    <p className="text-xs text-white/65">
+                      Solution not available in {LANGUAGE_LABELS[language]} yet. Showing Python fallback.
+                    </p>
+                  ) : null}
+
                   <div className="flex flex-wrap gap-1.5">
                     {availableSolutionLanguages.map((lang) => (
                       <button
@@ -288,22 +307,6 @@ export function ProblemStatementPanel({
                   </pre>
                 </section>
               </>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'hints' && (
-          <div className="space-y-2">
-            {hints.length > 0 ? (
-              <ul className="list-disc space-y-1 pl-4 text-sm text-white/80">
-                {hints.map((hint) => (
-                  <li key={hint}>{hint}</li>
-                ))}
-              </ul>
-            ) : (
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-white/75">
-                No hints available yet. Try running tests and ask Pebble for a targeted hint.
-              </div>
             )}
           </div>
         )}

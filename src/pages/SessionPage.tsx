@@ -46,6 +46,7 @@ import {
   type SubmissionsByUnit,
 } from '../lib/submissionsStore'
 import { useBodyScrollLock } from '../utils/useBodyScrollLock'
+import { useTheme } from '../hooks/useTheme'
 
 type RunResponse = {
   ok: boolean
@@ -61,6 +62,7 @@ const LANGUAGE_RUNTIME_LABEL: Record<PlacementLanguage, string> = {
   javascript: 'JavaScript',
   cpp: 'C++17',
   java: 'Java 17',
+  c: 'C (GNU)',
 }
 
 function normalizeOutput(value: string) {
@@ -217,6 +219,8 @@ export function SessionPage() {
   )
 
   const languageMeta = useMemo(() => getLanguageMetadata(selectedLanguage), [selectedLanguage])
+  const { theme, setTheme } = useTheme()
+  const runtimeLanguage: PlacementLanguage = selectedLanguage === 'c' ? 'cpp' : selectedLanguage
 
   useEffect(() => {
     saveUnitProgress(unitProgress)
@@ -374,7 +378,7 @@ export function SessionPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          language: selectedLanguage,
+          language: runtimeLanguage,
           code: currentCode,
           stdin: test.input,
           timeoutMs: 4000,
@@ -490,7 +494,7 @@ export function SessionPage() {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                language: selectedLanguage,
+                language: runtimeLanguage,
                 code: runnableCode,
                 stdin: '',
                 timeoutMs: 4000,
@@ -595,7 +599,7 @@ export function SessionPage() {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  language: selectedLanguage,
+                  language: runtimeLanguage,
                   code: runnableCode,
                   stdin: '',
                   timeoutMs: 4000,
@@ -702,7 +706,7 @@ export function SessionPage() {
       setIsRunningAll(false)
       setActiveAction(null)
     }
-  }, [currentCode, currentFunctionConfig, currentUnit, executeTest, isRunningAll, selectedLanguage])
+  }, [currentCode, currentFunctionConfig, currentUnit, executeTest, isRunningAll, runtimeLanguage, selectedLanguage])
 
   function selectUnit(index: number) {
     setCurrentUnitIndex(index)
@@ -838,6 +842,16 @@ export function SessionPage() {
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            title="Page settings"
+            onClick={() => setSettingsOpen(true)}
+            className="h-8 w-8 rounded-lg border-white/20 bg-white/[0.05] p-0 text-white/85 hover:border-white/35 hover:bg-white/[0.12]"
+          >
+            <Settings2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -858,7 +872,6 @@ export function SessionPage() {
             concept={currentUnit.concept}
             prompt={currentUnit.prompt}
             constraints={constraints}
-            hints={currentUnit.hints}
             tests={currentUnit.tests}
             difficultyLabel={difficultyByLevel(selectedLevel)}
             tags={[languageMeta.label, 'Practice', 'Runtime verified']}
@@ -1027,6 +1040,30 @@ export function SessionPage() {
 
             <div className="mt-4 space-y-3 text-sm text-white/80">
               <label className="flex items-center justify-between gap-3">
+                <span>Theme</span>
+                <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    className={`rounded-md px-2.5 py-1 text-xs transition ${
+                      theme === 'dark' ? 'bg-white/14 text-white' : 'text-white/70 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    Dark
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    className={`rounded-md px-2.5 py-1 text-xs transition ${
+                      theme === 'light' ? 'bg-white/14 text-white' : 'text-white/70 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    Light
+                  </button>
+                </div>
+              </label>
+
+              <label className="flex items-center justify-between gap-3">
                 <span>Font size</span>
                 <input
                   type="range"
@@ -1049,10 +1086,6 @@ export function SessionPage() {
                   {wordWrapEnabled ? 'On' : 'Off'}
                 </button>
               </label>
-
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70">
-                Theme is fixed to Pebble dark for this prototype.
-              </div>
             </div>
           </div>
         </div>

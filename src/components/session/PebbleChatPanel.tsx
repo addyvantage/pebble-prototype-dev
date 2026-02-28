@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { askPebble } from '../../utils/pebbleLLM'
+import { Globe, SendHorizontal, Settings2 } from 'lucide-react'
 
 type ChatMessage = {
   id: string
@@ -22,6 +23,26 @@ type PebbleChatPanelProps = {
   className?: string
 }
 
+const CHAT_LANGUAGE_KEY = 'pebble.chatLanguage.v1'
+
+const CHAT_LANGUAGES = [
+  'English',
+  'Hindi',
+  'Bengali',
+  'Telugu',
+  'Marathi',
+  'Tamil',
+  'Urdu',
+  'Gujarati',
+  'Kannada',
+  'Malayalam',
+  'Odia',
+  'Punjabi',
+  'Assamese',
+] as const
+
+type ChatLanguage = (typeof CHAT_LANGUAGES)[number]
+
 const TYPE_MIN = 1
 const TYPE_MAX = 3
 const TYPE_MS = 26
@@ -38,6 +59,19 @@ function summarizeRecentChat(messages: ChatMessage[]) {
     .slice(0, 360)
 }
 
+function isChatLanguage(value: string | null): value is ChatLanguage {
+  return CHAT_LANGUAGES.includes((value ?? '') as ChatLanguage)
+}
+
+function resolveInitialChatLanguage() {
+  if (typeof window === 'undefined') {
+    return 'English' as ChatLanguage
+  }
+
+  const stored = window.localStorage.getItem(CHAT_LANGUAGE_KEY)
+  return isChatLanguage(stored) ? stored : 'English'
+}
+
 function buildPrompt(input: {
   question: string
   unitTitle: string
@@ -46,6 +80,7 @@ function buildPrompt(input: {
   runMessage: string
   failingSummary: string
   recentSummary: string
+  chatLanguage: ChatLanguage
 }) {
   const contextLines = [
     `Unit: ${input.unitTitle}`,
@@ -54,6 +89,7 @@ function buildPrompt(input: {
     input.runMessage ? `Run output summary: ${input.runMessage}` : '',
     input.failingSummary ? `Failing tests: ${input.failingSummary}` : '',
     input.recentSummary ? `Recent chat summary: ${input.recentSummary}` : '',
+    `User language preference: ${input.chatLanguage}. Respond in this language unless user asks otherwise.`,
     `Question: ${input.question}`,
   ]
 
@@ -82,6 +118,8 @@ export function PebbleChatPanel({
   const [assistantState, setAssistantState] = useState<'idle' | 'thinking' | 'typing'>('idle')
   const [typedDraft, setTypedDraft] = useState('')
   const [lastAsked, setLastAsked] = useState('')
+  const [chatLanguage, setChatLanguage] = useState<ChatLanguage>(resolveInitialChatLanguage)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const abortRef = useRef<AbortController | null>(null)
   const typingTimerRef = useRef<number | null>(null)
@@ -94,6 +132,13 @@ export function PebbleChatPanel({
   useEffect(() => {
     onSummaryChange(recentSummary || initialSummary)
   }, [initialSummary, onSummaryChange, recentSummary])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(CHAT_LANGUAGE_KEY, chatLanguage)
+  }, [chatLanguage])
 
   const clearTyping = useCallback(() => {
     if (typingTimerRef.current !== null) {
@@ -185,6 +230,7 @@ export function PebbleChatPanel({
         runMessage,
         failingSummary,
         recentSummary,
+        chatLanguage,
       })
 
       try {
@@ -218,6 +264,7 @@ export function PebbleChatPanel({
       }
     },
     [
+      chatLanguage,
       codeText,
       failingSummary,
       hasRunContext,
@@ -245,6 +292,17 @@ export function PebbleChatPanel({
     },
   ] as const
 
+  const canSend = !isGenerating && input.trim().length > 0
+
+  function sendCurrentInput() {
+    const value = input.trim()
+    if (!value || isGenerating) {
+      return
+    }
+    setInput('')
+    void submitQuestion(value)
+  }
+
   return (
     <CardLayout className={className}>
       <div className="flex items-center justify-between gap-2">
@@ -266,9 +324,43 @@ export function PebbleChatPanel({
             <p className="text-xs text-white/70">AI mentor in context</p>
           </div>
         </div>
-        <Badge variant={runStatus === 'success' ? 'success' : runStatus === 'error' ? 'warning' : 'neutral'}>
-          {runStatus}
-        </Badge>
+
+        <div className="relative flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((prev) => !prev)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.05] text-white/75 transition hover:bg-white/[0.12]"
+            title="Chat settings"
+          >
+            <Settings2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <Badge variant={runStatus === 'success' ? 'success' : runStatus === 'error' ? 'warning' : 'neutral'}>
+            {runStatus}
+          </Badge>
+
+          {settingsOpen && (
+            <div className="absolute right-0 top-10 z-20 w-56 rounded-xl border border-white/12 bg-[#101827] p-3 shadow-[0_14px_34px_rgba(2,8,23,0.45)]">
+              <label className="space-y-1">
+                <span className="text-[11px] uppercase tracking-[0.06em] text-white/55">Chat language</span>
+                <div className="relative">
+                  <Globe className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/55" />
+                  <select
+                    value={chatLanguage}
+                    onChange={(event) => setChatLanguage(event.target.value as ChatLanguage)}
+                    className="w-full appearance-none rounded-lg border border-white/10 bg-white/[0.05] px-8 py-1.5 text-xs text-white outline-none focus:border-pebble-accent/45"
+                  >
+                    {CHAT_LANGUAGES.map((language) => (
+                      <option key={language} value={language} className="bg-[#101827] text-white">
+                        {language}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+              <p className="mt-2 text-[11px] text-white/55">Responses follow selected language preference.</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {hasRunContext && (
@@ -277,18 +369,23 @@ export function PebbleChatPanel({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-1.5">
-        {quickActions.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-medium text-white/85 transition hover:bg-white/[0.12] disabled:opacity-50"
-            onClick={() => void submitQuestion(action.prompt, true)}
-            disabled={isGenerating}
-          >
-            {action.label}
-          </button>
-        ))}
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap gap-1.5">
+          {quickActions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-medium text-white/85 transition hover:bg-white/[0.12] disabled:opacity-50"
+              onClick={() => void submitQuestion(action.prompt, true)}
+              disabled={isGenerating}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-white/58">
+          {hasRunContext ? 'Guidance is grounded in your latest run.' : 'Run tests to unlock specific guidance.'}
+        </p>
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-3 pr-2">
@@ -326,48 +423,45 @@ export function PebbleChatPanel({
         )}
       </div>
 
-      <div className="space-y-2">
-        <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          rows={2}
-          placeholder="Ask about failing tests, edge cases, or your next move..."
-          className="min-h-[44px] w-full resize-none rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none placeholder:text-white/55 focus:border-pebble-accent/55"
-        />
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-white/65">
-            {hasRunContext ? 'Pebble has your latest run context.' : 'Run tests to unlock specific guidance.'}
-          </p>
-          <div className="flex items-center gap-2">
-            {isGenerating && (
+      <div className="space-y-1.5">
+        {(isGenerating || !!lastAsked) && (
+          <div className="flex items-center justify-end gap-1.5">
+            {isGenerating ? (
               <Button variant="secondary" size="sm" onClick={cancelGeneration}>
                 Stop
               </Button>
-            )}
-            <Button
-              size="sm"
-              onClick={() => {
-                const value = input.trim()
-                if (!value) {
-                  return
-                }
-                setInput('')
-                void submitQuestion(value)
-              }}
-              disabled={isGenerating || !input.trim()}
-            >
-              Ask Pebble
-            </Button>
-            {!!lastAsked && !isGenerating && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => void submitQuestion(lastAsked, false)}
-              >
+            ) : null}
+            {!!lastAsked && !isGenerating ? (
+              <Button variant="secondary" size="sm" onClick={() => void submitQuestion(lastAsked, false)}>
                 Retry
               </Button>
-            )}
+            ) : null}
           </div>
+        )}
+
+        <div className="relative">
+          <textarea
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault()
+                sendCurrentInput()
+              }
+            }}
+            rows={1}
+            placeholder="Ask Pebble..."
+            className="min-h-[44px] w-full resize-none rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 pr-12 text-sm text-white outline-none placeholder:text-white/55 focus:border-pebble-accent/55"
+          />
+          <button
+            type="button"
+            onClick={sendCurrentInput}
+            disabled={!canSend}
+            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border border-pebble-accent/45 bg-pebble-accent/30 text-white transition hover:bg-pebble-accent/40 disabled:cursor-not-allowed disabled:opacity-45"
+            title="Send"
+          >
+            <SendHorizontal className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </CardLayout>
