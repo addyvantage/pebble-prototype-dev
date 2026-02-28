@@ -4,6 +4,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { LandingPage } from './pages/LandingPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { PlacementPage } from './pages/PlacementPage'
+import { ProblemsPage } from './pages/ProblemsPage'
 import { SessionPage } from './pages/SessionPage'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/placement" element={<PlacementPage />} />
         <Route path="/session/:sessionId" element={<SessionPage />} />
+        <Route path="/problems" element={<ProblemsPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -48,6 +48,7 @@ export function AppLayout() {
   const navItems = useMemo(
     () => [
       { to: '/', label: t('nav.home') },
+      { to: '/problems', label: t('nav.problems') },
       { to: '/session/1', label: t('nav.session') },
       { to: '/dashboard', label: t('nav.insights') },
     ],

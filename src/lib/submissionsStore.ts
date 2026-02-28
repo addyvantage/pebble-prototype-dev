@@ -1,4 +1,5 @@
 import type { PlacementLanguage } from '../data/onboardingData'
+import type { ProblemLanguage } from '../data/problemsBank'
 
 const SUBMISSIONS_KEY = 'pebble.submissions.v1'
 const MAX_SUBMISSIONS_PER_UNIT = 20
@@ -9,7 +10,7 @@ export type UnitSubmission = {
   id: string
   unitId: string
   status: SubmissionStatus
-  language: PlacementLanguage
+  language: PlacementLanguage | ProblemLanguage
   timestamp: number
   runtimeMs: number
   passCount: number
@@ -69,7 +70,7 @@ export function loadSubmissions(): SubmissionsByUnit {
           id: row.id,
           unitId,
           status: row.status,
-          language: row.language as PlacementLanguage,
+          language: row.language as PlacementLanguage | ProblemLanguage,
           timestamp: row.timestamp,
           runtimeMs: row.runtimeMs,
           passCount: row.passCount,
@@ -120,4 +121,3 @@ export function appendSubmission(
     [nextItem.unitId]: nextRows,
   } satisfies SubmissionsByUnit
 }
-

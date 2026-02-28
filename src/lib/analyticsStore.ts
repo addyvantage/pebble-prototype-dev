@@ -74,6 +74,8 @@ const EMPTY_STATE: AnalyticsState = {
   events: [],
 }
 
+let analyticsStateCache: AnalyticsState = EMPTY_STATE
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -220,12 +222,13 @@ function saveToStorage(state: AnalyticsState) {
 }
 
 function appendEvent(event: AnalyticsEvent) {
-  const current = readFromStorage()
+  const current = analyticsStateCache
   const nextState: AnalyticsState = {
     version: 1,
     updatedAt: Date.now(),
     events: [...current.events, event].slice(-ANALYTICS_MAX_EVENTS),
   }
+  analyticsStateCache = nextState
   saveToStorage(nextState)
   emitAnalyticsUpdate()
   return nextState
@@ -236,7 +239,7 @@ function buildEventId(prefix: string, ts: number) {
 }
 
 export function getAnalyticsState() {
-  return readFromStorage()
+  return analyticsStateCache
 }
 
 export function clearAnalyticsState() {
@@ -244,6 +247,7 @@ export function clearAnalyticsState() {
     return
   }
   window.localStorage.removeItem(ANALYTICS_STORAGE_KEY)
+  analyticsStateCache = EMPTY_STATE
   emitAnalyticsUpdate()
 }
 
@@ -252,11 +256,23 @@ export function subscribeAnalytics(listener: () => void) {
     return () => {}
   }
 
-  window.addEventListener(ANALYTICS_EVENT_NAME, listener)
-  window.addEventListener('storage', listener)
+  const onAnalyticsUpdate = () => {
+    listener()
+  }
+
+  const onStorage = (event: StorageEvent) => {
+    if (event.key && event.key !== ANALYTICS_STORAGE_KEY) {
+      return
+    }
+    analyticsStateCache = readFromStorage()
+    listener()
+  }
+
+  window.addEventListener(ANALYTICS_EVENT_NAME, onAnalyticsUpdate)
+  window.addEventListener('storage', onStorage)
   return () => {
-    window.removeEventListener(ANALYTICS_EVENT_NAME, listener)
-    window.removeEventListener('storage', listener)
+    window.removeEventListener(ANALYTICS_EVENT_NAME, onAnalyticsUpdate)
+    window.removeEventListener('storage', onStorage)
   }
 }
 
@@ -360,7 +376,7 @@ export function seedDemoAnalyticsData(params: {
   trackId: string
   unitIds: string[]
 }) {
-  const current = readFromStorage()
+  const current = analyticsStateCache
   if (current.events.length > 0 || params.unitIds.length === 0) {
     return current
   }
@@ -432,7 +448,12 @@ export function seedDemoAnalyticsData(params: {
     updatedAt: now,
     events: seeded.slice(-ANALYTICS_MAX_EVENTS),
   }
+  analyticsStateCache = nextState
   saveToStorage(nextState)
   emitAnalyticsUpdate()
   return nextState
+}
+
+if (typeof window !== 'undefined') {
+  analyticsStateCache = readFromStorage()
 }

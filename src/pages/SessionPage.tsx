@@ -22,7 +22,6 @@ import {
   type StartUnit,
 } from '../data/onboardingData'
 import { loadCurriculumPath, type CurriculumUnit } from '../content/pathLoader'
-import { IDE_MONACO_LANGUAGE } from '../components/ide/runtimeLanguages'
 import {
   getPebbleUserState,
   savePebbleCurriculumProgress,
@@ -64,6 +63,17 @@ import {
   logRunEvent,
   logSubmitEvent,
 } from '../lib/analyticsStore'
+import {
+  getDefaultProblemLanguage,
+  getProblemById,
+  getProblemStarterCode,
+  getSqlCheckerFailures,
+  isProblemLanguage,
+  type ProblemDefinition,
+  type ProblemLanguage,
+  type SqlPreviewTable,
+} from '../data/problemsBank'
+import { markProblemAttempt } from '../lib/solvedProblemsStore'
 
 type RunResponse = {
   ok: boolean
@@ -74,12 +84,24 @@ type RunResponse = {
   durationMs: number
 }
 
-const LANGUAGE_RUNTIME_LABEL: Record<PlacementLanguage, string> = {
+type SessionEditorLanguage = PlacementLanguage | 'sql'
+
+const SESSION_MONACO_LANGUAGE: Record<SessionEditorLanguage, string> = {
+  python: 'python',
+  javascript: 'javascript',
+  cpp: 'cpp',
+  java: 'java',
+  c: 'c',
+  sql: 'sql',
+}
+
+const SESSION_RUNTIME_LABEL: Record<SessionEditorLanguage, string> = {
   python: 'Python 3',
   javascript: 'JavaScript',
   cpp: 'C++17',
   java: 'Java 17',
   c: 'C (GNU)',
+  sql: 'SQL (Simulated)',
 }
 
 function normalizeOutput(value: string) {
@@ -147,11 +169,32 @@ function isStartUnit(value: string | null): value is StartUnit {
   return value === '1' || value === 'mid' || value === 'advanced'
 }
 
+function buildProblemUnit(problem: ProblemDefinition, language: ProblemLanguage): CurriculumUnit {
+  const starterCode = getProblemStarterCode(problem, language)
+  return {
+    id: problem.id,
+    title: problem.title,
+    concept: problem.topics[0] ?? 'Practice',
+    prompt: problem.statement.summary,
+    starterCode,
+    tests: problem.tests,
+    hints: [],
+  }
+}
+
+function formatSqlPreviewTable(table: SqlPreviewTable) {
+  const header = table.columns.join(' | ')
+  const separator = table.columns.map(() => '---').join(' | ')
+  const body = table.rows.map((row) => row.join(' | ')).join('\n')
+  return `${header}\n${separator}\n${body}`.trim()
+}
+
 export function SessionPage() {
   const { lang: uiLanguage, t, format } = useI18n()
   const [searchParams] = useSearchParams()
   const storedState = useMemo(() => getPebbleUserState(), [])
   const queryUnit = searchParams.get('unit')
+  const queryProblemId = searchParams.get('problem')
 
   useBodyScrollLock(true)
 
@@ -180,6 +223,22 @@ export function SessionPage() {
       'beginner'
     )
   }, [searchParams, storedState])
+
+  const activeProblem = useMemo(() => getProblemById(queryProblemId), [queryProblemId])
+  const activeProblemLanguage = useMemo<ProblemLanguage>(() => {
+    if (!activeProblem) {
+      return 'python'
+    }
+
+    const queryLanguage = searchParams.get('lang')
+    if (isProblemLanguage(queryLanguage) && activeProblem.languageSupport.includes(queryLanguage)) {
+      return queryLanguage
+    }
+
+    return getDefaultProblemLanguage(activeProblem)
+  }, [activeProblem, searchParams, selectedLanguage])
+  const sessionLanguage: SessionEditorLanguage = activeProblem ? activeProblemLanguage : selectedLanguage
+  const isSqlMode = activeProblem?.kind === 'sql' && sessionLanguage === 'sql'
 
   const [units, setUnits] = useState<CurriculumUnit[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -230,7 +289,11 @@ export function SessionPage() {
 
   const languageMeta = useMemo(() => getLanguageMetadata(selectedLanguage), [selectedLanguage])
   const { theme, setTheme } = useTheme()
-  const runtimeLanguage: PlacementLanguage = selectedLanguage === 'c' ? 'cpp' : selectedLanguage
+  const runtimeLanguage: PlacementLanguage = sessionLanguage === 'c'
+    ? 'cpp'
+    : isPlacementLanguage(sessionLanguage)
+      ? sessionLanguage
+      : selectedLanguage
   const trackId = `${selectedLanguage}:${selectedLevel}`
   const analyticsState = useSyncExternalStore(subscribeAnalytics, getAnalyticsState, getAnalyticsState)
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', [])
@@ -277,6 +340,26 @@ export function SessionPage() {
       setIsLoading(true)
       setLoadError('')
       try {
+        if (activeProblem) {
+          const problemUnit = buildProblemUnit(activeProblem, activeProblemLanguage)
+          if (!mounted) {
+            return
+          }
+
+          setUnits([problemUnit])
+          setDraftByUnitId({
+            [problemUnit.id]: problemUnit.starterCode,
+          })
+          setCurrentUnitIndex(0)
+          setSelectedTestIndex(0)
+          setTestResultsByIndex({})
+          setRunStatus('idle')
+          setRunMessage(t('run.evaluateAll'))
+          setTotalDurationMs(0)
+          setSubmitAccepted(false)
+          return
+        }
+
         const nextUnits = await loadCurriculumPath(selectedLanguage)
         if (!mounted) {
           return
@@ -345,6 +428,8 @@ export function SessionPage() {
       mounted = false
     }
   }, [
+    activeProblem,
+    activeProblemLanguage,
     queryUnit,
     selectedLanguage,
     storedState.curriculum?.currentUnitId,
@@ -359,15 +444,17 @@ export function SessionPage() {
   )
   const currentUnitCopy = currentUnit ? getLocalizedUnitCopy(currentUnit, uiLanguage) : null
   const currentDefaultCode = currentUnit
-    ? getUnitFunctionMode(selectedLanguage, currentUnit.id)?.starterStub ?? currentUnit.starterCode
+    ? activeProblem
+      ? getProblemStarterCode(activeProblem, activeProblemLanguage)
+      : getUnitFunctionMode(selectedLanguage, currentUnit.id)?.starterStub ?? currentUnit.starterCode
     : ''
   const currentCode = currentUnit ? draftByUnitId[currentUnit.id] ?? currentDefaultCode : ''
   const currentFunctionConfig = useMemo(() => {
-    if (!currentUnit) {
+    if (!currentUnit || activeProblem) {
       return null
     }
     return getUnitFunctionMode(selectedLanguage, currentUnit.id)
-  }, [currentUnit, selectedLanguage])
+  }, [activeProblem, currentUnit, selectedLanguage])
 
   const failingSummary = useMemo(
     () => buildFailingSummary(testResultsByIndex),
@@ -375,7 +462,7 @@ export function SessionPage() {
   )
 
   useEffect(() => {
-    if (!currentUnit) {
+    if (!currentUnit || activeProblem) {
       return
     }
 
@@ -386,7 +473,7 @@ export function SessionPage() {
       recentChatSummary,
       completedUnitIds,
     })
-  }, [completedUnitIds, currentUnit, recentChatSummary, selectedLanguage, selectedLevel])
+  }, [activeProblem, completedUnitIds, currentUnit, recentChatSummary, selectedLanguage, selectedLevel])
 
   const onCodeChange = useCallback((value: string) => {
     if (!currentUnit) {
@@ -483,7 +570,40 @@ export function SessionPage() {
       let nextResults: Record<number, UnitTestResultItem> = {}
       let durationTotal = 0
 
-      if (currentFunctionConfig?.evalMode === 'function') {
+      if (isSqlMode && activeProblem?.kind === 'sql' && activeProblem.sqlMeta) {
+        const checkerMessages: Record<string, string> = {
+          missing_select: t('sql.checker.missingSelect'),
+          missing_columns: t('sql.checker.missingColumns'),
+          missing_from_person: t('sql.checker.missingFromPerson'),
+          missing_left_join: t('sql.checker.missingLeftJoin'),
+          missing_join_condition: t('sql.checker.missingJoinCondition'),
+          missing_distinct: t('sql.checker.missingDistinct'),
+          missing_department: t('sql.checker.missingDepartment'),
+        }
+        const issues = getSqlCheckerFailures(activeProblem, currentCode)
+        const passed = issues.length === 0
+        const preview = formatSqlPreviewTable(activeProblem.sqlMeta.expectedResult)
+        const stderrText = passed
+          ? ''
+          : issues
+            .map((issue) => checkerMessages[issue] ?? issue)
+            .join(' ')
+        durationTotal = 36 + Math.min(120, Math.floor(currentCode.length / 16))
+
+        nextResults = Object.fromEntries(
+          currentUnit.tests.map((test, index) => [index, {
+            input: test.input,
+            expected: test.expected,
+            actual: passed ? preview : '',
+            stderr: stderrText,
+            passed,
+            timedOut: false,
+            durationMs: durationTotal,
+            exitCode: passed ? 0 : 1,
+          }]),
+        )
+        setTestResultsByIndex(nextResults)
+      } else if (currentFunctionConfig?.evalMode === 'function') {
         const parsedCases = currentUnit.tests.map((test) => currentFunctionConfig.parseTestCase(test))
         if (parsedCases.some((test) => test === null)) {
           nextResults = Object.fromEntries(
@@ -811,13 +931,24 @@ export function SessionPage() {
       if (allPassed) {
         setRunStatus('success')
         setRunMessage(
-          t('run.passedSummary', {
-            passed: passedCount,
-            total: currentUnit.tests.length,
-            duration: durationTotal,
-          }),
+          isSqlMode
+            ? `${t('sql.checker.pass')} • ${t('run.passedSummary', {
+                passed: passedCount,
+                total: currentUnit.tests.length,
+                duration: durationTotal,
+              })}`
+            : t('run.passedSummary', {
+                passed: passedCount,
+                total: currentUnit.tests.length,
+                duration: durationTotal,
+              }),
         )
-        setUnitProgress((prev) => markUnitCompleted(prev, currentUnit.id, durationTotal))
+        if (!activeProblem) {
+          setUnitProgress((prev) => markUnitCompleted(prev, currentUnit.id, durationTotal))
+        }
+        if (activeProblem) {
+          markProblemAttempt(activeProblem.id, mode === 'submit')
+        }
 
         if (mode === 'submit') {
           setSubmitAccepted(true)
@@ -847,6 +978,9 @@ export function SessionPage() {
         if (mode === 'submit') {
           setSubmitAccepted(false)
         }
+        if (activeProblem) {
+          markProblemAttempt(activeProblem.id, false)
+        }
       }
 
       if (mode === 'submit') {
@@ -854,7 +988,7 @@ export function SessionPage() {
           appendSubmission(prev, {
             unitId: currentUnit.id,
             status: allPassed ? 'accepted' : 'failed',
-            language: selectedLanguage,
+            language: sessionLanguage,
             runtimeMs: durationTotal,
             passCount: passedCount,
             totalCount: currentUnit.tests.length,
@@ -867,7 +1001,19 @@ export function SessionPage() {
       setIsRunningAll(false)
       setActiveAction(null)
     }
-  }, [currentCode, currentFunctionConfig, currentUnit, executeTest, isRunningAll, runtimeLanguage, selectedLanguage, t, trackId])
+  }, [
+    activeProblem,
+    currentCode,
+    currentFunctionConfig,
+    currentUnit,
+    executeTest,
+    isRunningAll,
+    isSqlMode,
+    runtimeLanguage,
+    selectedLanguage,
+    t,
+    trackId,
+  ])
 
   function selectUnit(index: number) {
     setCurrentUnitIndex(index)
@@ -903,7 +1049,9 @@ export function SessionPage() {
 
     setDraftByUnitId((prev) => ({
       ...prev,
-      [currentUnit.id]: currentFunctionConfig?.starterStub ?? currentUnit.starterCode,
+      [currentUnit.id]: activeProblem
+        ? getProblemStarterCode(activeProblem, activeProblemLanguage)
+        : currentFunctionConfig?.starterStub ?? currentUnit.starterCode,
     }))
     setRunStatus('idle')
     setRunMessage(t('run.editorReset'))
@@ -965,6 +1113,7 @@ export function SessionPage() {
     exitCode: typeof lastExitCode === 'number' ? lastExitCode : null,
   })
   const currentUnitSubmissions = submissionsByUnit[currentUnit.id] ?? []
+  const sqlPreviewTable = isSqlMode && activeProblem?.sqlMeta ? activeProblem.sqlMeta.expectedResult : null
 
   const constraints = currentFunctionConfig?.evalMode === 'function'
     ? [
@@ -977,6 +1126,7 @@ export function SessionPage() {
         t('constraints.scriptMode.2'),
         t('constraints.scriptMode.3', { count: currentUnit.tests.length }),
       ]
+  const resolvedConstraints = activeProblem?.statement.constraints ?? constraints
 
   return (
     <section className={`session-shell h-[100vh] overflow-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}>
@@ -1007,7 +1157,7 @@ export function SessionPage() {
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
           <p className="max-w-[420px] truncate px-1 text-sm font-semibold text-pebble-text-primary">
-            {currentUnitCopy?.title ?? currentUnit.title}
+            {activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
           </p>
           <button
             type="button"
@@ -1060,23 +1210,35 @@ export function SessionPage() {
         <div className="grid h-full min-h-0 grid-cols-[clamp(380px,24vw,420px)_minmax(0,1fr)_clamp(360px,24vw,400px)] gap-3">
           <ProblemStatementPanel
             unitId={currentUnit.id}
-            title={currentUnitCopy?.title ?? currentUnit.title}
-            concept={currentUnitCopy?.concept ?? currentUnit.concept}
-            prompt={currentUnitCopy?.prompt ?? currentUnit.prompt}
-            description={currentUnitCopy?.description}
-            constraints={constraints}
+            title={activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
+            concept={activeProblem?.topics[0] ?? currentUnitCopy?.concept ?? currentUnit.concept}
+            prompt={activeProblem?.statement.summary ?? currentUnitCopy?.prompt ?? currentUnit.prompt}
+            description={activeProblem?.statement.description ?? currentUnitCopy?.description}
+            constraints={resolvedConstraints}
             tests={currentUnit.tests}
+            examples={activeProblem?.statement.examples}
+            inputText={activeProblem?.statement.input}
+            outputText={activeProblem?.statement.output}
             difficultyLabel={
-              selectedLevel === 'beginner'
-                ? t('difficulty.easy')
-                : selectedLevel === 'intermediate'
-                  ? t('difficulty.medium')
-                  : t('difficulty.hard')
+              activeProblem
+                ? activeProblem.difficulty === 'Easy'
+                  ? t('difficulty.easy')
+                  : activeProblem.difficulty === 'Medium'
+                    ? t('difficulty.medium')
+                    : t('difficulty.hard')
+                : selectedLevel === 'beginner'
+                  ? t('difficulty.easy')
+                  : selectedLevel === 'intermediate'
+                    ? t('difficulty.medium')
+                    : t('difficulty.hard')
             }
-            tags={[languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]}
-            language={selectedLanguage}
+            tags={activeProblem
+              ? [...activeProblem.topics.slice(0, 2), `${activeProblem.estimatedMinutes}m`]
+              : [languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]}
+            language={sessionLanguage}
             functionMode={currentFunctionConfig?.evalMode === 'function'}
             submissions={currentUnitSubmissions}
+            sqlSchema={activeProblem?.sqlMeta?.tables}
             className="min-h-0"
           />
 
@@ -1091,13 +1253,13 @@ export function SessionPage() {
                 <div className="min-w-0">
                   <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">{t('editor.code')}</p>
                   <p className="truncate text-sm font-medium text-pebble-text-primary">
-                    {currentUnitCopy?.title ?? currentUnit.title}
+                    {activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className="rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary">
-                    {LANGUAGE_RUNTIME_LABEL[selectedLanguage]}
+                    {SESSION_RUNTIME_LABEL[sessionLanguage]}
                   </span>
                   {currentFunctionConfig?.evalMode === 'function' && (
                     <span className="rounded-full border border-pebble-accent/35 bg-pebble-accent/12 px-2.5 py-1 text-xs text-pebble-accent">
@@ -1155,7 +1317,7 @@ export function SessionPage() {
               <div dir="ltr" className="ltrSafe min-h-0 flex-1">
                 <Editor
                   height="100%"
-                  language={IDE_MONACO_LANGUAGE[selectedLanguage]}
+                  language={SESSION_MONACO_LANGUAGE[sessionLanguage]}
                   theme={theme === 'light' ? 'vs' : 'vs-dark'}
                   value={currentCode}
                   onChange={(nextValue) => onCodeChange(nextValue ?? '')}
@@ -1203,13 +1365,14 @@ export function SessionPage() {
               onSelectTest={(index) => setSelectedTestIndex(index)}
               resultsByIndex={testResultsByIndex}
               summaryLabel={summaryLabel}
+              sqlPreview={sqlPreviewTable}
               className="min-h-0"
             />
           </div>
 
           <PebbleChatPanel
-            unitTitle={currentUnitCopy?.title ?? currentUnit.title}
-            unitConcept={currentUnitCopy?.concept ?? currentUnit.concept}
+            unitTitle={activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
+            unitConcept={activeProblem?.topics[0] ?? currentUnitCopy?.concept ?? currentUnit.concept}
             codeText={currentCode}
             runStatus={runStatus}
             runMessage={runMessage}

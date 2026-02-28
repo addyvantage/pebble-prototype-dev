@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { PlacementLanguage } from '../../data/onboardingData'
+import type { ProblemExample, SqlTableSchema } from '../../data/problemsBank'
 import { getLocalizedUnitSolution } from '../../data/solutionsBank'
 import type { UnitSubmission } from '../../lib/submissionsStore'
 import { useI18n } from '../../i18n/useI18n'
@@ -17,11 +18,15 @@ type ProblemStatementPanelProps = {
   description?: string
   constraints: string[]
   tests: ProblemTest[]
+  examples?: ProblemExample[]
+  inputText?: string
+  outputText?: string
   difficultyLabel: string
   tags: string[]
-  language: PlacementLanguage
+  language: PlacementLanguage | 'sql'
   functionMode?: boolean
   submissions: UnitSubmission[]
+  sqlSchema?: SqlTableSchema[]
   className?: string
 }
 
@@ -33,12 +38,13 @@ function classNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(' ')
 }
 
-const LANGUAGE_LABELS: Record<PlacementLanguage, string> = {
+const LANGUAGE_LABELS: Record<PlacementLanguage | 'sql', string> = {
   python: 'Python',
   javascript: 'JavaScript',
   cpp: 'C++',
   java: 'Java',
   c: 'C',
+  sql: 'SQL',
 }
 
 export function ProblemStatementPanel({
@@ -49,26 +55,35 @@ export function ProblemStatementPanel({
   description,
   constraints,
   tests,
+  examples,
+  inputText,
+  outputText,
   difficultyLabel,
   tags,
   language,
   functionMode = false,
   submissions,
+  sqlSchema,
   className,
 }: ProblemStatementPanelProps) {
   const { lang, t, isRTL } = useI18n()
   const isUrdu = isRTL
   const proseClass = isUrdu ? 'rtlText' : ''
   const [activeTab, setActiveTab] = useState<'problem' | 'solutions' | 'submissions'>('problem')
-  const [solutionLanguage, setSolutionLanguage] = useState<PlacementLanguage>(language)
+  const [solutionLanguage, setSolutionLanguage] = useState<PlacementLanguage>(
+    language === 'sql' ? 'python' : language,
+  )
   const [copied, setCopied] = useState(false)
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
 
   const solution = useMemo(() => getLocalizedUnitSolution(unitId, lang), [lang, unitId])
-  const examples = tests.slice(0, 2)
+  const resolvedExamples = examples?.map((item) => ({
+    input: item.input,
+    expected: item.output,
+  })) ?? tests.slice(0, 2)
 
   useEffect(() => {
-    setSolutionLanguage(language)
+    setSolutionLanguage(language === 'sql' ? 'python' : language)
     setCopied(false)
     setSelectedSubmissionId('')
   }, [language, unitId])
@@ -87,7 +102,7 @@ export function ProblemStatementPanel({
       return [] as PlacementLanguage[]
     }
     const languages: PlacementLanguage[] = []
-    if (solution.implementations[language]) {
+    if (language !== 'sql' && solution.implementations[language]) {
       languages.push(language)
     }
     if (!languages.includes('python') && solution.implementations.python) {
@@ -187,15 +202,15 @@ export function ProblemStatementPanel({
             </Section>
 
             <Section title={t('problem.input')}>
-              {functionMode
+              {inputText ?? (functionMode
                 ? t('problem.inputFunctionMode')
-                : t('problem.inputScriptMode')}
+                : t('problem.inputScriptMode'))}
             </Section>
 
             <Section title={t('problem.output')}>
-              {functionMode
+              {outputText ?? (functionMode
                 ? t('problem.outputFunctionMode')
-                : t('problem.outputScriptMode')}
+                : t('problem.outputScriptMode'))}
             </Section>
 
             {functionMode && (
@@ -219,7 +234,7 @@ export function ProblemStatementPanel({
             <section className="space-y-2">
               <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.examples')}</h3>
               <div className="grid gap-2">
-                {examples.map((example, index) => (
+                {resolvedExamples.map((example, index) => (
                   <div
                     key={`${title}-example-${index}`}
                     className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-2"
@@ -247,6 +262,45 @@ export function ProblemStatementPanel({
                 ))}
               </div>
             </section>
+
+            {sqlSchema && sqlSchema.length > 0 ? (
+              <section className="space-y-2">
+                <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('sql.schema')}</h3>
+                <div className="space-y-2">
+                  {sqlSchema.map((table) => (
+                    <div key={table.name} className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3" dir="ltr">
+                      <p className="ltrSafe text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">
+                        {t('sql.table')}: {table.name}
+                      </p>
+                      <div className="mt-2 overflow-x-auto rounded-lg border border-pebble-border/24 bg-pebble-canvas/55">
+                        <table className="min-w-full text-left text-xs text-pebble-text-secondary ltrSafe">
+                          <thead className="bg-pebble-overlay/[0.08] text-pebble-text-primary">
+                            <tr>
+                              {table.columns.map((column) => (
+                                <th key={column.name} className="px-2 py-1.5 font-medium">
+                                  {column.name} ({column.type})
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {table.rows.map((row, rowIndex) => (
+                              <tr key={`${table.name}-row-${rowIndex}`} className="border-t border-pebble-border/20">
+                                {row.map((value, valueIndex) => (
+                                  <td key={`${table.name}-${rowIndex}-${valueIndex}`} className="px-2 py-1.5">
+                                    {value}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         )}
 
@@ -306,7 +360,7 @@ export function ProblemStatementPanel({
                     </button>
                   </div>
 
-                  {!solution?.implementations[language] && solution?.implementations.python ? (
+                  {language !== 'sql' && !solution?.implementations[language] && solution?.implementations.python ? (
                     <p className={classNames('text-xs text-pebble-text-secondary', proseClass)}>{t('solutions.languageFallback', { language: LANGUAGE_LABELS[language] })}</p>
                   ) : null}
 

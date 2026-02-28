@@ -1,5 +1,6 @@
 import { Card } from '../ui/Card'
 import { useI18n } from '../../i18n/useI18n'
+import type { SqlPreviewTable } from '../../data/problemsBank'
 
 export type UnitTestCase = {
   input: string
@@ -22,6 +23,7 @@ type TestResultsPanelProps = {
   selectedTestIndex: number
   resultsByIndex: Record<number, UnitTestResultItem>
   summaryLabel: string
+  sqlPreview?: SqlPreviewTable | null
   onSelectTest: (index: number) => void
   className?: string
 }
@@ -35,6 +37,7 @@ export function TestResultsPanel({
   selectedTestIndex,
   resultsByIndex,
   summaryLabel,
+  sqlPreview,
   onSelectTest,
   className,
 }: TestResultsPanelProps) {
@@ -133,6 +136,32 @@ export function TestResultsPanel({
 
             {selectedResult?.stderr ? (
               <FieldBlock label={t('tests.stderr')} value={selectedResult.stderr} warning isUrdu={isUrdu} />
+            ) : null}
+
+            {sqlPreview && selectedResult ? (
+              <div className="space-y-1.5">
+                <p className={`text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{t('sql.resultPreview')}</p>
+                <div className="overflow-x-auto rounded-lg border border-pebble-border/30 bg-pebble-canvas/55 p-2" dir="ltr">
+                  <table className="min-w-full text-left text-[12px] text-pebble-text-secondary ltrSafe">
+                    <thead className="text-pebble-text-primary">
+                      <tr>
+                        {sqlPreview.columns.map((column) => (
+                          <th key={column} className="px-2 py-1 font-medium">{column}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sqlPreview.rows.map((row, rowIndex) => (
+                        <tr key={`preview-row-${rowIndex}`} className="border-t border-pebble-border/20">
+                          {row.map((value, valueIndex) => (
+                            <td key={`preview-${rowIndex}-${valueIndex}`} className="px-2 py-1.5">{value}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : null}
           </div>
         )}
