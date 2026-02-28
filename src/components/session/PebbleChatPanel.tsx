@@ -19,6 +19,7 @@ type PebbleChatPanelProps = {
   failingSummary: string
   initialSummary: string
   onSummaryChange: (summary: string) => void
+  className?: string
 }
 
 const TYPE_MIN = 1
@@ -68,6 +69,7 @@ export function PebbleChatPanel({
   failingSummary,
   initialSummary,
   onSummaryChange,
+  className,
 }: PebbleChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -244,13 +246,18 @@ export function PebbleChatPanel({
   ] as const
 
   return (
-    <CardLayout>
+    <CardLayout className={className}>
+      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full border border-pebble-accent/20 bg-pebble-accent/8 blur-[1px]" />
+      <div className="pointer-events-none absolute bottom-3 right-3 text-[10px] uppercase tracking-[0.18em] text-white/20">
+        Pebble
+      </div>
+
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-pebble-border/30 bg-pebble-accent/18 text-xs font-semibold text-pebble-text-primary">
+          <div className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-pebble-accent/18 text-xs font-semibold text-white">
             P
             <span
-              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-pebble-canvas ${
+              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-[#0b1120] ${
                 runStatus === 'success'
                   ? 'bg-pebble-success'
                   : runStatus === 'error'
@@ -260,8 +267,8 @@ export function PebbleChatPanel({
             />
           </div>
           <div>
-            <p className="text-sm font-semibold text-pebble-text-primary">Pebble</p>
-            <p className="text-xs text-pebble-text-secondary">In-context guidance</p>
+            <p className="text-sm font-semibold text-white">Pebble</p>
+            <p className="text-xs text-white/60">In-context guidance</p>
           </div>
         </div>
         <Badge variant={runStatus === 'success' ? 'success' : runStatus === 'error' ? 'warning' : 'neutral'}>
@@ -270,7 +277,7 @@ export function PebbleChatPanel({
       </div>
 
       {hasRunContext && (
-        <p className="inline-flex w-fit rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.06em] text-pebble-text-muted">
+        <p className="inline-flex w-fit rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.06em] text-white/50">
           Using your run output
         </p>
       )}
@@ -280,7 +287,7 @@ export function PebbleChatPanel({
           <button
             key={action.label}
             type="button"
-            className="rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-3.5 py-1.5 text-xs font-medium text-pebble-text-secondary transition hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16] hover:text-pebble-text-primary"
+            className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11px] font-medium text-white/70 transition hover:bg-white/[0.12] hover:text-white"
             onClick={() => void submitQuestion(action.prompt, true)}
             disabled={isGenerating}
           >
@@ -289,18 +296,18 @@ export function PebbleChatPanel({
         ))}
       </div>
 
-      <div className="max-h-[360px] space-y-2 overflow-y-auto rounded-xl border border-pebble-border/30 bg-pebble-canvas/70 p-3">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-2.5">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`max-w-[92%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+            className={`max-w-[95%] rounded-xl px-2.5 py-1.5 text-[11px] leading-relaxed ${
               message.role === 'user'
-                ? 'ml-auto border border-pebble-accent/35 bg-pebble-accent/14 text-pebble-text-primary'
-                : 'mr-auto border border-pebble-border/30 bg-pebble-overlay/[0.09] text-pebble-text-secondary'
+                ? 'ml-auto border border-pebble-accent/35 bg-pebble-accent/14 text-white'
+                : 'mr-auto border border-white/10 bg-white/[0.06] text-white/75'
             }`}
           >
             {message.usedRunOutput && (
-              <p className="mb-1 inline-flex rounded-full border border-pebble-border/35 px-2 py-0.5 text-[10px] uppercase tracking-[0.04em] text-pebble-text-muted">
+              <p className="mb-1 inline-flex rounded-full border border-white/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.04em] text-white/45">
                 using run output
               </p>
             )}
@@ -309,14 +316,14 @@ export function PebbleChatPanel({
         ))}
 
         {assistantState === 'thinking' && (
-          <div className="mr-auto max-w-[92%] rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.09] px-3 py-2 text-xs text-pebble-text-secondary">
+          <div className="mr-auto max-w-[95%] rounded-xl border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11px] text-white/70">
             Pebble is thinking...
           </div>
         )}
 
         {assistantState === 'typing' && (
-          <div className="mr-auto max-w-[92%] rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.09] px-3 py-2 text-xs text-pebble-text-secondary">
-            <p className="mb-1 inline-flex rounded-full border border-pebble-border/35 px-2 py-0.5 text-[10px] uppercase tracking-[0.04em] text-pebble-text-muted">
+          <div className="mr-auto max-w-[95%] rounded-xl border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11px] text-white/75">
+            <p className="mb-1 inline-flex rounded-full border border-white/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.04em] text-white/45">
               typing
             </p>
             <p className="whitespace-pre-wrap">{typedDraft}</p>
@@ -328,12 +335,12 @@ export function PebbleChatPanel({
         <textarea
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          rows={3}
+          rows={2}
           placeholder="Ask about your failing tests, edge cases, or next step..."
-          className="w-full resize-none rounded-xl border border-pebble-border/35 bg-pebble-canvas/85 p-3 text-sm text-pebble-text-primary outline-none placeholder:text-pebble-text-muted focus:border-pebble-accent/60"
+          className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.05] p-2 text-xs text-white outline-none placeholder:text-white/35 focus:border-pebble-accent/50"
         />
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-pebble-text-muted">
+          <p className="text-[11px] text-white/45">
             {hasRunContext ? 'Pebble can use your latest run result.' : 'Run tests to unlock more specific guidance.'}
           </p>
           <div className="flex items-center gap-2">
@@ -372,9 +379,11 @@ export function PebbleChatPanel({
   )
 }
 
-function CardLayout({ children }: { children: ReactNode }) {
+function CardLayout({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="glass-panel soft-ring flex h-full min-h-[420px] flex-col gap-3 p-4">
+    <div
+      className={`relative flex h-full min-h-0 flex-col gap-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.03] p-3 ${className ?? ''}`}
+    >
       {children}
     </div>
   )

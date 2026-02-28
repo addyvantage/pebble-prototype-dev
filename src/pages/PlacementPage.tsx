@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import Editor from '@monaco-editor/react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Divider } from '../components/ui/Divider'
-import { buttonClass } from '../components/ui/buttonStyles'
-import { IDE_MONACO_LANGUAGE } from '../components/ide/runtimeLanguages'
+import { McqQuestionCard } from '../components/placement/McqQuestionCard'
+import {
+  CodingQuestionCard,
+  type CodingTestResult,
+} from '../components/placement/CodingQuestionCard'
 import {
   getLanguageMetadata,
   isPlacementLanguage,
@@ -14,13 +16,14 @@ import {
   scoreToStartUnit,
   type PlacementLanguage,
   type PlacementLevel,
-  type StartUnit,
 } from '../data/onboardingData'
 import {
   buildWeeklyPlacementSet,
   type PlacementCodingQuestion,
+  type PlacementMcqQuestion,
 } from '../data/placementBank'
 import { savePebblePlacement } from '../utils/pebbleUserState'
+import { useBodyScrollLock } from '../utils/useBodyScrollLock'
 
 type RunResponse = {
   ok: boolean
@@ -31,27 +34,15 @@ type RunResponse = {
   durationMs: number
 }
 
-type CodingTestResult = {
-  stdin: string
-  expected: string
-  actual: string
-  stderr: string
-  passed: boolean
-  timedOut: boolean
-}
-
 type CodingRunState = {
   code: string
   running: boolean
   results: CodingTestResult[]
 }
 
-type PlacementResult = {
-  score: number
-  mcqPoints: number
-  codingPoints: number
-  startUnit: StartUnit
-}
+type PlacementFlowQuestion =
+  | { kind: 'mcq'; question: PlacementMcqQuestion }
+  | { kind: 'coding'; question: PlacementCodingQuestion }
 
 function normalizeOutput(value: string) {
   return value.replace(/\r\n/g, '\n').trim()
@@ -83,16 +74,37 @@ function normalizeRunResponse(payload: unknown): RunResponse {
   }
 }
 
-function answerClass(isSelected: boolean) {
-  return `w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
-    isSelected
-      ? 'border-pebble-accent/45 bg-pebble-accent/14 text-pebble-text-primary'
-      : 'border-pebble-border/30 bg-pebble-overlay/[0.05] text-pebble-text-secondary hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.1] hover:text-pebble-text-primary'
-  }`
+function buildQuestionFlow(mcq: PlacementMcqQuestion[], coding: PlacementCodingQuestion[]): PlacementFlowQuestion[] {
+  const sequence: PlacementFlowQuestion[] = []
+
+  if (mcq[0]) sequence.push({ kind: 'mcq', question: mcq[0] })
+  if (coding[0]) sequence.push({ kind: 'coding', question: coding[0] })
+  if (mcq[1]) sequence.push({ kind: 'mcq', question: mcq[1] })
+  if (mcq[2]) sequence.push({ kind: 'mcq', question: mcq[2] })
+  if (coding[1]) sequence.push({ kind: 'coding', question: coding[1] })
+  if (mcq[3]) sequence.push({ kind: 'mcq', question: mcq[3] })
+  if (coding[2]) sequence.push({ kind: 'coding', question: coding[2] })
+
+  return sequence
+}
+
+function getCodingRunStateLabel(state: CodingRunState | undefined): 'not run' | 'running' | 'pass' | 'fail' {
+  if (state?.running) {
+    return 'running'
+  }
+  if (!state || state.results.length === 0) {
+    return 'not run'
+  }
+
+  const passedCount = state.results.filter((result) => result.passed).length
+  return passedCount === state.results.length ? 'pass' : 'fail'
 }
 
 export function PlacementPage() {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  useBodyScrollLock(true)
+
   const langParam = searchParams.get('lang')
   const levelParam = searchParams.get('level')
 
@@ -101,10 +113,14 @@ export function PlacementPage() {
 
   const metadata = useMemo(() => getLanguageMetadata(language), [language])
   const weeklySet = useMemo(() => buildWeeklyPlacementSet(language, level), [language, level])
+  const questionFlow = useMemo(
+    () => buildQuestionFlow(weeklySet.mcq, weeklySet.coding),
+    [weeklySet.coding, weeklySet.mcq],
+  )
 
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [mcqAnswers, setMcqAnswers] = useState<Record<string, number>>({})
   const [codingState, setCodingState] = useState<Record<string, CodingRunState>>({})
-  const [result, setResult] = useState<PlacementResult | null>(null)
 
   useEffect(() => {
     const nextCoding: Record<string, CodingRunState> = {}
@@ -116,21 +132,26 @@ export function PlacementPage() {
       }
     }
 
+    setCurrentQuestionIndex(0)
     setMcqAnswers({})
     setCodingState(nextCoding)
-    setResult(null)
   }, [weeklySet])
 
-  const answeredMcqCount = weeklySet.mcq.reduce((count, question) => {
-    return typeof mcqAnswers[question.id] === 'number' ? count + 1 : count
-  }, 0)
+  const currentQuestion = questionFlow[currentQuestionIndex]
+  const totalQuestions = questionFlow.length
+  const progressPercent = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0
 
-  const hasRunAllCoding = weeklySet.coding.every((question) => {
-    const state = codingState[question.id]
-    return Boolean(state && state.results.length > 0)
-  })
+  function isAnswered(question: PlacementFlowQuestion) {
+    if (question.kind === 'mcq') {
+      return typeof mcqAnswers[question.question.id] === 'number'
+    }
+    const state = codingState[question.question.id]
+    return Boolean(state && !state.running && state.results.length > 0)
+  }
 
-  const canSubmit = answeredMcqCount === weeklySet.mcq.length && hasRunAllCoding
+  const canGoBack = currentQuestionIndex > 0
+  const canGoNext = Boolean(currentQuestion && isAnswered(currentQuestion) && currentQuestionIndex < totalQuestions - 1)
+  const canFinish = Boolean(currentQuestion && isAnswered(currentQuestion) && currentQuestionIndex === totalQuestions - 1)
 
   function updateCode(questionId: string, code: string) {
     setCodingState((prev) => ({
@@ -241,36 +262,33 @@ export function PlacementPage() {
 
     const total = mcqPoints + codingPoints
     const startUnit = scoreToStartUnit(total)
-    return { score: total, mcqPoints, codingPoints, startUnit }
+
+    return {
+      score: total,
+      startUnit,
+      answerTrace: [
+        ...weeklySet.mcq.map((question) => mcqAnswers[question.id] ?? -1),
+        ...weeklySet.coding.map((question) => {
+          const state = codingState[question.id]
+          if (!state || state.results.length === 0) {
+            return 0
+          }
+          const passedCount = state.results.filter((test) => test.passed).length
+          if (passedCount === state.results.length) {
+            return 2
+          }
+          return passedCount > 0 ? 1 : 0
+        }),
+      ],
+      questionIds: [
+        ...weeklySet.mcq.map((question) => question.id),
+        ...weeklySet.coding.map((question) => question.id),
+      ],
+    }
   }
 
-  function finalizePlacement() {
-    if (!canSubmit) {
-      return
-    }
-
+  function finishPlacement() {
     const nextResult = computeScore()
-    setResult(nextResult)
-
-    const answerTrace = [
-      ...weeklySet.mcq.map((question) => mcqAnswers[question.id] ?? -1),
-      ...weeklySet.coding.map((question) => {
-        const state = codingState[question.id]
-        if (!state || state.results.length === 0) {
-          return 0
-        }
-        const passedCount = state.results.filter((test) => test.passed).length
-        if (passedCount === state.results.length) {
-          return 2
-        }
-        return passedCount > 0 ? 1 : 0
-      }),
-    ]
-
-    const questionIds = [
-      ...weeklySet.mcq.map((question) => question.id),
-      ...weeklySet.coding.map((question) => question.id),
-    ]
 
     const startUnitIndex =
       nextResult.startUnit === 'advanced' ? 7 : nextResult.startUnit === 'mid' ? 4 : 1
@@ -281,160 +299,96 @@ export function PlacementPage() {
       score: nextResult.score,
       startUnit: nextResult.startUnit,
       startUnitIndex,
-      answers: answerTrace,
+      answers: nextResult.answerTrace,
       weekBucket: weeklySet.weekBucket,
-      questionIds,
+      questionIds: nextResult.questionIds,
     })
+
+    navigate(`/session/1?lang=${language}&level=${level}&unit=${nextResult.startUnit}`)
   }
 
   return (
-    <section className="page-enter mx-auto w-full max-w-6xl space-y-5">
-      <Card padding="lg" className="space-y-5" interactive>
+    <section className="h-[100vh] overflow-hidden p-3">
+      <Card padding="md" className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col space-y-4" interactive>
         <div className="space-y-2">
-          <Badge>Placement</Badge>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Badge>Placement</Badge>
+            <span className="rounded-full border border-pebble-border/35 px-2.5 py-1 text-xs text-pebble-text-muted">
+              Level: {level}
+            </span>
+          </div>
+
           <h1 className="text-balance text-3xl font-semibold tracking-[-0.015em] text-pebble-text-primary sm:text-4xl">
-            {metadata.label} placement set
+            {metadata.label} placement assessment
           </h1>
-          <p className="max-w-3xl text-sm leading-relaxed text-pebble-text-secondary sm:text-base">
-            This week you get 7 questions: 4 concept checks + 3 coding checks. Set refreshes weekly,
-            but remains deterministic for your language and level profile.
+          <p className="text-sm text-pebble-text-secondary sm:text-base">
+            Question {Math.min(currentQuestionIndex + 1, totalQuestions)} / {totalQuestions}
           </p>
-          <div className="flex flex-wrap gap-2 text-xs text-pebble-text-muted">
-            <span className="rounded-full border border-pebble-border/35 px-2.5 py-1">Level: {level}</span>
-            <span className="rounded-full border border-pebble-border/35 px-2.5 py-1">Week bucket: {weeklySet.weekBucket}</span>
+          <div className="h-2 overflow-hidden rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.06]">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-pebble-accent/85 to-sky-300/75 transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
         </div>
 
         <Divider />
 
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-pebble-text-primary">Part A — Multiple choice (4)</h2>
-          {weeklySet.mcq.map((question, index) => (
-            <Card key={question.id} padding="sm" className="bg-pebble-overlay/[0.05]" interactive>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-pebble-text-primary">{index + 1}. {question.prompt}</p>
-                <Badge variant="neutral">{question.difficulty}</Badge>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {question.options.map((option, optionIndex) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className={answerClass(mcqAnswers[question.id] === optionIndex)}
-                    onClick={() => {
-                      setMcqAnswers((prev) => ({
-                        ...prev,
-                        [question.id]: optionIndex,
-                      }))
-                    }}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-pebble-text-primary">Part B — Coding checks (3)</h2>
-          {weeklySet.coding.map((question, index) => {
-            const state = codingState[question.id]
-            const passedCount = state?.results.filter((result) => result.passed).length ?? 0
-            const totalTests = question.tests.length
-            return (
-              <Card key={question.id} padding="sm" className="bg-pebble-overlay/[0.05]" interactive>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-pebble-text-primary">
-                    {index + 5}. {question.prompt}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="neutral">{question.difficulty}</Badge>
-                    <Badge variant={passedCount === totalTests && totalTests > 0 ? 'success' : passedCount > 0 ? 'warning' : 'neutral'}>
-                      {state?.results.length ? `${passedCount}/${totalTests} tests` : 'not run'}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="mt-3 overflow-hidden rounded-xl border border-pebble-border/28 bg-pebble-canvas/92">
-                  <Editor
-                    height="220px"
-                    language={IDE_MONACO_LANGUAGE[language]}
-                    theme="vs-dark"
-                    value={state?.code ?? question.starterCode}
-                    onChange={(value) => updateCode(question.id, value ?? '')}
-                    options={{
-                      minimap: { enabled: false },
-                      fontSize: 13,
-                      lineHeight: 21,
-                      automaticLayout: true,
-                    }}
-                  />
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-pebble-text-secondary">
-                    Timeout: {question.timeoutMs}ms • Tests: {totalTests}
-                  </p>
-                  <Button
-                    size="sm"
-                    onClick={() => void runCodingQuestion(question)}
-                    disabled={state?.running === true}
-                  >
-                    {state?.running ? 'Running...' : 'Run'}
-                  </Button>
-                </div>
-
-                {state?.results.length ? (
-                  <div className="mt-3 space-y-2 rounded-xl border border-pebble-border/25 bg-pebble-canvas/70 p-3">
-                    {state.results.map((test, testIndex) => (
-                      <div key={`${question.id}-test-${testIndex}`} className="rounded-lg border border-pebble-border/20 bg-pebble-overlay/[0.06] p-2">
-                        <p className="text-xs font-medium text-pebble-text-primary">
-                          Test {testIndex + 1}: {test.passed ? 'PASS' : 'FAIL'}
-                        </p>
-                        <p className="mt-1 text-[11px] text-pebble-text-secondary">stdin: {test.stdin || '(empty)'}</p>
-                        <p className="text-[11px] text-pebble-text-secondary">expected: {normalizeOutput(test.expected) || '(empty)'}</p>
-                        <p className="text-[11px] text-pebble-text-secondary">actual: {normalizeOutput(test.actual) || '(empty)'}</p>
-                        {!!test.stderr && (
-                          <p className="mt-1 text-[11px] text-pebble-warning">stderr: {test.stderr.slice(0, 180)}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </Card>
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {currentQuestion ? (
+            currentQuestion.kind === 'mcq' ? (
+              <McqQuestionCard
+                question={currentQuestion.question}
+                questionNumber={currentQuestionIndex + 1}
+                selectedIndex={mcqAnswers[currentQuestion.question.id] ?? null}
+                onSelect={(optionIndex) => {
+                  setMcqAnswers((prev) => ({
+                    ...prev,
+                    [currentQuestion.question.id]: optionIndex,
+                  }))
+                }}
+              />
+            ) : (
+              <CodingQuestionCard
+                question={currentQuestion.question}
+                questionNumber={currentQuestionIndex + 1}
+                language={language}
+                code={codingState[currentQuestion.question.id]?.code ?? currentQuestion.question.starterCode}
+                isRunning={codingState[currentQuestion.question.id]?.running === true}
+                runState={getCodingRunStateLabel(codingState[currentQuestion.question.id])}
+                results={codingState[currentQuestion.question.id]?.results ?? []}
+                onCodeChange={(code) => updateCode(currentQuestion.question.id, code)}
+                onRun={() => void runCodingQuestion(currentQuestion.question)}
+              />
             )
-          })}
+          ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-pebble-border/24 pt-4">
-          <p className="text-sm text-pebble-text-secondary">
-            Progress: {answeredMcqCount}/4 MCQ answered • {hasRunAllCoding ? 'coding checks run' : 'run all coding checks'}
-          </p>
-          <Button onClick={finalizePlacement} disabled={!canSubmit}>
-            Finalize placement
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-pebble-border/24 pt-3">
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
+            disabled={!canGoBack}
+          >
+            Back
           </Button>
-        </div>
 
-        {result && (
-          <Card padding="md" className="border-pebble-accent/35 bg-pebble-accent/10" interactive>
-            <p className="text-sm font-semibold text-pebble-text-primary">Score: {result.score}/10</p>
-            <p className="mt-1 text-sm text-pebble-text-secondary">
-              MCQ: {result.mcqPoints}/4 • Coding: {result.codingPoints}/6
-            </p>
-            <p className="mt-1 text-sm text-pebble-text-secondary">
-              Suggested start unit: <span className="font-semibold text-pebble-text-primary">{result.startUnit}</span>
-            </p>
-            <div className="mt-4">
-              <Link
-                to={`/session/1?lang=${language}&level=${level}&unit=${result.startUnit}`}
-                className={buttonClass('primary')}
+          <div className="flex items-center gap-2">
+            {!canFinish && (
+              <Button
+                onClick={() => setCurrentQuestionIndex((prev) => Math.min(totalQuestions - 1, prev + 1))}
+                disabled={!canGoNext}
               >
-                Start learning
-              </Link>
-            </div>
-          </Card>
-        )}
+                Next
+              </Button>
+            )}
+            {canFinish && (
+              <Button onClick={finishPlacement}>
+                Finish
+              </Button>
+            )}
+          </div>
+        </div>
       </Card>
     </section>
   )

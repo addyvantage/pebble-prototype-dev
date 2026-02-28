@@ -5,6 +5,12 @@ import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { PebbleChatPanel } from '../components/session/PebbleChatPanel'
+import { ProblemStatementPanel } from '../components/session/ProblemStatementPanel'
+import {
+  TestResultsPanel,
+  type UnitTestResultItem,
+} from '../components/session/TestResultsPanel'
+import { UnitsDrawer } from '../components/session/UnitsDrawer'
 import {
   getUnitIndexFromStartUnit,
   getLanguageMetadata,
@@ -20,6 +26,7 @@ import {
   getPebbleUserState,
   savePebbleCurriculumProgress,
 } from '../utils/pebbleUserState'
+import { useBodyScrollLock } from '../utils/useBodyScrollLock'
 
 type RunResponse = {
   ok: boolean
@@ -30,14 +37,11 @@ type RunResponse = {
   durationMs: number
 }
 
-type UnitTestResult = {
-  index: number
-  input: string
-  expected: string
-  actual: string
-  stderr: string
-  passed: boolean
-  timedOut: boolean
+const LANGUAGE_RUNTIME_LABEL: Record<PlacementLanguage, string> = {
+  python: 'Python3',
+  javascript: 'JavaScript',
+  cpp: 'C++17',
+  java: 'Java',
 }
 
 function normalizeOutput(value: string) {
@@ -80,16 +84,23 @@ function statusVariant(status: string): 'neutral' | 'success' | 'warning' {
   return 'neutral'
 }
 
-function buildFailingSummary(results: UnitTestResult[]) {
-  const failed = results.filter((result) => !result.passed).slice(0, 2)
+function buildFailingSummary(resultsByIndex: Record<number, UnitTestResultItem>) {
+  const failed = Object.entries(resultsByIndex)
+    .map(([index, result]) => ({ index: Number(index), result }))
+    .filter(({ result }) => !result.passed)
+    .sort((a, b) => a.index - b.index)
+    .slice(0, 2)
+
   if (failed.length === 0) {
     return ''
   }
 
   return failed
-    .map((result) => {
-      const actual = result.stderr.trim() ? `stderr: ${result.stderr.slice(0, 120)}` : `actual: ${result.actual || '(empty)'}`
-      return `#${result.index + 1} expected: ${result.expected}; ${actual}`
+    .map(({ index, result }) => {
+      const actual = result.stderr.trim()
+        ? `stderr: ${result.stderr.slice(0, 120)}`
+        : `actual: ${result.actual || '(empty)'}`
+      return `#${index + 1} expected: ${result.expected}; ${actual}`
     })
     .join(' | ')
 }
@@ -98,14 +109,22 @@ function isStartUnit(value: string | null): value is StartUnit {
   return value === '1' || value === 'mid' || value === 'advanced'
 }
 
-function previewText(value: string) {
-  return value.length > 0 ? value : '(empty)'
+function difficultyByLevel(level: PlacementLevel) {
+  if (level === 'beginner') {
+    return 'Easy'
+  }
+  if (level === 'intermediate') {
+    return 'Medium'
+  }
+  return 'Hard'
 }
 
 export function SessionPage() {
   const [searchParams] = useSearchParams()
   const storedState = useMemo(() => getPebbleUserState(), [])
   const queryUnit = searchParams.get('unit')
+
+  useBodyScrollLock(true)
 
   const selectedLanguage: PlacementLanguage = useMemo(() => {
     const queryLanguage = searchParams.get('lang')
@@ -136,6 +155,7 @@ export function SessionPage() {
   const [units, setUnits] = useState<CurriculumUnit[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0)
   const [draftByUnitId, setDraftByUnitId] = useState<Record<string, string>>({})
@@ -144,9 +164,11 @@ export function SessionPage() {
   )
 
   const [runStatus, setRunStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')
-  const [runMessage, setRunMessage] = useState('Run tests to validate your solution.')
-  const [testResults, setTestResults] = useState<UnitTestResult[]>([])
-  const [isRunning, setIsRunning] = useState(false)
+  const [runMessage, setRunMessage] = useState('Run a testcase or submit all tests.')
+  const [selectedTestIndex, setSelectedTestIndex] = useState(0)
+  const [testResultsByIndex, setTestResultsByIndex] = useState<Record<number, UnitTestResultItem>>({})
+  const [isRunningSingle, setIsRunningSingle] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [recentChatSummary, setRecentChatSummary] = useState(
     storedState.curriculum?.recentChatSummary ?? '',
   )
@@ -202,6 +224,8 @@ export function SessionPage() {
         }
 
         setCurrentUnitIndex(nextIndex)
+        setSelectedTestIndex(0)
+        setTestResultsByIndex({})
       } catch (error) {
         if (!mounted) {
           return
@@ -230,7 +254,10 @@ export function SessionPage() {
   const currentUnit = units[currentUnitIndex] ?? null
   const currentCode = currentUnit ? draftByUnitId[currentUnit.id] ?? currentUnit.starterCode : ''
 
-  const failingSummary = useMemo(() => buildFailingSummary(testResults), [testResults])
+  const failingSummary = useMemo(
+    () => buildFailingSummary(testResultsByIndex),
+    [testResultsByIndex],
+  )
 
   useEffect(() => {
     if (!currentUnit) {
@@ -257,92 +284,131 @@ export function SessionPage() {
     }))
   }, [currentUnit])
 
-  const runUnitTests = useCallback(async () => {
-    if (!currentUnit || isRunning) {
+  async function executeTest(index: number): Promise<UnitTestResultItem> {
+    if (!currentUnit) {
+      return {
+        input: '',
+        expected: '',
+        actual: '',
+        stderr: 'No active unit.',
+        passed: false,
+        timedOut: false,
+      }
+    }
+
+    const test = currentUnit.tests[index]
+
+    let payload: unknown = null
+    try {
+      const response = await fetch('/api/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          language: selectedLanguage,
+          code: currentCode,
+          stdin: test.input,
+          timeoutMs: 4000,
+        }),
+      })
+      payload = await response.json().catch(() => null)
+    } catch {
+      payload = {
+        ok: false,
+        exitCode: null,
+        stdout: '',
+        stderr: 'Failed to reach /api/run.',
+        timedOut: false,
+        durationMs: 0,
+      }
+    }
+
+    const result = normalizeRunResponse(payload)
+    const expectedNormalized = normalizeOutput(test.expected)
+    const actualNormalized = normalizeOutput(result.stdout)
+    const passed = result.ok && expectedNormalized === actualNormalized
+
+    return {
+      input: test.input,
+      expected: test.expected,
+      actual: result.stdout,
+      stderr: result.stderr,
+      passed,
+      timedOut: result.timedOut,
+    }
+  }
+
+  const runSelectedTest = useCallback(async () => {
+    if (!currentUnit || isRunningSingle || isSubmitting) {
       return
     }
 
-    setIsRunning(true)
+    setIsRunningSingle(true)
     setRunStatus('running')
-    setRunMessage(`Running ${currentUnit.tests.length} tests...`)
-    setTestResults([])
+    setRunMessage(`Running testcase #${selectedTestIndex + 1}...`)
 
-    const nextResults: UnitTestResult[] = []
+    try {
+      const result = await executeTest(selectedTestIndex)
+      setTestResultsByIndex((prev) => ({
+        ...prev,
+        [selectedTestIndex]: result,
+      }))
+
+      if (result.passed) {
+        setRunStatus('success')
+        setRunMessage(`Testcase #${selectedTestIndex + 1} passed.`)
+      } else {
+        setRunStatus('error')
+        setRunMessage(`Testcase #${selectedTestIndex + 1} failed.`)
+      }
+    } finally {
+      setIsRunningSingle(false)
+    }
+  }, [currentUnit, isRunningSingle, isSubmitting, selectedTestIndex])
+
+  const submitAllTests = useCallback(async () => {
+    if (!currentUnit || isSubmitting || isRunningSingle) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setRunStatus('running')
+    setRunMessage(`Submitting ${currentUnit.tests.length} tests...`)
+
+    const nextResults: Record<number, UnitTestResultItem> = {}
 
     try {
       for (let index = 0; index < currentUnit.tests.length; index += 1) {
-        const test = currentUnit.tests[index]
-
-        let payload: unknown = null
-        try {
-          const response = await fetch('/api/run', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              language: selectedLanguage,
-              code: currentCode,
-              stdin: test.input,
-              timeoutMs: 4000,
-            }),
-          })
-          payload = await response.json().catch(() => null)
-        } catch {
-          payload = {
-            ok: false,
-            exitCode: null,
-            stdout: '',
-            stderr: 'Failed to reach /api/run.',
-            timedOut: false,
-            durationMs: 0,
-          }
-        }
-
-        const result = normalizeRunResponse(payload)
-        const expectedNormalized = normalizeOutput(test.expected)
-        const actualNormalized = normalizeOutput(result.stdout)
-        const passed = result.ok && expectedNormalized === actualNormalized
-
-        nextResults.push({
-          index,
-          input: test.input,
-          expected: test.expected,
-          actual: result.stdout,
-          stderr: result.stderr,
-          passed,
-          timedOut: result.timedOut,
-        })
+        nextResults[index] = await executeTest(index)
       }
 
-      const passedCount = nextResults.filter((item) => item.passed).length
-      const allPassed = passedCount === nextResults.length
-      setTestResults(nextResults)
+      setTestResultsByIndex(nextResults)
+
+      const passedCount = Object.values(nextResults).filter((item) => item.passed).length
+      const allPassed = passedCount === currentUnit.tests.length
 
       if (allPassed) {
         setRunStatus('success')
-        setRunMessage(`All tests passed (${passedCount}/${nextResults.length}). Great work.`)
+        setRunMessage(`All tests passed (${passedCount}/${currentUnit.tests.length}).`)
         setCompletedUnitIds((prev) =>
           prev.includes(currentUnit.id) ? prev : [...prev, currentUnit.id],
         )
       } else {
-        const firstFailed = nextResults.find((item) => !item.passed)
-        const failedMessage = firstFailed
-          ? `Fail #${firstFailed.index + 1}: expected ${firstFailed.expected}, got ${normalizeOutput(firstFailed.actual) || '(empty)'}`
-          : 'Some tests failed.'
         setRunStatus('error')
-        setRunMessage(`${passedCount}/${nextResults.length} passed. ${failedMessage}`)
+        setRunMessage(`${passedCount}/${currentUnit.tests.length} passed. Keep iterating.`)
       }
     } finally {
-      setIsRunning(false)
+      setIsSubmitting(false)
     }
-  }, [currentCode, currentUnit, isRunning, selectedLanguage])
+  }, [currentUnit, isSubmitting, isRunningSingle])
 
   function selectUnit(index: number) {
     setCurrentUnitIndex(index)
+    setSelectedTestIndex(0)
     setRunStatus('idle')
-    setRunMessage('Run tests to validate your solution.')
-    setTestResults([])
+    setRunMessage('Run a testcase or submit all tests.')
+    setTestResultsByIndex({})
   }
 
   function moveToNextUnit() {
@@ -353,7 +419,7 @@ export function SessionPage() {
 
   if (isLoading) {
     return (
-      <section className="page-enter">
+      <section className="h-[100vh] overflow-hidden bg-[#070b14] p-3">
         <Card className="space-y-2" padding="md" interactive>
           <p className="text-sm font-medium text-pebble-text-primary">Loading curriculum...</p>
           <p className="text-sm text-pebble-text-secondary">Preparing {languageMeta.label} path.</p>
@@ -364,7 +430,7 @@ export function SessionPage() {
 
   if (loadError || !currentUnit) {
     return (
-      <section className="page-enter">
+      <section className="h-[100vh] overflow-hidden bg-[#070b14] p-3">
         <Card className="space-y-2" padding="md" interactive>
           <p className="text-sm font-medium text-pebble-warning">Unable to load this session.</p>
           <p className="text-sm text-pebble-text-secondary">{loadError || 'No units found.'}</p>
@@ -373,202 +439,175 @@ export function SessionPage() {
     )
   }
 
-  const passedTests = testResults.filter((result) => result.passed).length
+  const completedCount = Object.keys(testResultsByIndex).length
+  const passedCount = Object.values(testResultsByIndex).filter((result) => result.passed).length
   const currentIsCompleted = completedUnitIds.includes(currentUnit.id)
-  const taskExamples = currentUnit.tests.slice(0, 2)
-  const taskConstraints = [
+
+  const constraints = [
     'Read input from stdin exactly as provided.',
-    'Write output to stdout with the required format only.',
-    `Your solution should pass all ${currentUnit.tests.length} tests.`,
+    'Write output to stdout in the exact expected format.',
+    `Pass all ${currentUnit.tests.length} unit tests before submitting.`,
   ]
 
   return (
-    <section className="page-enter space-y-4">
-      <Card className="flex flex-wrap items-center justify-between gap-3" padding="sm" interactive>
-        <div>
-          <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">Curriculum Session</p>
-          <h1 className="text-xl font-semibold text-pebble-text-primary">
-            {languageMeta.label} • {selectedLevel}
-          </h1>
+    <section className="h-[100vh] overflow-hidden bg-[#070b14] text-white">
+      <header className="flex h-16 items-center justify-between border-b border-white/10 bg-white/[0.02] px-4">
+        <div className="flex items-center gap-4">
+          <p className="text-lg font-semibold tracking-[-0.01em] text-white">Pebble</p>
+          <nav className="hidden items-center gap-2 text-sm text-white/55 md:flex">
+            <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-white/85">Session</span>
+            <span>{languageMeta.label}</span>
+          </nav>
         </div>
+
         <div className="flex items-center gap-2">
-          <Badge variant="neutral">Unit {currentUnitIndex + 1}/{units.length}</Badge>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="rounded-xl border border-white/10 bg-white/[0.05] px-3 py-1.5 text-sm text-white/80 transition hover:bg-white/[0.1]"
+          >
+            ☰ Units
+          </button>
           <Badge variant={statusVariant(runStatus)}>{runStatus}</Badge>
+          {currentIsCompleted && currentUnitIndex < units.length - 1 && (
+            <Button variant="secondary" size="sm" onClick={moveToNextUnit}>
+              Next unit
+            </Button>
+          )}
         </div>
-      </Card>
+      </header>
 
-      <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-        <aside className="glass-panel soft-ring h-fit p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Units</p>
-          <div className="mt-3 space-y-2">
-            {units.map((unit, index) => {
-              const isCurrent = index === currentUnitIndex
-              const isDone = completedUnitIds.includes(unit.id)
-              return (
-                <button
-                  key={unit.id}
-                  type="button"
-                  className={`w-full rounded-xl border px-3 py-2 text-left transition ${
-                    isCurrent
-                      ? 'border-pebble-accent/40 bg-pebble-accent/12'
-                      : 'border-pebble-border/25 bg-pebble-overlay/[0.04] hover:bg-pebble-overlay/[0.1]'
-                  }`}
-                  onClick={() => selectUnit(index)}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-semibold ${
-                        isDone
-                          ? 'bg-pebble-success/25 text-pebble-success'
-                          : isCurrent
-                            ? 'bg-pebble-accent/30 text-pebble-text-primary'
-                            : 'bg-pebble-overlay/[0.15] text-pebble-text-muted'
-                      }`}
-                    >
-                      {isDone ? '✓' : index + 1}
-                    </span>
-                    <p className="text-xs font-medium text-pebble-text-primary">{unit.title}</p>
-                  </div>
-                  <p className="mt-1 text-xs text-pebble-text-secondary">{unit.concept}</p>
-                </button>
-              )
-            })}
-          </div>
-        </aside>
+      <main className="h-[calc(100vh-64px)] overflow-hidden p-3">
+        <div className="grid h-full min-h-0 grid-cols-[420px_minmax(0,1fr)] gap-3">
+          <ProblemStatementPanel
+            title={currentUnit.title}
+            concept={currentUnit.concept}
+            prompt={currentUnit.prompt}
+            constraints={constraints}
+            tests={currentUnit.tests}
+            difficultyLabel={difficultyByLevel(selectedLevel)}
+            tags={[languageMeta.label, 'Arrays', 'Simulation']}
+            className="min-h-0"
+          />
 
-        <div className="space-y-4">
-          <Card className="sticky top-3 z-10 space-y-4 border-pebble-border/32 bg-pebble-canvas/94" padding="sm" interactive>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">Task</p>
-              <Badge variant="neutral">Unit {currentUnitIndex + 1}</Badge>
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-pebble-text-primary">{currentUnit.title}</h2>
-              <p className="text-sm text-pebble-text-secondary">{currentUnit.prompt}</p>
-            </div>
+          <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_260px] gap-3">
+            <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.03]">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-[0.08em] text-white/45">Code</p>
+                  <p className="truncate text-sm font-medium text-white">{currentUnit.title}</p>
+                </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Constraints</p>
-                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-pebble-text-secondary">
-                  {taskConstraints.map((constraint) => (
-                    <li key={constraint}>{constraint}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Examples</p>
-                <div className="mt-2 space-y-2">
-                  {taskExamples.map((test, index) => (
-                    <div key={`${currentUnit.id}-example-${index}`} className="rounded-lg border border-pebble-border/20 bg-pebble-canvas/70 p-2">
-                      <p className="text-[11px] font-medium text-pebble-text-primary">Example {index + 1}</p>
-                      <p className="mt-1 text-[11px] text-pebble-text-secondary">input: {previewText(test.input)}</p>
-                      <p className="text-[11px] text-pebble-text-secondary">output: {previewText(normalizeOutput(test.expected))}</p>
-                    </div>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs text-white/70">
+                    {LANGUAGE_RUNTIME_LABEL[selectedLanguage]}
+                  </span>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-[11px] text-white/65 transition hover:bg-white/[0.1]"
+                    aria-label="Format"
+                  >
+                    ⟲
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-[11px] text-white/65 transition hover:bg-white/[0.1]"
+                    aria-label="Settings"
+                  >
+                    ⚙
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <div className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Required output</p>
-              <p className="mt-1 text-xs text-pebble-text-secondary">
-                Match the expected output for each test case exactly (whitespace normalized by the checker).
-              </p>
-            </div>
-          </Card>
+              <div className="min-h-0 flex-1">
+                <Editor
+                  height="100%"
+                  language={IDE_MONACO_LANGUAGE[selectedLanguage]}
+                  theme="vs-dark"
+                  value={currentCode}
+                  onChange={(nextValue) => onCodeChange(nextValue ?? '')}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineHeight: 21,
+                    automaticLayout: true,
+                    wordWrap: 'on',
+                    scrollBeyondLastLine: false,
+                    smoothScrolling: true,
+                    overviewRulerLanes: 0,
+                    padding: {
+                      top: 12,
+                      bottom: 12,
+                    },
+                  }}
+                />
+              </div>
 
-          <p className="px-1 text-xs text-pebble-text-secondary">
-            Tests: <span className="font-medium text-pebble-text-primary">{passedTests}/{currentUnit.tests.length}</span>
-          </p>
+              <div className="flex items-center justify-between gap-2 border-t border-white/10 px-3 py-2">
+                <p className="truncate text-xs text-white/60">
+                  Case {selectedTestIndex + 1} • {runMessage}
+                </p>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => void runSelectedTest()}
+                    disabled={isRunningSingle || isSubmitting}
+                    className="gap-2"
+                  >
+                    <span aria-hidden="true" className="inline-flex">
+                      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current">
+                        <path d="M5 3.8a1 1 0 0 1 1.53-.85l8.9 5.7a1.6 1.6 0 0 1 0 2.7l-8.9 5.7A1 1 0 0 1 5 16.2V3.8z" />
+                      </svg>
+                    </span>
+                    {isRunningSingle ? 'Running...' : 'Run'}
+                  </Button>
 
-          <Card className="space-y-3" padding="md" interactive>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium text-pebble-text-primary">{currentUnit.concept}</p>
-              <Badge variant={statusVariant(runStatus)}>{runStatus}</Badge>
-            </div>
-            <div className="overflow-hidden rounded-xl border border-pebble-border/28 bg-pebble-canvas/92">
-              <Editor
-                height="340px"
-                language={IDE_MONACO_LANGUAGE[selectedLanguage]}
-                theme="vs-dark"
-                value={currentCode}
-                onChange={(nextValue) => onCodeChange(nextValue ?? '')}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineHeight: 22,
-                  automaticLayout: true,
-                }}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void submitAllTests()}
+                    disabled={isSubmitting || isRunningSingle}
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                  </Button>
+                </div>
+              </div>
+            </section>
+
+            <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_340px] gap-3">
+              <TestResultsPanel
+                tests={currentUnit.tests}
+                selectedTestIndex={selectedTestIndex}
+                onSelectTest={(index) => setSelectedTestIndex(index)}
+                resultsByIndex={testResultsByIndex}
+                summaryLabel={`${passedCount}/${currentUnit.tests.length} passed • ${completedCount}/${currentUnit.tests.length} run`}
+                className="min-h-0"
+              />
+
+              <PebbleChatPanel
+                unitTitle={currentUnit.title}
+                unitConcept={currentUnit.concept}
+                codeText={currentCode}
+                runStatus={runStatus}
+                runMessage={runMessage}
+                failingSummary={failingSummary}
+                initialSummary={recentChatSummary}
+                onSummaryChange={setRecentChatSummary}
+                className="min-h-0"
               />
             </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={() => void runUnitTests()} disabled={isRunning}>
-                  {isRunning ? 'Running...' : 'Run tests'}
-                </Button>
-                <Badge variant={statusVariant(runStatus)}>{runMessage}</Badge>
-              </div>
-
-              {currentIsCompleted && currentUnitIndex < units.length - 1 && (
-                <Button variant="secondary" size="sm" onClick={moveToNextUnit}>
-                  Next unit
-                </Button>
-              )}
-            </div>
-          </Card>
-
-          <Card className="space-y-3" padding="md" interactive>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-pebble-text-primary">Output & Tests</p>
-              <p className="text-xs text-pebble-text-secondary">
-                {testResults.length > 0 ? `${passedTests}/${testResults.length} passed` : 'No run yet'}
-              </p>
-            </div>
-
-            <div className="max-h-[180px] space-y-2 overflow-y-auto rounded-xl border border-pebble-border/25 bg-pebble-canvas/65 p-3">
-              {testResults.length === 0 && (
-                <p className="text-xs text-pebble-text-muted">Run tests to see detailed results.</p>
-              )}
-              {testResults.map((result) => (
-                <div key={result.index} className="rounded-lg border border-pebble-border/25 bg-pebble-overlay/[0.05] p-2">
-                  <p className="text-xs font-medium text-pebble-text-primary">
-                    Test #{result.index + 1} {result.passed ? '✓' : '✕'}
-                  </p>
-                  <p className="mt-1 text-[11px] text-pebble-text-secondary">input: {result.input || '(empty)'}</p>
-                  <p className="text-[11px] text-pebble-text-secondary">expected: {result.expected}</p>
-                  <p className="text-[11px] text-pebble-text-secondary">actual: {normalizeOutput(result.actual) || '(empty)'}</p>
-                  {result.stderr && (
-                    <p className="mt-1 text-[11px] text-pebble-warning">stderr: {result.stderr.slice(0, 180)}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Hints</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-pebble-text-secondary">
-                {currentUnit.hints.map((hint) => (
-                  <li key={hint}>{hint}</li>
-                ))}
-              </ul>
-            </div>
-          </Card>
+          </div>
         </div>
+      </main>
 
-        <PebbleChatPanel
-          unitTitle={currentUnit.title}
-          unitConcept={currentUnit.concept}
-          codeText={currentCode}
-          runStatus={runStatus}
-          runMessage={runMessage}
-          failingSummary={failingSummary}
-          initialSummary={recentChatSummary}
-          onSummaryChange={setRecentChatSummary}
-        />
-      </div>
+      <UnitsDrawer
+        open={drawerOpen}
+        units={units}
+        currentUnitIndex={currentUnitIndex}
+        completedUnitIds={completedUnitIds}
+        onClose={() => setDrawerOpen(false)}
+        onSelectUnit={selectUnit}
+      />
     </section>
   )
 }
