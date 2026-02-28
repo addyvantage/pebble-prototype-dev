@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Editor from '@monaco-editor/react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import {
+  IDE_LANGUAGES,
+  IDE_LANGUAGE_LABELS,
+  IDE_MONACO_LANGUAGE,
+  getStarterCodeForLanguage,
+  type IdeRunLanguage,
+} from './runtimeLanguages'
 
 export type PythonRunResponse = {
   ok: boolean
@@ -14,8 +21,10 @@ export type PythonRunResponse = {
 
 type PythonIDEProps = {
   initialCode: string
+  initialLanguage?: IdeRunLanguage
   readOnly?: boolean
   onCodeChange?: (code: string) => void
+  onLanguageChange?: (language: IdeRunLanguage) => void
   onRunComplete?: (result: PythonRunResponse, code: string) => void
 }
 
@@ -35,14 +44,26 @@ function createErrorResult(message: string): PythonRunResponse {
   }
 }
 
-export function PythonIDE({ initialCode, onCodeChange, onRunComplete, readOnly = false }: PythonIDEProps) {
-  const [code, setCode] = useState(initialCode)
+export function PythonIDE({
+  initialCode,
+  initialLanguage = 'python',
+  onCodeChange,
+  onLanguageChange,
+  onRunComplete,
+  readOnly = false,
+}: PythonIDEProps) {
+  const [language, setLanguage] = useState<IdeRunLanguage>(initialLanguage)
+  const [code, setCode] = useState(initialCode || getStarterCodeForLanguage(initialLanguage))
   const [isRunning, setIsRunning] = useState(false)
   const [runResult, setRunResult] = useState<PythonRunResponse | null>(null)
 
   useEffect(() => {
-    setCode(initialCode)
+    setCode(initialCode || getStarterCodeForLanguage(language))
   }, [initialCode])
+
+  useEffect(() => {
+    setLanguage(initialLanguage)
+  }, [initialLanguage])
 
   const statusLabel = useMemo(() => {
     if (isRunning) {
@@ -63,12 +84,13 @@ export function PythonIDE({ initialCode, onCodeChange, onRunComplete, readOnly =
 
     setIsRunning(true)
     try {
-      const response = await fetch('/api/run/python', {
+      const response = await fetch('/api/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          language,
           code,
           stdin: '',
           timeoutMs: 4000,
@@ -104,14 +126,45 @@ export function PythonIDE({ initialCode, onCodeChange, onRunComplete, readOnly =
     } finally {
       setIsRunning(false)
     }
-  }, [code, isRunning, onRunComplete, readOnly])
+  }, [code, isRunning, language, onRunComplete, readOnly])
+
+  const onSelectLanguage = useCallback(
+    (nextLanguage: IdeRunLanguage) => {
+      if (readOnly) {
+        return
+      }
+
+      const starterCode = getStarterCodeForLanguage(nextLanguage)
+      setLanguage(nextLanguage)
+      setCode(starterCode)
+      setRunResult(null)
+      onLanguageChange?.(nextLanguage)
+      onCodeChange?.(starterCode)
+    },
+    [onCodeChange, onLanguageChange, readOnly],
+  )
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Badge variant="neutral">Python IDE</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="neutral">Code IDE</Badge>
           <Badge variant={statusVariant}>{statusLabel}</Badge>
+          <label className="inline-flex items-center gap-2 text-xs text-pebble-text-muted">
+            Language
+            <select
+              className="rounded-md border border-pebble-border/35 bg-pebble-canvas/85 px-2 py-1 text-xs text-pebble-text-primary outline-none"
+              value={language}
+              onChange={(event) => onSelectLanguage(event.target.value as IdeRunLanguage)}
+              disabled={readOnly || isRunning}
+            >
+              {IDE_LANGUAGES.map((item) => (
+                <option key={item} value={item}>
+                  {IDE_LANGUAGE_LABELS[item]}
+                </option>
+              ))}
+            </select>
+          </label>
           {runResult && (
             <p className="text-xs text-pebble-text-muted">
               exit={runResult.exitCode ?? 'n/a'} · {runResult.durationMs}ms
@@ -126,7 +179,7 @@ export function PythonIDE({ initialCode, onCodeChange, onRunComplete, readOnly =
       <div className="overflow-hidden rounded-xl border border-pebble-border/35 bg-pebble-canvas/92">
         <Editor
           height="430px"
-          defaultLanguage="python"
+          language={IDE_MONACO_LANGUAGE[language]}
           theme="vs-dark"
           value={code}
           onChange={(next) => {

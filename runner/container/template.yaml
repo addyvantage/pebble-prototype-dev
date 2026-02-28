@@ -1,30 +1,28 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Pebble Python sandbox runner (Lambda)
+Description: Pebble multi-language runner (Lambda container)
 
 Globals:
   Function:
-    Runtime: python3.11
-    MemorySize: 512
-    Timeout: 10
+    MemorySize: 1024
+    Timeout: 15
     Tracing: Active
 
 Resources:
   PebbleRunnerFunction:
     Type: AWS::Serverless::Function
     Properties:
+      PackageType: Image
       Architectures:
-        - arm64
-      FunctionName: pebble-python-runner
-      Handler: handler.handler
-      CodeUri: ./
+        - x86_64
+      FunctionName: pebble-multilang-runner
       FunctionUrlConfig:
         AuthType: AWS_IAM
         InvokeMode: BUFFERED
-      # Optional VPC isolation:
-      # 1) Place function in private subnets with no NAT gateway.
-      # 2) Add only required VPC endpoints if needed.
-      # This blocks outbound internet access from the runner by default.
+    Metadata:
+      DockerContext: ./
+      Dockerfile: Dockerfile
+      DockerTag: latest
 
 Outputs:
   RunnerFunctionName:

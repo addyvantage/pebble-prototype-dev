@@ -7,6 +7,7 @@ export const storageKeys = {
   userProfile: 'pebble_user_profile',
   userName: 'pebble_user_name',
   personaSummary: 'pebble_persona_summary',
+  pebbleUserState: 'pebbleUserState',
 } as const
 
 const localUserKeys = [
@@ -16,6 +17,7 @@ const localUserKeys = [
   storageKeys.userProfile,
   storageKeys.userName,
   storageKeys.personaSummary,
+  storageKeys.pebbleUserState,
 ] as const
 
 const appKeys = [

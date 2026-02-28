@@ -1,0 +1,172 @@
+{
+  "units": [
+    {
+      "id": "hello-world",
+      "title": "Hello World",
+      "concept": "stdout basics",
+      "prompt": "Print exactly: Hello, Pebble!",
+      "tests": [
+        {
+          "input": "",
+          "expected": "Hello, Pebble!"
+        },
+        {
+          "input": "\n",
+          "expected": "Hello, Pebble!"
+        }
+      ],
+      "hints": [
+        "Use one print statement.",
+        "Match punctuation and spacing exactly."
+      ],
+      "starterCode": "#include <iostream>\n\nint main() {\n  std::cout << \"Hello\" << std::endl;\n  return 0;\n}\n"
+    },
+    {
+      "id": "variables-sum",
+      "title": "Variables and Input",
+      "concept": "parse + sum",
+      "prompt": "Read two integers from stdin and print their sum.",
+      "tests": [
+        {
+          "input": "4 8\n",
+          "expected": "12"
+        },
+        {
+          "input": "10 -3\n",
+          "expected": "7"
+        }
+      ],
+      "hints": [
+        "Split stdin by whitespace.",
+        "Convert values to numbers before adding."
+      ],
+      "starterCode": "#include <iostream>\n\nint main() {\n  long long a = 0, b = 0;\n  std::cin >> a >> b;\n  // TODO\n  std::cout << 0 << std::endl;\n  return 0;\n}\n"
+    },
+    {
+      "id": "loops-sum-n",
+      "title": "Loops",
+      "concept": "accumulation",
+      "prompt": "Read n and print the sum of numbers from 1 to n.",
+      "tests": [
+        {
+          "input": "5\n",
+          "expected": "15"
+        },
+        {
+          "input": "10\n",
+          "expected": "55"
+        }
+      ],
+      "hints": [
+        "Use a running total.",
+        "Loop from 1 through n inclusive."
+      ],
+      "starterCode": "#include <iostream>\n\nint main() {\n  long long n = 0;\n  std::cin >> n;\n  // TODO\n  std::cout << 0 << std::endl;\n  return 0;\n}\n"
+    },
+    {
+      "id": "functions-even",
+      "title": "Functions",
+      "concept": "function decomposition",
+      "prompt": "Create is_even(x) and print true if x is even, else false.",
+      "tests": [
+        {
+          "input": "6\n",
+          "expected": "true"
+        },
+        {
+          "input": "7\n",
+          "expected": "false"
+        }
+      ],
+      "hints": [
+        "Return a boolean from your function.",
+        "Use modulo 2."
+      ],
+      "starterCode": "#include <iostream>\n\nbool isEven(long long x) {\n  // TODO\n  return false;\n}\n\nint main() {\n  long long value = 0;\n  std::cin >> value;\n  std::cout << (isEven(value) ? \"true\" : \"false\") << std::endl;\n  return 0;\n}\n"
+    },
+    {
+      "id": "arrays-max",
+      "title": "Arrays",
+      "concept": "iteration over collections",
+      "prompt": "Read space-separated integers and print the maximum value.",
+      "tests": [
+        {
+          "input": "3 7 2 9\n",
+          "expected": "9"
+        },
+        {
+          "input": "-5 -2 -10\n",
+          "expected": "-2"
+        }
+      ],
+      "hints": [
+        "Initialize with the first element.",
+        "Update max while iterating."
+      ],
+      "starterCode": "#include <iostream>\n#include <vector>\n\nint main() {\n  std::vector<long long> nums;\n  long long x;\n  while (std::cin >> x) nums.push_back(x);\n\n  if (nums.empty()) {\n    std::cout << 0 << std::endl;\n    return 0;\n  }\n\n  // TODO\n  std::cout << 0 << std::endl;\n  return 0;\n}\n"
+    },
+    {
+      "id": "strings-reverse",
+      "title": "Strings",
+      "concept": "string transformation",
+      "prompt": "Read one line and print it reversed.",
+      "tests": [
+        {
+          "input": "pebble\n",
+          "expected": "elbbep"
+        },
+        {
+          "input": "code\n",
+          "expected": "edoc"
+        }
+      ],
+      "hints": [
+        "Watch trailing newlines in stdin.",
+        "Use built-in reverse helpers if available."
+      ],
+      "starterCode": "#include <algorithm>\n#include <iostream>\n#include <string>\n\nint main() {\n  std::string text;\n  std::getline(std::cin, text);\n  // TODO\n  std::cout << text << std::endl;\n  return 0;\n}\n"
+    },
+    {
+      "id": "dsa-two-sum",
+      "title": "Basic DSA - Two Sum",
+      "concept": "hash map lookup",
+      "prompt": "Line 1: space-separated ints, line 2: target. Print two indices i j that sum to target.",
+      "tests": [
+        {
+          "input": "2 7 11 15\n9\n",
+          "expected": "0 1"
+        },
+        {
+          "input": "3 2 4\n6\n",
+          "expected": "1 2"
+        }
+      ],
+      "hints": [
+        "Store seen value -> index.",
+        "At each element, look for target - value."
+      ],
+      "starterCode": "#include <iostream>\n#include <sstream>\n#include <string>\n\nint main() {\n  std::string line;\n  std::getline(std::cin, line);\n  std::stringstream ss(line);\n\n  int target = 0;\n  std::cin >> target;\n\n  // TODO\n  std::cout << \"-1 -1\" << std::endl;\n  return 0;\n}\n"
+    },
+    {
+      "id": "dsa-palindrome",
+      "title": "Basic DSA - Palindrome",
+      "concept": "two pointers",
+      "prompt": "Read one string and print true if it is a palindrome, else false.",
+      "tests": [
+        {
+          "input": "racecar\n",
+          "expected": "true"
+        },
+        {
+          "input": "pebble\n",
+          "expected": "false"
+        }
+      ],
+      "hints": [
+        "Compare left and right characters.",
+        "Move both pointers inward."
+      ],
+      "starterCode": "#include <iostream>\n#include <string>\n\nint main() {\n  std::string text;\n  std::getline(std::cin, text);\n  // TODO\n  std::cout << \"false\" << std::endl;\n  return 0;\n}\n"
+    }
+  ]
+}
