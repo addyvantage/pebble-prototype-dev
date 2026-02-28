@@ -57,6 +57,8 @@ export function ProblemStatementPanel({
   className,
 }: ProblemStatementPanelProps) {
   const { lang, t, isRTL } = useI18n()
+  const isUrdu = isRTL
+  const proseClass = isUrdu ? 'rtlText' : ''
   const [activeTab, setActiveTab] = useState<'problem' | 'solutions' | 'submissions'>('problem')
   const [solutionLanguage, setSolutionLanguage] = useState<PlacementLanguage>(language)
   const [copied, setCopied] = useState(false)
@@ -133,7 +135,6 @@ export function ProblemStatementPanel({
 
   return (
     <section
-      dir={isRTL ? 'rtl' : 'ltr'}
       className={classNames(
         'flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-pebble-border/30 bg-gradient-to-b from-pebble-overlay/[0.12] to-pebble-overlay/[0.04]',
         className,
@@ -161,7 +162,7 @@ export function ProblemStatementPanel({
         {activeTab === 'problem' && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <h2 className="text-xl font-semibold text-pebble-text-primary">{title}</h2>
+              <h2 className={classNames('text-xl font-semibold text-pebble-text-primary', proseClass)}>{title}</h2>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary">
                   {difficultyLabel}
@@ -178,7 +179,7 @@ export function ProblemStatementPanel({
                   </span>
                 ))}
               </div>
-              <p className="text-sm leading-relaxed text-pebble-text-secondary">{prompt}</p>
+              <p className={classNames('text-sm leading-relaxed text-pebble-text-secondary', proseClass)}>{prompt}</p>
             </div>
 
             <Section title={t('problem.description')}>
@@ -204,8 +205,11 @@ export function ProblemStatementPanel({
             )}
 
             <section className="space-y-1">
-              <h3 className="text-sm font-semibold text-pebble-text-primary">{t('problem.constraints')}</h3>
-              <ul className="list-disc space-y-1 pl-4 text-sm text-pebble-text-secondary">
+              <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.constraints')}</h3>
+              <ul className={classNames(
+                'list-disc space-y-1 text-sm text-pebble-text-secondary',
+                isUrdu ? 'rtlText pr-4 pl-0' : 'pl-4',
+              )}>
                 {constraints.map((constraint) => (
                   <li key={constraint}>{constraint}</li>
                 ))}
@@ -213,24 +217,30 @@ export function ProblemStatementPanel({
             </section>
 
             <section className="space-y-2">
-              <h3 className="text-sm font-semibold text-pebble-text-primary">{t('problem.examples')}</h3>
+              <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.examples')}</h3>
               <div className="grid gap-2">
                 {examples.map((example, index) => (
                   <div
                     key={`${title}-example-${index}`}
                     className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-2"
                   >
-                    <p className="text-xs font-medium text-pebble-text-primary">
+                    <p className={classNames('text-xs font-medium text-pebble-text-primary', proseClass)}>
                       {t('problem.example')} {index + 1}
                     </p>
                     <div className="mt-1 grid gap-1 text-xs text-pebble-text-secondary">
-                      <p className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 px-2 py-1">
-                        <span className="font-medium text-pebble-text-primary">{t('problem.inputLabel')}:</span>{' '}
-                        {compactText(example.input, t('common.empty'))}
+                      <p className={classNames(
+                        'rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 px-2 py-1',
+                        proseClass,
+                      )}>
+                        <span className={classNames('font-medium text-pebble-text-primary', proseClass)}>{t('problem.inputLabel')}:</span>{' '}
+                        <span className={isUrdu ? 'ltrSafe inline-block' : ''}>{compactText(example.input, t('common.empty'))}</span>
                       </p>
-                      <p className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 px-2 py-1">
-                        <span className="font-medium text-pebble-text-primary">{t('problem.outputLabel')}:</span>{' '}
-                        {compactText(example.expected, t('common.empty'))}
+                      <p className={classNames(
+                        'rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 px-2 py-1',
+                        proseClass,
+                      )}>
+                        <span className={classNames('font-medium text-pebble-text-primary', proseClass)}>{t('problem.outputLabel')}:</span>{' '}
+                        <span className={isUrdu ? 'ltrSafe inline-block' : ''}>{compactText(example.expected, t('common.empty'))}</span>
                       </p>
                     </div>
                   </div>
@@ -243,8 +253,8 @@ export function ProblemStatementPanel({
         {activeTab === 'solutions' && (
           <div className="space-y-4">
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold text-pebble-text-primary">{t('solutions.howToSolve')}</h3>
-              <p className="text-sm text-pebble-text-secondary">
+              <h3 className={classNames('text-lg font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.howToSolve')}</h3>
+              <p className={classNames('text-sm text-pebble-text-secondary', proseClass)}>
                 {t('solutions.walkthrough')}
               </p>
             </div>
@@ -256,13 +266,16 @@ export function ProblemStatementPanel({
             ) : (
               <>
                 <section className="space-y-1">
-                  <h4 className="text-sm font-semibold text-pebble-text-primary">{t('solutions.intuition')}</h4>
-                  <p className="text-sm text-pebble-text-secondary">{solution.intuition}</p>
+                  <h4 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.intuition')}</h4>
+                  <p className={classNames('text-sm text-pebble-text-secondary', proseClass)}>{solution.intuition}</p>
                 </section>
 
                 <section className="space-y-1">
-                  <h4 className="text-sm font-semibold text-pebble-text-primary">{t('solutions.approach')}</h4>
-                  <ul className="list-disc space-y-1 pl-4 text-sm text-pebble-text-secondary">
+                  <h4 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.approach')}</h4>
+                  <ul className={classNames(
+                    'list-disc space-y-1 text-sm text-pebble-text-secondary',
+                    isUrdu ? 'rtlText pr-4 pl-0' : 'pl-4',
+                  )}>
                     {solution.approach.map((step) => (
                       <li key={step}>{step}</li>
                     ))}
@@ -270,9 +283,15 @@ export function ProblemStatementPanel({
                 </section>
 
                 <section className="space-y-1">
-                  <h4 className="text-sm font-semibold text-pebble-text-primary">{t('solutions.complexity')}</h4>
-                  <p className="text-sm text-pebble-text-secondary">{t('solutions.time')}: {solution.complexity.time}</p>
-                  <p className="text-sm text-pebble-text-secondary">{t('solutions.space')}: {solution.complexity.space}</p>
+                  <h4 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.complexity')}</h4>
+                  <p className={classNames('text-sm text-pebble-text-secondary', proseClass)}>
+                    {t('solutions.time')}:{' '}
+                    <span className={isUrdu ? 'inlineLtrToken' : ''}>{solution.complexity.time}</span>
+                  </p>
+                  <p className={classNames('text-sm text-pebble-text-secondary', proseClass)}>
+                    {t('solutions.space')}:{' '}
+                    <span className={isUrdu ? 'inlineLtrToken' : ''}>{solution.complexity.space}</span>
+                  </p>
                 </section>
 
                 <section className="space-y-2">
@@ -288,7 +307,7 @@ export function ProblemStatementPanel({
                   </div>
 
                   {!solution?.implementations[language] && solution?.implementations.python ? (
-                    <p className="text-xs text-pebble-text-secondary">{t('solutions.languageFallback', { language: LANGUAGE_LABELS[language] })}</p>
+                    <p className={classNames('text-xs text-pebble-text-secondary', proseClass)}>{t('solutions.languageFallback', { language: LANGUAGE_LABELS[language] })}</p>
                   ) : null}
 
                   <div className="flex flex-wrap gap-1.5">
@@ -329,12 +348,12 @@ export function ProblemStatementPanel({
             ) : (
               <>
                 <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3">
-                  <p className="text-xs uppercase tracking-[0.06em] text-pebble-text-muted">{t('submissions.lastAccepted')}</p>
+                  <p className={classNames('text-xs uppercase tracking-[0.06em] text-pebble-text-muted', proseClass)}>{t('submissions.lastAccepted')}</p>
                   {lastAcceptedSubmission ? (
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <div className="space-y-0.5">
-                        <p className="text-sm font-semibold text-pebble-text-primary">{LANGUAGE_LABELS[lastAcceptedSubmission.language]}</p>
-                        <p className="text-xs text-pebble-text-secondary">
+                        <p className={classNames('text-sm font-semibold text-pebble-text-primary', isUrdu ? 'inlineLtrToken' : '')}>{LANGUAGE_LABELS[lastAcceptedSubmission.language]}</p>
+                        <p className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>
                           {new Date(lastAcceptedSubmission.timestamp).toLocaleString()}
                         </p>
                       </div>
@@ -342,19 +361,19 @@ export function ProblemStatementPanel({
                         <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-2 py-0.5 text-[11px] text-pebble-success">
                           {t('submissions.accepted')}
                         </span>
-                        <p className="mt-1 text-xs text-pebble-text-secondary">
+                        <p className={classNames('mt-1 text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>
                           {lastAcceptedSubmission.runtimeMs}ms • {t('summary.exitLabel')}{' '}
                           {lastAcceptedSubmission.exitCode ?? 'null'}
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-2 text-xs text-pebble-text-secondary">{t('submissions.noAcceptedYet')}</p>
+                    <p className={classNames('mt-2 text-xs text-pebble-text-secondary', proseClass)}>{t('submissions.noAcceptedYet')}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-pebble-text-primary">{t('submissions.recent')}</h3>
+                  <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('submissions.recent')}</h3>
                   <div className="grid gap-1.5">
                     {submissions.map((submission) => {
                       const active = (selectedSubmission?.id ?? submissions[0]?.id) === submission.id
@@ -379,9 +398,9 @@ export function ProblemStatementPanel({
                             >
                               {submission.status === 'accepted' ? t('submissions.accepted') : t('submissions.failed')}
                             </span>
-                            <span className="text-xs text-pebble-text-secondary">{new Date(submission.timestamp).toLocaleString()}</span>
+                            <span className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>{new Date(submission.timestamp).toLocaleString()}</span>
                           </div>
-                          <p className="mt-1 text-xs text-pebble-text-secondary">
+                          <p className={classNames('mt-1 text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>
                             {LANGUAGE_LABELS[submission.language]} • {submission.runtimeMs}ms • {submission.passCount}/{submission.totalCount}
                           </p>
                         </button>
@@ -391,7 +410,7 @@ export function ProblemStatementPanel({
                 </div>
 
                 {selectedSubmission && (
-                  <SubmissionDetail submission={selectedSubmission} />
+                  <SubmissionDetail submission={selectedSubmission} isUrdu={isUrdu} />
                 )}
               </>
             )}
@@ -402,7 +421,7 @@ export function ProblemStatementPanel({
   )
 }
 
-function SubmissionDetail({ submission }: { submission: UnitSubmission }) {
+function SubmissionDetail({ submission, isUrdu }: { submission: UnitSubmission; isUrdu: boolean }) {
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
 
@@ -426,7 +445,7 @@ function SubmissionDetail({ submission }: { submission: UnitSubmission }) {
   return (
     <div className="space-y-2 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-semibold text-pebble-text-primary">{t('submissions.detail')}</h4>
+        <h4 className={classNames('text-sm font-semibold text-pebble-text-primary', isUrdu ? 'rtlText' : '')}>{t('submissions.detail')}</h4>
         <span
           className={`rounded-full border px-2 py-0.5 text-[11px] ${
             submission.status === 'accepted'
@@ -440,19 +459,19 @@ function SubmissionDetail({ submission }: { submission: UnitSubmission }) {
 
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 p-2">
-          <p className="text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted">{t('submissions.runtime')}</p>
-          <p className="mt-1 text-sm font-medium text-pebble-text-primary">{submission.runtimeMs}ms</p>
-          <p className="text-xs text-pebble-text-secondary">{t('submissions.beatsPlaceholder')}</p>
+          <p className={classNames('text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted', isUrdu ? 'rtlText' : '')}>{t('submissions.runtime')}</p>
+          <p className={classNames('mt-1 text-sm font-medium text-pebble-text-primary', isUrdu ? 'inlineLtrToken' : '')}>{submission.runtimeMs}ms</p>
+          <p className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'rtlText' : '')}>{t('submissions.beatsPlaceholder')}</p>
         </div>
         <div className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 p-2">
-          <p className="text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted">{t('submissions.memory')}</p>
+          <p className={classNames('text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted', isUrdu ? 'rtlText' : '')}>{t('submissions.memory')}</p>
           <p className="mt-1 text-sm font-medium text-pebble-text-primary">--</p>
-          <p className="text-xs text-pebble-text-secondary">{t('submissions.pendingBenchmark')}</p>
+          <p className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'rtlText' : '')}>{t('submissions.pendingBenchmark')}</p>
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-pebble-text-secondary">
+        <p className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>
           {LANGUAGE_LABELS[submission.language]} • {t('summary.exitLabel')} {submission.exitCode ?? 'null'} •{' '}
           {new Date(submission.timestamp).toLocaleString()}
         </p>
@@ -500,10 +519,12 @@ function TabButton({
 }
 
 function Section({ title, children }: { title: string; children: string }) {
+  const { isRTL } = useI18n()
+  const isUrdu = isRTL
   return (
     <section className="space-y-1">
-      <h3 className="text-sm font-semibold text-pebble-text-primary">{title}</h3>
-      <p className="text-sm text-pebble-text-secondary">{children}</p>
+      <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', isUrdu ? 'rtlText' : '')}>{title}</h3>
+      <p className={classNames('text-sm text-pebble-text-secondary', isUrdu ? 'rtlText' : '')}>{children}</p>
     </section>
   )
 }

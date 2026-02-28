@@ -50,6 +50,12 @@ import { useTheme } from '../hooks/useTheme'
 import { loadPagePrefs, savePagePrefs, type PagePrefs } from '../lib/pagePrefsStore'
 import { useI18n } from '../i18n/useI18n'
 import { getLocalizedUnitCopy } from '../i18n/unitContent'
+import {
+  classifyErrorType,
+  logAssistEvent,
+  logRunEvent,
+  logSubmitEvent,
+} from '../lib/analyticsStore'
 
 type RunResponse = {
   ok: boolean
@@ -217,6 +223,7 @@ export function SessionPage() {
   const languageMeta = useMemo(() => getLanguageMetadata(selectedLanguage), [selectedLanguage])
   const { theme, setTheme } = useTheme()
   const runtimeLanguage: PlacementLanguage = selectedLanguage === 'c' ? 'cpp' : selectedLanguage
+  const trackId = `${selectedLanguage}:${selectedLevel}`
 
   useEffect(() => {
     saveUnitProgress(unitProgress)
@@ -473,6 +480,36 @@ export function SessionPage() {
           setRunStatus('error')
           setRunMessage(t('run.prepareFunctionCasesFailed'))
           setSubmitAccepted(false)
+          const errorType = classifyErrorType({
+            passed: false,
+            stderr: t('run.prepareFunctionCasesFailed'),
+            exitCode: null,
+          })
+          if (mode === 'run') {
+            logRunEvent({
+              unitId: currentUnit.id,
+              trackId,
+              language: selectedLanguage,
+              passed: false,
+              passCount: 0,
+              total: currentUnit.tests.length,
+              runtimeMs: 0,
+              exitCode: null,
+              errorType,
+            })
+          } else {
+            logSubmitEvent({
+              unitId: currentUnit.id,
+              trackId,
+              language: selectedLanguage,
+              accepted: false,
+              passCount: 0,
+              total: currentUnit.tests.length,
+              runtimeMs: 0,
+              exitCode: null,
+              errorType,
+            })
+          }
           return
         }
 
@@ -505,6 +542,36 @@ export function SessionPage() {
             setRunStatus('error')
             setRunMessage(t('run.functionModeUnavailable', { language: selectedLanguage }))
             setSubmitAccepted(false)
+            const errorType = classifyErrorType({
+              passed: false,
+              stderr: t('run.functionModeUnavailable', { language: selectedLanguage }),
+              exitCode: null,
+            })
+            if (mode === 'run') {
+              logRunEvent({
+                unitId: currentUnit.id,
+                trackId,
+                language: selectedLanguage,
+                passed: false,
+                passCount: 0,
+                total: currentUnit.tests.length,
+                runtimeMs: 0,
+                exitCode: null,
+                errorType,
+              })
+            } else {
+              logSubmitEvent({
+                unitId: currentUnit.id,
+                trackId,
+                language: selectedLanguage,
+                accepted: false,
+                passCount: 0,
+                total: currentUnit.tests.length,
+                runtimeMs: 0,
+                exitCode: null,
+                errorType,
+              })
+            }
             return
           }
 
@@ -685,6 +752,39 @@ export function SessionPage() {
         Object.values(nextResults)
           .map((item) => item.exitCode)
           .find((exitCode) => exitCode !== null) ?? null
+      const firstFailed = Object.values(nextResults).find((item) => !item.passed)
+      const derivedErrorType = classifyErrorType({
+        passed: allPassed,
+        timedOut: firstFailed?.timedOut ?? false,
+        stderr: firstFailed?.stderr ?? '',
+        exitCode: firstFailed?.exitCode ?? runExitCode,
+      })
+
+      if (mode === 'run') {
+        logRunEvent({
+          unitId: currentUnit.id,
+          trackId,
+          language: selectedLanguage,
+          passed: allPassed,
+          passCount: passedCount,
+          total: currentUnit.tests.length,
+          runtimeMs: durationTotal,
+          exitCode: runExitCode,
+          errorType: derivedErrorType,
+        })
+      } else {
+        logSubmitEvent({
+          unitId: currentUnit.id,
+          trackId,
+          language: selectedLanguage,
+          accepted: allPassed,
+          passCount: passedCount,
+          total: currentUnit.tests.length,
+          runtimeMs: durationTotal,
+          exitCode: runExitCode,
+          errorType: derivedErrorType,
+        })
+      }
 
       if (allPassed) {
         setRunStatus('success')
@@ -701,15 +801,15 @@ export function SessionPage() {
           setSubmitAccepted(true)
         }
       } else {
-        const firstFailed = Object.entries(nextResults)
+        const firstFailedEntry = Object.entries(nextResults)
           .map(([index, result]) => ({ index: Number(index), result }))
           .find(({ result }) => !result.passed)
 
-        const failPreview = firstFailed
+        const failPreview = firstFailedEntry
           ? t('run.failedPreview', {
-              index: firstFailed.index + 1,
-              expected: firstFailed.result.expected,
-              actual: normalizeOutput(firstFailed.result.actual) || t('common.empty'),
+              index: firstFailedEntry.index + 1,
+              expected: firstFailedEntry.result.expected,
+              actual: normalizeOutput(firstFailedEntry.result.actual) || t('common.empty'),
             })
           : t('run.someTestsFailed')
 
@@ -745,7 +845,7 @@ export function SessionPage() {
       setIsRunningAll(false)
       setActiveAction(null)
     }
-  }, [currentCode, currentFunctionConfig, currentUnit, executeTest, isRunningAll, runtimeLanguage, selectedLanguage, t])
+  }, [currentCode, currentFunctionConfig, currentUnit, executeTest, isRunningAll, runtimeLanguage, selectedLanguage, t, trackId])
 
   function selectUnit(index: number) {
     setCurrentUnitIndex(index)
@@ -1024,7 +1124,7 @@ export function SessionPage() {
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1">
+              <div dir="ltr" className="ltrSafe min-h-0 flex-1">
                 <Editor
                   height="100%"
                   language={IDE_MONACO_LANGUAGE[selectedLanguage]}
@@ -1088,6 +1188,14 @@ export function SessionPage() {
             failingSummary={failingSummary}
             initialSummary={recentChatSummary}
             onSummaryChange={setRecentChatSummary}
+            onAssistAction={(action) => {
+              logAssistEvent({
+                unitId: currentUnit.id,
+                trackId,
+                language: selectedLanguage,
+                action,
+              })
+            }}
             className="h-full min-h-0"
           />
         </div>

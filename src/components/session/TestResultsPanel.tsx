@@ -39,6 +39,7 @@ export function TestResultsPanel({
   className,
 }: TestResultsPanelProps) {
   const { t, isRTL } = useI18n()
+  const isUrdu = isRTL
   const selectedTest = tests[selectedTestIndex]
   const selectedResult = resultsByIndex[selectedTestIndex]
 
@@ -47,11 +48,11 @@ export function TestResultsPanel({
       padding="sm"
       className={`flex h-full min-h-0 flex-col gap-2.5 ${className ?? ''}`}
       interactive
-      dir={isRTL ? 'rtl' : 'ltr'}
+      dir="ltr"
     >
       <div className="flex items-center justify-between gap-2 border-b border-pebble-border/25 pb-1.5">
-        <p className="text-sm font-semibold text-pebble-text-primary">{t('tests.title')}</p>
-        <p className="text-xs text-pebble-text-secondary">{summaryLabel}</p>
+        <p className={`text-sm font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{t('tests.title')}</p>
+        <p className={`text-xs text-pebble-text-secondary ${isUrdu ? 'ltrSafe' : ''}`}>{summaryLabel}</p>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -85,13 +86,14 @@ export function TestResultsPanel({
           <p className="text-sm text-pebble-text-secondary">{t('tests.noCases')}</p>
         ) : (
           <div className="grid h-full content-start gap-2">
-            <FieldBlock label={t('tests.input')} value={selectedTest.input || t('common.empty')} />
-            <FieldBlock
-              label={t('tests.expected')}
-              value={normalizeOutput(selectedTest.expected, t('common.empty'))}
-            />
-            <FieldBlock
-              label={t('tests.actual')}
+                <FieldBlock label={t('tests.input')} value={selectedTest.input || t('common.empty')} isUrdu={isUrdu} />
+                <FieldBlock
+                  label={t('tests.expected')}
+                  value={normalizeOutput(selectedTest.expected, t('common.empty'))}
+                  isUrdu={isUrdu}
+                />
+                <FieldBlock
+                  label={t('tests.actual')}
               value={
                 selectedResult
                   ? normalizeOutput(selectedResult.actual, t('common.empty'))
@@ -105,6 +107,7 @@ export function TestResultsPanel({
                     : t('tests.fail')
                   : t('tests.notRun')
               }
+              isUrdu={isUrdu}
             />
 
             {selectedResult ? (
@@ -118,8 +121,8 @@ export function TestResultsPanel({
                 >
                   {selectedResult.passed ? t('tests.pass') : t('tests.fail')}
                 </span>
-                <span className="text-pebble-text-secondary">{t('summary.runtimeLabel')} {selectedResult.durationMs}ms</span>
-                <span className="text-pebble-text-secondary">{t('summary.exitLabel')} {selectedResult.exitCode ?? 'null'}</span>
+                <span className={`text-pebble-text-secondary ${isUrdu ? 'ltrSafe inline-block' : ''}`}>{t('summary.runtimeLabel')} {selectedResult.durationMs}ms</span>
+                <span className={`text-pebble-text-secondary ${isUrdu ? 'ltrSafe inline-block' : ''}`}>{t('summary.exitLabel')} {selectedResult.exitCode ?? 'null'}</span>
                 {selectedResult.timedOut ? (
                   <span className="rounded-full border border-pebble-warning/35 bg-pebble-warning/10 px-2 py-0.5 text-pebble-warning">
                     {t('tests.timedOut')}
@@ -129,7 +132,7 @@ export function TestResultsPanel({
             ) : null}
 
             {selectedResult?.stderr ? (
-              <FieldBlock label={t('tests.stderr')} value={selectedResult.stderr} warning />
+              <FieldBlock label={t('tests.stderr')} value={selectedResult.stderr} warning isUrdu={isUrdu} />
             ) : null}
           </div>
         )}
@@ -144,17 +147,19 @@ function FieldBlock({
   status,
   statusLabel,
   warning,
+  isUrdu,
 }: {
   label: string
   value: string
   status?: 'pass' | 'fail' | 'not run'
   statusLabel?: string
   warning?: boolean
+  isUrdu: boolean
 }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted">{label}</p>
+        <p className={`text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{label}</p>
         {status && (
           <span
             className={`rounded-full border px-2 py-0.5 text-[10px] ${
@@ -175,8 +180,9 @@ function FieldBlock({
             ? 'border-pebble-warning/35 bg-pebble-warning/10 text-pebble-warning'
             : 'border-pebble-border/30 bg-pebble-canvas/55 text-pebble-text-primary'
         }`}
+        dir="ltr"
       >
-        <p className="[display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:8] overflow-hidden whitespace-pre-wrap break-words">
+        <p className={`ltrSafe [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:8] overflow-hidden whitespace-pre-wrap break-words ${isUrdu ? 'text-left' : ''}`}>
           {value}
         </p>
       </div>

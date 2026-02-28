@@ -26,6 +26,7 @@ export function UnitsDrawer({
   onSelectUnit,
 }: UnitsDrawerProps) {
   const { t, isRTL } = useI18n()
+  const isUrdu = isRTL
   const [query, setQuery] = useState('')
 
   const filteredUnits = useMemo(() => {
@@ -63,7 +64,7 @@ export function UnitsDrawer({
       />
 
       <aside
-        dir={isRTL ? 'rtl' : 'ltr'}
+        dir="ltr"
         className={`relative h-full w-[360px] max-w-[92vw] border-r border-pebble-border/30 bg-gradient-to-b from-pebble-panel/95 to-pebble-canvas/85 p-4 shadow-[0_24px_80px_rgba(2,8,23,0.38)] transition-transform duration-200 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -71,8 +72,8 @@ export function UnitsDrawer({
         <div className="flex h-full min-h-0 flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">{t('units.curriculum')}</p>
-              <h2 className="text-lg font-semibold text-pebble-text-primary">{t('units.units')}</h2>
+              <p className={`text-xs uppercase tracking-[0.08em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{t('units.curriculum')}</p>
+              <h2 className={`text-lg font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{t('units.units')}</h2>
             </div>
             <button
               type="button"
@@ -85,7 +86,7 @@ export function UnitsDrawer({
 
           <div className="space-y-2 rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-pebble-text-secondary">{t('units.progress')}</p>
+              <p className={`text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>{t('units.progress')}</p>
               <Badge variant="neutral">
                 {completedCount}/{units.length}
               </Badge>
@@ -99,12 +100,15 @@ export function UnitsDrawer({
           </div>
 
           <label className="space-y-1">
-            <span className="text-xs text-pebble-text-muted">{t('units.search')}</span>
+            <span className={`text-xs text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{t('units.search')}</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('units.searchPlaceholder')}
-              className="w-full rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-2 text-sm text-pebble-text-primary outline-none placeholder:text-pebble-text-muted focus:border-pebble-accent/45"
+              dir={isUrdu ? 'rtl' : 'ltr'}
+              className={`w-full rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-2 text-sm text-pebble-text-primary outline-none placeholder:text-pebble-text-muted focus:border-pebble-accent/45 ${
+                isUrdu ? 'text-right' : ''
+              }`}
             />
           </label>
 
@@ -139,9 +143,9 @@ export function UnitsDrawer({
                     >
                       {isDone ? '✓' : index + 1}
                     </span>
-                    <p className="text-sm font-medium text-pebble-text-primary">{unit.title}</p>
+                    <p className={`text-sm font-medium text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{unit.title}</p>
                   </div>
-                  <p className="mt-1 text-xs text-pebble-text-secondary">{unit.concept}</p>
+                  <p className={`mt-1 text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>{unit.concept}</p>
                 </button>
               )
             })}

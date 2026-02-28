@@ -201,6 +201,26 @@
   }
 }
 
+@layer utilities {
+  .rtlText {
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: plaintext;
+  }
+
+  .ltrSafe {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: plaintext;
+  }
+
+  .inlineLtrToken {
+    direction: ltr;
+    unicode-bidi: embed;
+    display: inline-block;
+  }
+}
+
 @keyframes page-enter {
   from {
     opacity: 0;

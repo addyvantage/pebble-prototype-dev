@@ -16,7 +16,7 @@ const iconButtonClass =
   'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-pebble-border/35 bg-pebble-overlay/8 text-pebble-text-secondary transition hover:bg-pebble-overlay/14 hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
 
 export function AppLayout() {
-  const { t, isRTL } = useI18n()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -30,6 +30,7 @@ export function AppLayout() {
     return profile.personaSummary === 'Not set' ? 'Not set' : profile.personaSummary
   }, [profile.personaSummary])
   const isImmersiveRoute = location.pathname.startsWith('/session/') || location.pathname.startsWith('/placement')
+  const isLandingRoute = location.pathname === '/'
   const navItems = useMemo(
     () => [
       { to: '/', label: t('nav.home') },
@@ -128,7 +129,6 @@ export function AppLayout() {
 
   return (
     <div
-      dir={isRTL ? 'rtl' : 'ltr'}
       className="relative min-h-screen overflow-hidden bg-pebble-deep text-pebble-text-primary"
     >
       <div className="pointer-events-none absolute inset-0">
@@ -141,8 +141,12 @@ export function AppLayout() {
           <Outlet />
         </div>
       ) : (
-        <div className="relative mx-auto flex min-h-screen w-full max-w-[1360px] flex-col px-4 pb-8 pt-5 sm:px-8 lg:px-12">
-          <Card className="mb-6 p-4 sm:mb-7 sm:p-5" interactive>
+        <div
+          className={`relative mx-auto flex w-full max-w-[1360px] flex-col px-4 pt-4 sm:px-8 lg:px-12 ${
+            isLandingRoute ? 'h-screen overflow-hidden pb-4' : 'min-h-screen pb-8 pt-5'
+          }`}
+        >
+          <Card className={`p-4 sm:p-5 ${isLandingRoute ? 'mb-4' : 'mb-6 sm:mb-7'}`} interactive>
             <div className="flex items-center justify-between gap-3 sm:gap-4">
               <img
                 src="/assets/pebble/master/brand/pebble_app_icon_primary_1024.png"
@@ -220,7 +224,7 @@ export function AppLayout() {
             </nav>
           </Card>
 
-          <main className="flex-1">
+          <main className={isLandingRoute ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1'}>
             <Outlet />
           </main>
         </div>

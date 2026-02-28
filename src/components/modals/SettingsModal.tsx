@@ -3,6 +3,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { buttonClass } from '../ui/buttonStyles'
 import { LANGUAGES } from '../../i18n/languages'
 import { useI18n } from '../../i18n/useI18n'
+import { LanguageSelect } from '../ui/LanguageSelect'
 
 type SettingsModalProps = {
   open: boolean
@@ -69,6 +70,7 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const { theme, setTheme } = useTheme()
   const { lang, setLang, t, isRTL } = useI18n()
+  const isUrdu = isRTL
 
   useEffect(() => {
     if (!open) {
@@ -120,7 +122,7 @@ export function SettingsModal({
       }}
     >
       <section
-        dir={isRTL ? 'rtl' : 'ltr'}
+        dir="ltr"
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
@@ -134,10 +136,10 @@ export function SettingsModal({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 id="settings-title" className="text-xl font-semibold text-pebble-text-primary">
+            <h2 id="settings-title" className={`text-xl font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
               {t('settings.title')}
             </h2>
-            <p className="mt-1 text-sm text-pebble-text-secondary">
+            <p className={`mt-1 text-sm text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
               {t('settings.subtitle')}
             </p>
           </div>
@@ -159,32 +161,12 @@ export function SettingsModal({
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-pebble-text-primary">{t('settings.language')}</p>
-            <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-pebble-border/40 bg-pebble-overlay/[0.08] p-2">
-              {LANGUAGES.map((language) => {
-                const selected = language.code === lang
-                return (
-                  <button
-                    key={language.code}
-                    type="button"
-                    onClick={() => setLang(language.code)}
-                    className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-sm transition ${
-                      selected
-                        ? 'border-pebble-accent/45 bg-pebble-accent/14 text-pebble-text-primary'
-                        : 'border-pebble-border/25 bg-pebble-overlay/[0.06] text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]'
-                    }`}
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm text-pebble-text-primary">{language.nativeName}</span>
-                      <span className="block truncate text-xs text-pebble-text-secondary">{language.romanizedName}</span>
-                    </span>
-                    <span className="ml-2 text-xs text-pebble-accent">{selected ? '✓' : ''}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <LanguageSelect
+            label={t('settings.language')}
+            value={lang}
+            onChange={setLang}
+            options={LANGUAGES}
+          />
 
           <div className="space-y-2">
             <p className="text-sm font-medium text-pebble-text-primary">{t('settings.theme')}</p>
