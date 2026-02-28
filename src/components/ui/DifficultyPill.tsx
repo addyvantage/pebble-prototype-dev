@@ -42,7 +42,7 @@ export function DifficultyPill({
   return (
     <span
       className={classNames(
-        'inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium leading-none',
+        'inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold leading-none',
         toneClass(theme, difficulty),
         className,
       )}

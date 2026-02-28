@@ -177,8 +177,8 @@ export function DashboardPage() {
   )
 
   return (
-    <section className="page-enter space-y-3">
-      <Card padding="md" interactive className="space-y-4">
+    <section className="page-enter space-y-2.5 pb-1">
+      <Card padding="sm" interactive className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Badge>{t('insights.hero.chipGrowth')}</Badge>
           <div className="flex items-center gap-2">
@@ -235,8 +235,8 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <Card padding="md" interactive className="space-y-3">
+      <div className="grid gap-2.5 xl:grid-cols-12">
+        <Card padding="sm" interactive className="flex h-full flex-col space-y-3 xl:col-span-7 xl:aspect-square xl:min-h-[520px]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.radar.title')}</p>
@@ -244,17 +244,19 @@ export function DashboardPage() {
             </div>
             <Badge variant="neutral">{t('insights.radar.liveShape')}</Badge>
           </div>
-          <HexRadar
-            current={derived.radarCurrent}
-            previous={derived.radarPrevious}
-            axisOrder={[...RADAR_AXIS_ORDER]}
-            axisLabels={axisLabels}
-            currentLabel={t('insights.radar.current')}
-            previousLabel={t('insights.radar.previous')}
-          />
+          <div className="min-h-0 flex-1">
+            <HexRadar
+              current={derived.radarCurrent}
+              previous={derived.radarPrevious}
+              axisOrder={[...RADAR_AXIS_ORDER]}
+              axisLabels={axisLabels}
+              currentLabel={t('insights.radar.current')}
+              previousLabel={t('insights.radar.previous')}
+            />
+          </div>
         </Card>
 
-        <div className="grid content-start gap-2.5">
+        <div className="grid content-start gap-2.5 xl:col-span-5">
           <StreakCalendar
             dailyMap={dailyCompletions}
             streak={streakStats.streak}
@@ -262,7 +264,7 @@ export function DashboardPage() {
             isTodayComplete={streakStats.isTodayComplete}
             timeZone={timeZone}
           />
-          <Card padding="md" interactive className="space-y-3">
+          <Card padding="sm" interactive className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.next.title')}</p>
@@ -288,7 +290,7 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-2.5 xl:grid-cols-2">
-        <Card padding="md" interactive className="space-y-3">
+        <Card padding="sm" interactive className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.trend.title')}</p>
@@ -303,7 +305,7 @@ export function DashboardPage() {
           />
         </Card>
 
-        <Card padding="md" interactive className="space-y-3">
+        <Card padding="sm" interactive className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.issue.title')}</p>
@@ -315,7 +317,7 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <Card padding="md" interactive className="space-y-3">
+      <Card padding="sm" interactive className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.ledger.title')}</p>
@@ -345,7 +347,7 @@ export function DashboardPage() {
       </Card>
 
       {!hasLiveData && !unitsLoading ? (
-        <Card padding="md" interactive className="space-y-3 text-center">
+        <Card padding="sm" interactive className="space-y-3 text-center">
           <Activity className="mx-auto h-5 w-5 text-pebble-text-secondary" aria-hidden="true" />
           <p className="text-base font-semibold text-pebble-text-primary">{t('insights.empty.title')}</p>
           <p className="text-sm text-pebble-text-secondary">{t('insights.empty.description')}</p>

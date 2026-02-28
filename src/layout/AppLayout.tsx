@@ -15,6 +15,7 @@ import { clearTaskProgress } from '../utils/taskProgress'
 import { useI18n } from '../i18n/useI18n'
 import { getAnalyticsState, subscribeAnalytics } from '../lib/analyticsStore'
 import { dateKeyForTimeZone, selectCurrentStreak, selectDailyCompletions } from '../lib/analyticsDerivers'
+import { safeClearPrefix, subscribeStoragePressure } from '../lib/safeStorage'
 
 const iconButtonClass =
   'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-pebble-border/35 bg-pebble-overlay/8 text-pebble-text-secondary transition hover:bg-pebble-overlay/14 hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
@@ -28,6 +29,7 @@ export function AppLayout() {
   const [profileAnchorRect, setProfileAnchorRect] = useState<DOMRect | null>(null)
   const [demoMode, setDemoModeState] = useState(() => getDemoMode())
   const [profile, setProfile] = useState(() => getLocalUserProfile())
+  const [showStoragePressureNotice, setShowStoragePressureNotice] = useState(false)
   const profileButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const personaLabel = useMemo(() => {
@@ -125,6 +127,12 @@ export function AppLayout() {
     })
   }, [])
 
+  useEffect(() => {
+    return subscribeStoragePressure(() => {
+      setShowStoragePressureNotice(true)
+    })
+  }, [])
+
   function handleDemoModeChange(nextMode: boolean) {
     setDemoModeState(nextMode)
     setDemoMode(nextMode)
@@ -133,6 +141,11 @@ export function AppLayout() {
   function handleResetLocalData() {
     clearTaskProgress()
     clearAppLocalData()
+    window.location.reload()
+  }
+
+  function handleResetAfterStoragePressure() {
+    safeClearPrefix(['pebble.', 'pebble:', 'pebble_'])
     window.location.reload()
   }
 
@@ -158,22 +171,42 @@ export function AppLayout() {
         </div>
       ) : (
         <div className={`relative flex min-h-screen flex-col ${isLandingRoute ? 'overflow-hidden' : ''}`}>
-          <header className="w-full pt-2 sm:pt-3">
+          <header className="w-full pt-1.5 sm:pt-2">
             <PageContainer>
-              <Card className={`p-4 sm:p-5 ${isLandingRoute ? 'mb-3' : 'mb-4 sm:mb-5'}`} interactive>
-                <div className="flex items-center justify-between gap-3 sm:gap-4">
-                  <img
-                    src="/assets/pebble/master/brand/pebble_app_icon_primary_1024.png"
-                    alt="Pebble mark"
-                    className="h-8 w-8 rounded-xl sm:h-10 sm:w-10"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xl font-semibold tracking-[-0.015em] text-pebble-text-primary sm:text-2xl">
-                      Pebble
-                    </p>
-                    <p className="mt-0.5 text-sm text-pebble-text-secondary">
-                      {t('app.tagline')}
-                    </p>
+              <Card className={`p-3.5 sm:p-4 ${isLandingRoute ? 'mb-2.5' : 'mb-3.5 sm:mb-4'}`} interactive>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <img
+                      src="/assets/pebble/master/brand/pebble_app_icon_primary_1024.png"
+                      alt="Pebble mark"
+                      className="h-8 w-8 rounded-xl sm:h-9 sm:w-9"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-lg font-semibold tracking-[-0.015em] text-pebble-text-primary sm:text-xl">
+                        Pebble
+                      </p>
+                      <p className="mt-0.5 text-xs text-pebble-text-secondary sm:text-sm">
+                        {t('app.tagline')}
+                      </p>
+                    </div>
+
+                    <nav className="ml-2 hidden items-center gap-1 overflow-x-auto rounded-xl border border-pebble-border/28 bg-pebble-overlay/7 p-1 lg:flex">
+                      {navItems.map(({ to, label }) => (
+                        <NavLink
+                          key={to}
+                          to={to}
+                          className={({ isActive }) =>
+                            `whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium tracking-[0.01em] transition ${
+                              isActive
+                                ? 'border border-pebble-border/45 bg-pebble-overlay/16 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]'
+                                : 'border border-transparent text-pebble-text-secondary hover:bg-pebble-overlay/12 hover:text-pebble-text-primary'
+                            }`
+                          }
+                        >
+                          {label}
+                        </NavLink>
+                      ))}
+                    </nav>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -224,7 +257,7 @@ export function AppLayout() {
                   </div>
                 </div>
 
-                <nav className="mt-3 flex items-center gap-1 overflow-x-auto rounded-xl border border-pebble-border/28 bg-pebble-overlay/7 p-1">
+                <nav className="mt-3 flex items-center gap-1 overflow-x-auto rounded-xl border border-pebble-border/28 bg-pebble-overlay/7 p-1 lg:hidden">
                   {navItems.map(({ to, label }) => (
                     <NavLink
                       key={to}
@@ -245,7 +278,7 @@ export function AppLayout() {
             </PageContainer>
           </header>
 
-          <main className={isLandingRoute ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1 pb-6'}>
+          <main className={isLandingRoute ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1 pb-4'}>
             <PageContainer className={isLandingRoute ? 'h-full min-h-0' : ''}>
               <Outlet />
             </PageContainer>
@@ -269,6 +302,29 @@ export function AppLayout() {
         onDemoModeChange={handleDemoModeChange}
         onResetLocalData={handleResetLocalData}
       />
+
+      {showStoragePressureNotice ? (
+        <div className="fixed bottom-4 right-4 z-[120] w-[min(92vw,360px)] rounded-2xl border border-pebble-warning/35 bg-pebble-panel/92 p-3 shadow-[0_18px_42px_rgba(2,8,23,0.34)] backdrop-blur-xl">
+          <p className="text-sm font-medium text-pebble-text-primary">{t('storage.fullTitle')}</p>
+          <p className="mt-1 text-xs text-pebble-text-secondary">{t('storage.fullDescription')}</p>
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowStoragePressureNotice(false)}
+              className="rounded-lg border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16]"
+            >
+              {t('actions.close')}
+            </button>
+            <button
+              type="button"
+              onClick={handleResetAfterStoragePressure}
+              className="rounded-lg border border-pebble-warning/35 bg-pebble-warning/15 px-2.5 py-1 text-xs font-medium text-pebble-warning transition hover:bg-pebble-warning/22"
+            >
+              {t('storage.resetAction')}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

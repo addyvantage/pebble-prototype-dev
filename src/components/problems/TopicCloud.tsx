@@ -23,13 +23,13 @@ export function TopicCloud({
   isUrdu,
 }: TopicCloudProps) {
   return (
-    <Card padding="sm" interactive className="space-y-2">
-      <div className="space-y-0.5">
+    <Card padding="sm" interactive className="space-y-1.5">
+      <div className="space-y-0">
         <h2 className={`text-base font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{title}</h2>
         <p className={`text-sm text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>{subtitle}</p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {topics.map((entry) => {
           const selected = selectedTopics.includes(entry.topic)
           return (

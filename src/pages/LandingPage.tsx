@@ -35,17 +35,17 @@ export function LandingPage() {
 
   return (
     <section className="page-enter h-full min-h-0 overflow-y-auto lg:overflow-hidden">
-      <div className="flex h-full min-h-0 flex-col gap-2.5 lg:grid lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-3">
+      <div className="flex h-full min-h-0 flex-col gap-2 lg:grid lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-2.5">
         <Card className="relative min-h-0 overflow-hidden p-4 lg:p-5" interactive>
           <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-pebble-accent/18 blur-3xl" />
           <div className="pointer-events-none absolute -right-12 -top-16 h-56 w-56 rounded-full bg-sky-400/12 blur-3xl" />
 
-          <div className="relative grid h-full min-h-0 gap-4 lg:grid-cols-[1.12fr_0.88fr] lg:gap-[18px]">
-            <div className="flex min-h-0 flex-col justify-center gap-3.5">
+          <div className="relative grid h-full min-h-0 gap-3.5 lg:grid-cols-[1.2fr_0.8fr] lg:gap-4">
+            <div className="flex min-h-0 flex-col justify-center gap-3">
               <Badge className="w-fit">{t('landing.badge')}</Badge>
 
-              <div className="space-y-2.5">
-                <h1 className={`max-w-[18ch] text-balance text-3xl font-semibold tracking-[-0.02em] text-pebble-text-primary sm:text-4xl xl:text-[3.25rem] ${isUrdu ? 'rtlText' : ''}`}>
+              <div className="space-y-2">
+                <h1 className={`max-w-[22ch] text-balance text-3xl font-semibold tracking-[-0.02em] text-pebble-text-primary sm:text-4xl xl:text-[3.2rem] ${isUrdu ? 'rtlText' : ''}`}>
                   {t('landing.headline')}
                 </h1>
                 <p className={`max-w-[58ch] text-sm leading-relaxed text-pebble-text-secondary sm:text-[15px] ${isUrdu ? 'rtlText' : ''}`}>
@@ -75,7 +75,7 @@ export function LandingPage() {
             </div>
 
             <div className="flex min-h-0 items-center lg:justify-end">
-              <div className="w-full max-w-[560px] rounded-2xl border border-pebble-border/34 bg-pebble-overlay/[0.08] p-4 shadow-[0_20px_48px_rgba(2,8,23,0.2)] lg:p-[18px]">
+              <div className="w-full max-w-[620px] rounded-2xl border border-pebble-border/34 bg-pebble-overlay/[0.08] p-4 shadow-[0_20px_48px_rgba(2,8,23,0.2)] lg:p-[18px]">
                 <div className="flex items-center justify-between gap-2">
                   <p className={`text-[11px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>
                     {t('landing.previewLabel')}
@@ -120,7 +120,7 @@ export function LandingPage() {
           {bentoCards.map((card) => {
             const Icon = card.icon
             return (
-              <Card key={card.title} padding="sm" className="h-full min-h-[118px] bg-pebble-overlay/[0.05]" interactive>
+              <Card key={card.title} padding="sm" className="h-full min-h-[128px] bg-pebble-overlay/[0.05]" interactive>
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-pebble-border/34 bg-pebble-overlay/[0.12] text-pebble-text-primary">
                     <Icon className="h-4 w-4" aria-hidden="true" />

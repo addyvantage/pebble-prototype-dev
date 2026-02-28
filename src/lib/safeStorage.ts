@@ -3,10 +3,12 @@ type SafeSetOptions = {
   silent?: boolean
 }
 
+const STORAGE_PRESSURE_EVENT = 'pebble:storage-pressure'
 const DEFAULT_MAX_BYTES = 25 * 1024
 const LARGE_ITEM_BYTES = 120 * 1024
 const TOTAL_PEBBLE_BYTES = 600 * 1024
 let bootRecoveryDone = false
+let storagePressureRaised = false
 
 function inBrowser() {
   return typeof window !== 'undefined'
@@ -24,6 +26,27 @@ function warn(message: string, silent?: boolean) {
     return
   }
   console.warn(`[safeStorage] ${message}`)
+}
+
+function isQuotaError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false
+  }
+  const message = `${error.name} ${error.message}`.toLowerCase()
+  return message.includes('quota') || message.includes('kquotabytesperitem')
+}
+
+function notifyStoragePressure(cause: string) {
+  if (!inBrowser() || storagePressureRaised) {
+    return
+  }
+  storagePressureRaised = true
+  window.dispatchEvent(new CustomEvent(STORAGE_PRESSURE_EVENT, {
+    detail: {
+      cause,
+      ts: Date.now(),
+    },
+  }))
 }
 
 export function safeGetItem(key: string): string | null {
@@ -56,6 +79,9 @@ export function safeSetItem(key: string, value: string, options?: SafeSetOptions
     return true
   } catch (error) {
     warn(`setItem failed for "${key}": ${error instanceof Error ? error.message : String(error)}`, options?.silent)
+    if (isQuotaError(error)) {
+      notifyStoragePressure(key)
+    }
     return false
   }
 }
@@ -169,5 +195,17 @@ export function recoverPebbleStorageOnBoot() {
   } catch (error) {
     warn(`boot recovery failed: ${error instanceof Error ? error.message : String(error)}`)
     safeClearPrefix('pebble')
+  }
+}
+
+export function subscribeStoragePressure(listener: () => void) {
+  if (!inBrowser()) {
+    return () => {}
+  }
+
+  const handler = () => listener()
+  window.addEventListener(STORAGE_PRESSURE_EVENT, handler)
+  return () => {
+    window.removeEventListener(STORAGE_PRESSURE_EVENT, handler)
   }
 }

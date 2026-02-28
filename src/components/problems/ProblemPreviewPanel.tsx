@@ -64,8 +64,9 @@ export function ProblemPreviewPanel({
     return null
   }
 
-  const surfaceClass =
-    'border border-pebble-border/30 bg-[rgba(var(--pebble-panel),0.78)] shadow-[0_24px_64px_rgba(2,8,23,0.36)] backdrop-blur-xl [background-image:linear-gradient(180deg,rgba(var(--pebble-overlay),0.2)_0%,rgba(var(--pebble-overlay),0.06)_100%)]'
+  const surfaceClass = theme === 'light'
+    ? 'border border-black/10 bg-white/78 shadow-[0_24px_64px_rgba(15,23,42,0.16)] backdrop-blur-xl [background-image:linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.7)_100%)]'
+    : 'border border-white/12 bg-slate-950/62 shadow-[0_24px_64px_rgba(2,8,23,0.44)] backdrop-blur-xl [background-image:linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.03)_100%)]'
 
   const panelContent = (
     <div className="flex h-full min-h-0 flex-col">
@@ -156,7 +157,7 @@ export function ProblemPreviewPanel({
   )
 
   return (
-    <div className="fixed inset-0 z-[70]">
+    <div className="fixed inset-0 z-[90]">
       <div
         className={`absolute inset-0 backdrop-blur-md ${
           theme === 'light' ? 'bg-white/50' : 'bg-black/40'
@@ -164,9 +165,9 @@ export function ProblemPreviewPanel({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 flex justify-end p-0 lg:p-3">
+      <div className="absolute inset-0 flex justify-end p-0 sm:p-3">
         <aside
-          className={`h-full w-full max-w-[520px] overflow-hidden rounded-none lg:rounded-2xl ${surfaceClass}`}
+          className={`h-full w-full max-w-[520px] overflow-hidden rounded-none sm:rounded-2xl ${surfaceClass}`}
           role="dialog"
           aria-modal="true"
           aria-label={labels.preview}

@@ -30,6 +30,9 @@ export const EN_STRINGS = {
   'error.uiRecoverableTitle': 'Pebble hit a recoverable UI error.',
   'error.uiRecoverableDescription': 'The interface encountered an issue. Reset local data and reload safely.',
   'error.uiRecoverableReset': 'Reset local data',
+  'storage.fullTitle': 'Local storage is full.',
+  'storage.fullDescription': 'Pebble will store less data locally until space is available.',
+  'storage.resetAction': 'Reset local data',
 
   'placement.badge': 'Placement',
   'placement.level': 'Level',

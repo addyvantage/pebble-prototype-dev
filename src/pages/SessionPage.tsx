@@ -1155,6 +1155,26 @@ export function SessionPage() {
     setSubmitAccepted(false)
   }
 
+  const handleAssistAction = useCallback((action: StruggleAssistAction) => {
+    if (!currentUnit) {
+      return
+    }
+    logAssistEvent({
+      unitId: currentUnit.id,
+      trackId,
+      language: selectedLanguage,
+      action,
+    })
+    ingestStruggleEvent({
+      type: 'CHAT_ASSIST_USED',
+      action,
+    })
+  }, [currentUnit, ingestStruggleEvent, selectedLanguage, trackId])
+
+  const handleStruggleDismiss = useCallback(() => {
+    ingestStruggleEvent({ type: 'DISMISS_NUDGE' })
+  }, [ingestStruggleEvent])
+
   if (isLoading) {
     return (
       <section className="h-[100vh] overflow-hidden bg-pebble-deep p-3">
@@ -1209,21 +1229,6 @@ export function SessionPage() {
   })
   const currentUnitSubmissions = submissionsByUnit[currentUnit.id] ?? []
   const sqlPreviewTable = isSqlMode && activeProblem?.sqlMeta ? activeProblem.sqlMeta.expectedResult : null
-  const handleAssistAction = useCallback((action: StruggleAssistAction) => {
-    logAssistEvent({
-      unitId: currentUnit.id,
-      trackId,
-      language: selectedLanguage,
-      action,
-    })
-    ingestStruggleEvent({
-      type: 'CHAT_ASSIST_USED',
-      action,
-    })
-  }, [currentUnit.id, ingestStruggleEvent, selectedLanguage, trackId])
-  const handleStruggleDismiss = useCallback(() => {
-    ingestStruggleEvent({ type: 'DISMISS_NUDGE' })
-  }, [ingestStruggleEvent])
 
   const constraints = currentFunctionConfig?.evalMode === 'function'
     ? [

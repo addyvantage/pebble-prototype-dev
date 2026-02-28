@@ -11,9 +11,9 @@ type HexRadarProps = {
   previousLabel: string
 }
 
-const SIZE = 360
+const SIZE = 400
 const CENTER = SIZE / 2
-const OUTER_RADIUS = 122
+const OUTER_RADIUS = 136
 const RINGS = 5
 
 function toPoint(index: number, total: number, score01: number) {
@@ -75,12 +75,12 @@ export function HexRadar({
   const chartStyle = useMemo(() => {
     const dark = theme === 'dark'
     return {
-      gridStroke: dark ? 'rgba(var(--pebble-border), 0.28)' : 'rgba(var(--pebble-border), 0.2)',
-      axisStroke: dark ? 'rgba(var(--pebble-border), 0.22)' : 'rgba(var(--pebble-border), 0.18)',
-      currentFill: dark ? 'rgba(var(--pebble-accent), 0.24)' : 'rgba(var(--pebble-accent), 0.18)',
-      currentStroke: dark ? 'rgba(var(--pebble-accent), 0.92)' : 'rgba(var(--pebble-accent), 0.78)',
-      previousFill: dark ? 'rgba(var(--pebble-accent), 0.08)' : 'rgba(var(--pebble-accent), 0.06)',
-      previousStroke: dark ? 'rgba(var(--pebble-accent), 0.56)' : 'rgba(var(--pebble-accent), 0.48)',
+      gridStroke: dark ? 'rgba(var(--pebble-border), 0.3)' : 'rgba(var(--pebble-border), 0.24)',
+      axisStroke: dark ? 'rgba(var(--pebble-border), 0.24)' : 'rgba(var(--pebble-border), 0.18)',
+      currentFill: dark ? 'rgba(var(--pebble-accent), 0.22)' : 'rgba(var(--pebble-accent), 0.16)',
+      currentStroke: dark ? 'rgba(var(--pebble-accent), 0.9)' : 'rgba(var(--pebble-accent), 0.76)',
+      previousFill: dark ? 'rgba(var(--pebble-accent), 0.05)' : 'rgba(var(--pebble-accent), 0.04)',
+      previousStroke: dark ? 'rgba(var(--pebble-accent), 0.52)' : 'rgba(var(--pebble-accent), 0.46)',
       labelFill: dark ? 'rgb(var(--pebble-text-secondary))' : 'rgb(var(--pebble-text-primary))',
       currentDotFill: dark ? 'rgba(var(--pebble-accent), 0.98)' : 'rgba(var(--pebble-accent), 0.86)',
       previousDotFill: dark ? 'rgba(var(--pebble-accent), 0.62)' : 'rgba(var(--pebble-accent), 0.52)',
@@ -89,16 +89,16 @@ export function HexRadar({
   }, [theme])
 
   return (
-    <div className="rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-4">
-      <div className="mx-auto w-full max-w-[380px]">
-        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-[320px] w-full">
+    <div className="rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-3">
+      <div className="mx-auto aspect-square w-full max-w-[560px]">
+        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-full w-full">
           {ringPolygons.map((ring, index) => (
             <polygon
               key={`ring-${index}`}
               points={pointsToPath(ring)}
               fill="none"
               stroke={chartStyle.gridStroke}
-              strokeWidth={index === RINGS - 1 ? 1.25 : 1}
+              strokeWidth={index === RINGS - 1 ? 1.3 : 1}
             />
           ))}
 
@@ -187,7 +187,7 @@ export function HexRadar({
                 textAnchor={Math.abs(dx) < 8 ? 'middle' : dx > 0 ? 'start' : 'end'}
                 dominantBaseline={Math.abs(dy) < 8 ? 'middle' : dy > 0 ? 'hanging' : 'auto'}
                 fill={chartStyle.labelFill}
-                fontSize="11"
+                fontSize="12"
                 fontWeight="500"
               >
                 {label}
