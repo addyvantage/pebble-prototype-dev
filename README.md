@@ -27,6 +27,12 @@ Open `http://localhost:5173/session/1`.
 
 Vite proxies `/api/*` to `http://localhost:3001` in local dev.
 
+## Placement rotation
+
+- Placement now uses 7 questions per attempt: 4 MCQ + 3 coding.
+- Questions come from a larger per-language bank and rotate weekly.
+- Selection is deterministic for a week using `(language + level + week-bucket)` seeding, so the same profile sees the same set until the next weekly bucket.
+
 ## How curriculum works
 
 - Curriculum content lives in `src/content/paths/{python,javascript,cpp,java}.json`.

@@ -13,7 +13,10 @@ export type PebblePlacementState = {
   level: PlacementLevel
   score: number
   startUnit: StartUnit
+  startUnitIndex?: number
   answers: number[]
+  weekBucket?: number
+  questionIds?: string[]
   completedAt: string
 }
 
@@ -78,7 +81,10 @@ export function savePebblePlacement(input: {
   level: PlacementLevel
   score: number
   startUnit: StartUnit
+  startUnitIndex?: number
   answers: number[]
+  weekBucket?: number
+  questionIds?: string[]
 }) {
   if (typeof window === 'undefined') {
     return
@@ -92,7 +98,10 @@ export function savePebblePlacement(input: {
       level: input.level,
       score: input.score,
       startUnit: input.startUnit,
+      startUnitIndex: input.startUnitIndex,
       answers: input.answers,
+      weekBucket: input.weekBucket,
+      questionIds: input.questionIds,
       completedAt: new Date().toISOString(),
     },
   }

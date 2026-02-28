@@ -87,6 +87,7 @@ export function PebbleChatPanel({
 
   const isGenerating = assistantState === 'thinking' || assistantState === 'typing'
   const recentSummary = useMemo(() => summarizeRecentChat(messages), [messages])
+  const hasRunContext = runStatus !== 'idle' && runMessage.trim().length > 0
 
   useEffect(() => {
     onSummaryChange(recentSummary || initialSummary)
@@ -173,7 +174,7 @@ export function PebbleChatPanel({
       setAssistantState('thinking')
       setTypedDraft('')
 
-      const usesRunOutput = Boolean(runMessage.trim())
+      const usesRunOutput = hasRunContext
       const prompt = buildPrompt({
         question,
         unitTitle,
@@ -217,6 +218,7 @@ export function PebbleChatPanel({
     [
       codeText,
       failingSummary,
+      hasRunContext,
       pushAssistantWithTypewriter,
       recentSummary,
       runMessage,
@@ -244,21 +246,41 @@ export function PebbleChatPanel({
   return (
     <CardLayout>
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold text-pebble-text-primary">Pebble Chat</p>
-          <p className="text-xs text-pebble-text-secondary">Guidance tuned to your latest run.</p>
+        <div className="flex items-center gap-2.5">
+          <div className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-pebble-border/30 bg-pebble-accent/18 text-xs font-semibold text-pebble-text-primary">
+            P
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-pebble-canvas ${
+                runStatus === 'success'
+                  ? 'bg-pebble-success'
+                  : runStatus === 'error'
+                    ? 'bg-pebble-warning'
+                    : 'bg-pebble-text-muted'
+              }`}
+            />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-pebble-text-primary">Pebble</p>
+            <p className="text-xs text-pebble-text-secondary">In-context guidance</p>
+          </div>
         </div>
         <Badge variant={runStatus === 'success' ? 'success' : runStatus === 'error' ? 'warning' : 'neutral'}>
           {runStatus}
         </Badge>
       </div>
 
+      {hasRunContext && (
+        <p className="inline-flex w-fit rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.06em] text-pebble-text-muted">
+          Using your run output
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {quickActions.map((action) => (
           <button
             key={action.label}
             type="button"
-            className="rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-3 py-1 text-xs text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16] hover:text-pebble-text-primary"
+            className="rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-3.5 py-1.5 text-xs font-medium text-pebble-text-secondary transition hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16] hover:text-pebble-text-primary"
             onClick={() => void submitQuestion(action.prompt, true)}
             disabled={isGenerating}
           >
@@ -312,7 +334,7 @@ export function PebbleChatPanel({
         />
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-pebble-text-muted">
-            {runMessage ? 'Pebble can use your latest run result.' : 'Run tests to unlock more specific guidance.'}
+            {hasRunContext ? 'Pebble can use your latest run result.' : 'Run tests to unlock more specific guidance.'}
           </p>
           <div className="flex items-center gap-2">
             {isGenerating && (

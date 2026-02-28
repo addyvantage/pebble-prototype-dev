@@ -6,11 +6,13 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { PebbleChatPanel } from '../components/session/PebbleChatPanel'
 import {
+  getUnitIndexFromStartUnit,
   getLanguageMetadata,
   isPlacementLanguage,
   isPlacementLevel,
   type PlacementLanguage,
   type PlacementLevel,
+  type StartUnit,
 } from '../data/onboardingData'
 import { loadCurriculumPath, type CurriculumUnit } from '../content/pathLoader'
 import { IDE_MONACO_LANGUAGE } from '../components/ide/runtimeLanguages'
@@ -92,9 +94,18 @@ function buildFailingSummary(results: UnitTestResult[]) {
     .join(' | ')
 }
 
+function isStartUnit(value: string | null): value is StartUnit {
+  return value === '1' || value === 'mid' || value === 'advanced'
+}
+
+function previewText(value: string) {
+  return value.length > 0 ? value : '(empty)'
+}
+
 export function SessionPage() {
   const [searchParams] = useSearchParams()
   const storedState = useMemo(() => getPebbleUserState(), [])
+  const queryUnit = searchParams.get('unit')
 
   const selectedLanguage: PlacementLanguage = useMemo(() => {
     const queryLanguage = searchParams.get('lang')
@@ -164,10 +175,33 @@ export function SessionPage() {
         })
 
         const preferredUnitId = storedState.curriculum?.currentUnitId
-        const preferredIndex = preferredUnitId
+        const curriculumIndex = preferredUnitId
           ? nextUnits.findIndex((unit) => unit.id === preferredUnitId)
           : -1
-        setCurrentUnitIndex(preferredIndex >= 0 ? preferredIndex : 0)
+
+        const placementStart = storedState.placement?.startUnitIndex
+        const placementIndex =
+          typeof placementStart === 'number' && placementStart > 0
+            ? Math.min(placementStart - 1, nextUnits.length - 1)
+            : -1
+
+        let nextIndex = 0
+        if (placementIndex >= 0) {
+          nextIndex = placementIndex
+        }
+        if (curriculumIndex >= 0) {
+          nextIndex = curriculumIndex
+        }
+        if (isStartUnit(queryUnit)) {
+          nextIndex = getUnitIndexFromStartUnit(queryUnit, nextUnits.length)
+        } else if (queryUnit && /^\d+$/.test(queryUnit)) {
+          const numericUnit = Number.parseInt(queryUnit, 10)
+          if (numericUnit >= 1) {
+            nextIndex = Math.min(numericUnit - 1, nextUnits.length - 1)
+          }
+        }
+
+        setCurrentUnitIndex(nextIndex)
       } catch (error) {
         if (!mounted) {
           return
@@ -186,7 +220,12 @@ export function SessionPage() {
     return () => {
       mounted = false
     }
-  }, [selectedLanguage, storedState.curriculum?.currentUnitId])
+  }, [
+    queryUnit,
+    selectedLanguage,
+    storedState.curriculum?.currentUnitId,
+    storedState.placement?.startUnitIndex,
+  ])
 
   const currentUnit = units[currentUnitIndex] ?? null
   const currentCode = currentUnit ? draftByUnitId[currentUnit.id] ?? currentUnit.starterCode : ''
@@ -336,6 +375,12 @@ export function SessionPage() {
 
   const passedTests = testResults.filter((result) => result.passed).length
   const currentIsCompleted = completedUnitIds.includes(currentUnit.id)
+  const taskExamples = currentUnit.tests.slice(0, 2)
+  const taskConstraints = [
+    'Read input from stdin exactly as provided.',
+    'Write output to stdout with the required format only.',
+    `Your solution should pass all ${currentUnit.tests.length} tests.`,
+  ]
 
   return (
     <section className="page-enter space-y-4">
@@ -392,16 +437,60 @@ export function SessionPage() {
         </aside>
 
         <div className="space-y-4">
-          <Card className="space-y-3" padding="md" interactive>
+          <Card className="sticky top-3 z-10 space-y-4 border-pebble-border/32 bg-pebble-canvas/94" padding="sm" interactive>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">Task</p>
+              <Badge variant="neutral">Unit {currentUnitIndex + 1}</Badge>
+            </div>
             <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">Current Unit</p>
               <h2 className="text-lg font-semibold text-pebble-text-primary">{currentUnit.title}</h2>
               <p className="text-sm text-pebble-text-secondary">{currentUnit.prompt}</p>
             </div>
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Constraints</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-pebble-text-secondary">
+                  {taskConstraints.map((constraint) => (
+                    <li key={constraint}>{constraint}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Examples</p>
+                <div className="mt-2 space-y-2">
+                  {taskExamples.map((test, index) => (
+                    <div key={`${currentUnit.id}-example-${index}`} className="rounded-lg border border-pebble-border/20 bg-pebble-canvas/70 p-2">
+                      <p className="text-[11px] font-medium text-pebble-text-primary">Example {index + 1}</p>
+                      <p className="mt-1 text-[11px] text-pebble-text-secondary">input: {previewText(test.input)}</p>
+                      <p className="text-[11px] text-pebble-text-secondary">output: {previewText(normalizeOutput(test.expected))}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Required output</p>
+              <p className="mt-1 text-xs text-pebble-text-secondary">
+                Match the expected output for each test case exactly (whitespace normalized by the checker).
+              </p>
+            </div>
+          </Card>
+
+          <p className="px-1 text-xs text-pebble-text-secondary">
+            Tests: <span className="font-medium text-pebble-text-primary">{passedTests}/{currentUnit.tests.length}</span>
+          </p>
+
+          <Card className="space-y-3" padding="md" interactive>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-pebble-text-primary">{currentUnit.concept}</p>
+              <Badge variant={statusVariant(runStatus)}>{runStatus}</Badge>
+            </div>
             <div className="overflow-hidden rounded-xl border border-pebble-border/28 bg-pebble-canvas/92">
               <Editor
-                height="420px"
+                height="340px"
                 language={IDE_MONACO_LANGUAGE[selectedLanguage]}
                 theme="vs-dark"
                 value={currentCode}
@@ -439,7 +528,7 @@ export function SessionPage() {
               </p>
             </div>
 
-            <div className="max-h-[220px] space-y-2 overflow-y-auto rounded-xl border border-pebble-border/25 bg-pebble-canvas/65 p-3">
+            <div className="max-h-[180px] space-y-2 overflow-y-auto rounded-xl border border-pebble-border/25 bg-pebble-canvas/65 p-3">
               {testResults.length === 0 && (
                 <p className="text-xs text-pebble-text-muted">Run tests to see detailed results.</p>
               )}
