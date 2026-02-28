@@ -4,7 +4,7 @@ import {
   normalizeRunRequest,
   normalizeRunnerResponse,
   type RunRequestBody,
-} from '../../server/runnerShared'
+} from './runnerShared.js'
 
 export const config = {
   runtime: 'nodejs',
@@ -253,7 +253,7 @@ export default async function handler(
 
     let result
     if (mode === 'local') {
-      const { runCodeLocally } = await import('../../server/runnerLocal')
+      const { runCodeLocally } = await import('./runnerLocal.js')
       result = await runCodeLocally(normalized.value)
     } else if (hasRunnerUrl) {
       result = await runViaRunnerUrl(normalized.value)
