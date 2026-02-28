@@ -235,14 +235,6 @@ export function DashboardPage() {
         />
       </div>
 
-      <StreakCalendar
-        dailyMap={dailyCompletions}
-        streak={streakStats.streak}
-        longest={longestStreak.longest}
-        isTodayComplete={streakStats.isTodayComplete}
-        timeZone={timeZone}
-      />
-
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <Card padding="md" interactive className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -262,28 +254,37 @@ export function DashboardPage() {
           />
         </Card>
 
-        <Card padding="md" interactive className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.next.title')}</p>
-              <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.next.subtitle')}</p>
-            </div>
-            <Target className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
-          </div>
-          <NextTasks
-            items={derived.nextActions}
-            titleByUnitId={localizedUnitTitles}
-            labels={{
-              empty: t('insights.next.empty'),
-              continueAction: t('insights.next.continueUnit'),
-              syntaxAction: t('insights.next.focusSyntax'),
-              debugAction: t('insights.next.focusDebugging'),
-              complexityAction: t('insights.next.raiseComplexity'),
-              streakAction: t('insights.next.maintainStreak'),
-              continueCta: t('insights.next.continueCta'),
-            }}
+        <div className="grid content-start gap-3">
+          <StreakCalendar
+            dailyMap={dailyCompletions}
+            streak={streakStats.streak}
+            longest={longestStreak.longest}
+            isTodayComplete={streakStats.isTodayComplete}
+            timeZone={timeZone}
           />
-        </Card>
+          <Card padding="md" interactive className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.next.title')}</p>
+                <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.next.subtitle')}</p>
+              </div>
+              <Target className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
+            </div>
+            <NextTasks
+              items={derived.nextActions}
+              titleByUnitId={localizedUnitTitles}
+              labels={{
+                empty: t('insights.next.empty'),
+                continueAction: t('insights.next.continueUnit'),
+                syntaxAction: t('insights.next.focusSyntax'),
+                debugAction: t('insights.next.focusDebugging'),
+                complexityAction: t('insights.next.raiseComplexity'),
+                streakAction: t('insights.next.maintainStreak'),
+                continueCta: t('insights.next.continueCta'),
+              }}
+            />
+          </Card>
+        </div>
       </div>
 
       <div className="grid gap-3 xl:grid-cols-2">

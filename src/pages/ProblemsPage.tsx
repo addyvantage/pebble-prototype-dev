@@ -1,4 +1,4 @@
-import { Search, Shuffle } from 'lucide-react'
+import { ChevronDown, Search, Shuffle } from 'lucide-react'
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TopicCloud } from '../components/problems/TopicCloud'
@@ -7,7 +7,7 @@ import {
   type ProblemsFilterState,
 } from '../components/problems/ProblemsFilterPopover'
 import { ProblemsTable } from '../components/problems/ProblemsTable'
-import { ProblemPreviewDrawer } from '../components/problems/ProblemPreviewDrawer'
+import { ProblemPreviewPanel } from '../components/problems/ProblemPreviewPanel'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import {
@@ -166,8 +166,8 @@ export function ProblemsPage() {
   } as const
 
   return (
-    <section className="page-enter space-y-3 pb-1">
-      <Card padding="md" interactive className="space-y-1.5">
+    <section className="page-enter -mt-1 space-y-2 pb-1">
+      <Card padding="sm" interactive className="space-y-1">
         <h1 className={`text-3xl font-semibold tracking-[-0.02em] text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
           {t('problems.title')}
         </h1>
@@ -185,7 +185,7 @@ export function ProblemsPage() {
         isUrdu={isUrdu}
       />
 
-      <Card padding="sm" interactive className="space-y-3">
+      <Card padding="sm" interactive className="space-y-2.5">
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative min-w-[280px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble-text-muted" aria-hidden="true" />
@@ -231,18 +231,41 @@ export function ProblemsPage() {
             }}
           />
 
-          <select
-            value={sortMode}
-            onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className="h-10 rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] px-3 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
-            aria-label={t('problems.sort.label')}
-          >
-            <option value="newest">{t('problems.sort.newest')}</option>
-            <option value="difficulty">{t('problems.sort.difficulty')}</option>
-            <option value="acceptance">{t('problems.sort.acceptance')}</option>
-            <option value="topic">{t('problems.sort.topic')}</option>
-            <option value="lastSolved">{t('problems.sort.lastSolved')}</option>
-          </select>
+          <label className="relative">
+            <select
+              value={filters.difficulty}
+              onChange={(event) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  difficulty: event.target.value as ProblemsFilterState['difficulty'],
+                }))
+              }
+              className="h-10 appearance-none rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] pl-3 pr-9 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+              aria-label={t('problems.filters.difficulty')}
+            >
+              <option value="any">{t('problems.filters.anyDifficulty')}</option>
+              <option value="easy">{t('difficulty.easy')}</option>
+              <option value="medium">{t('difficulty.medium')}</option>
+              <option value="hard">{t('difficulty.hard')}</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble-text-secondary" aria-hidden="true" />
+          </label>
+
+          <label className="relative">
+            <select
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as SortMode)}
+              className="h-10 appearance-none rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] pl-3 pr-9 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+              aria-label={t('problems.sort.label')}
+            >
+              <option value="newest">{t('problems.sort.newest')}</option>
+              <option value="difficulty">{t('problems.sort.difficulty')}</option>
+              <option value="acceptance">{t('problems.sort.acceptance')}</option>
+              <option value="topic">{t('problems.sort.topic')}</option>
+              <option value="lastSolved">{t('problems.sort.lastSolved')}</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble-text-secondary" aria-hidden="true" />
+          </label>
 
           <div className="ml-auto flex items-center gap-2">
             <span className={`rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] px-3 py-2 text-sm text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
@@ -280,7 +303,7 @@ export function ProblemsPage() {
         />
       </Card>
 
-      <ProblemPreviewDrawer
+      <ProblemPreviewPanel
         open={Boolean(previewProblem)}
         problem={previewProblem}
         selectedLanguage={previewLanguage}
