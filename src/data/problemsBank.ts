@@ -643,8 +643,7 @@ const SQL_ADDITIONAL_SEEDS: AdditionalSqlSeed[] = [
     tables: SQL_SALES_TABLES,
     expectedResult: { columns: ['category', 'penetration_pct'], rows: [] },
     requiredTokens: ['select', 'count distinct']
-  }
-];
+  },
   {
     title: 'Sequel I: City Match Report',
     difficulty: 'Easy',

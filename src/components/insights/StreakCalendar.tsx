@@ -13,6 +13,7 @@ type StreakCalendarProps = {
   longest: number
   isTodayComplete: boolean
   timeZone: string
+  className?: string
 }
 
 const WEEKDAY_BASE = new Date(Date.UTC(2024, 0, 1))
@@ -23,12 +24,17 @@ function addDays(base: Date, days: number) {
   return next
 }
 
+function classNames(...values: Array<string | undefined>) {
+  return values.filter(Boolean).join(' ')
+}
+
 export function StreakCalendar({
   dailyMap,
   streak,
   longest,
   isTodayComplete,
   timeZone,
+  className,
 }: StreakCalendarProps) {
   const { t, lang, isRTL } = useI18n()
   const locale = getLanguageOption(lang).locale
@@ -68,7 +74,7 @@ export function StreakCalendar({
   )
 
   return (
-    <div className="space-y-2 rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-3">
+    <div className={classNames('space-y-2.5', className)}>
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5">
           <p className={`text-sm font-semibold text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
@@ -82,36 +88,36 @@ export function StreakCalendar({
           <button
             type="button"
             onClick={() => setCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.14] hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.14] hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
             aria-label={t('insights.calendar.prevMonth')}
           >
             <ChevronLeft className="h-3 w-3" aria-hidden="true" />
           </button>
-          <p className={`w-[80px] text-center text-[11px] font-medium text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
+          <p className={`w-[94px] text-center text-[11px] font-medium text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
             {monthLabel}
           </p>
           <button
             type="button"
             onClick={() => setCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.14] hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.14] hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
             aria-label={t('insights.calendar.nextMonth')}
           >
             <ChevronRight className="h-3 w-3" aria-hidden="true" />
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap gap-1">
-        <span className="inline-flex items-center gap-1 rounded-full border border-pebble-warning/35 bg-pebble-warning/12 px-2 py-[3px] text-[10px] text-pebble-warning">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 rounded-full border border-pebble-warning/35 bg-pebble-warning/12 px-2 py-0.5 text-[10px] text-pebble-warning">
           <Flame className="h-2.5 w-2.5" aria-hidden="true" />
           <span className="ltrSafe font-semibold">{streak}</span>
         </span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2 py-[3px] text-[10px] text-pebble-text-secondary">
+        <span className="inline-flex items-center gap-1 rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2 py-0.5 text-[10px] text-pebble-text-secondary">
           <Trophy className="h-2.5 w-2.5" aria-hidden="true" />
           <span className={isRTL ? 'rtlText' : ''}>{t('insights.streak.longest')}</span>
           <span className="ltrSafe font-semibold text-pebble-text-primary">{longest}</span>
         </span>
         {isTodayComplete ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-pebble-success/35 bg-pebble-success/12 px-2 py-[3px] text-[10px] text-pebble-success">
+          <span className="inline-flex items-center gap-1 rounded-full border border-pebble-success/35 bg-pebble-success/12 px-2 py-0.5 text-[10px] text-pebble-success">
             <Check className="h-2.5 w-2.5" aria-hidden="true" />
             <span className={isRTL ? 'rtlText' : ''}>{t('insights.streak.todayDone')}</span>
           </span>
@@ -123,7 +129,7 @@ export function StreakCalendar({
           {weekdayLabels.map((label) => (
             <span
               key={label}
-              className={`text-center text-[9px] font-medium text-pebble-text-muted ${isRTL ? 'rtlText' : ''}`}
+              className={`text-center text-[11px] font-medium text-pebble-text-muted ${isRTL ? 'rtlText' : ''}`}
             >
               {label}
             </span>
@@ -139,10 +145,10 @@ export function StreakCalendar({
                   ? t('insights.calendar.completedCount', { count: day.count })
                   : t('insights.calendar.none')
               }
-              className={`relative flex h-5 w-5 items-center justify-center rounded-[6px] border text-[10px] transition ${day.isComplete
-                  ? 'border-pebble-success/45 bg-pebble-success/22 text-pebble-success shadow-[0_0_0_1px_rgba(74,222,128,0.12)]'
-                  : 'border-pebble-border/24 bg-pebble-overlay/[0.06] text-pebble-text-secondary'
-                } ${day.isInMonth ? '' : 'opacity-45'} ${day.isToday ? 'ring-1 ring-pebble-accent/45' : ''}`}
+              className={`relative flex h-7 w-7 items-center justify-center rounded-lg border text-[12px] font-medium transition sm:h-8 sm:w-8 ${day.isComplete
+                ? 'border-pebble-success/40 bg-pebble-success/18 text-pebble-success'
+                : 'border-pebble-border/25 bg-pebble-overlay/[0.05] text-pebble-text-secondary hover:bg-pebble-overlay/[0.1]'
+              } ${day.isInMonth ? '' : 'opacity-40'} ${day.isToday ? 'ring-2 ring-pebble-accent/35' : ''}`}
             >
               <span className="ltrSafe">{day.dayNumber}</span>
             </div>

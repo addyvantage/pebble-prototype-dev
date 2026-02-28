@@ -177,8 +177,8 @@ export function DashboardPage() {
   )
 
   return (
-    <section className="page-enter space-y-2.5 pb-1">
-      <Card padding="sm" interactive className="space-y-3">
+    <section className="page-enter space-y-3 pb-2">
+      <Card padding="sm" interactive className="space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Badge>{t('insights.hero.chipGrowth')}</Badge>
           <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ export function DashboardPage() {
         </p>
       </Card>
 
-      <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
           title={t('insights.kpi.recoveryEffectiveness')}
           value={derived.kpis.recoveryEffectiveness}
@@ -235,39 +235,73 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-12">
-        <Card padding="sm" interactive className="flex h-full flex-col space-y-3 xl:col-span-5 min-h-[420px]">
+      <div className="grid gap-3 xl:grid-cols-12">
+        <Card
+          padding="sm"
+          interactive
+          className="xl:col-span-5 flex h-full flex-col gap-3"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.radar.title')}</p>
+              <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
+                {t('insights.radar.title')}
+              </p>
               <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.radar.subtitle')}</p>
             </div>
             <Badge variant="neutral">{t('insights.radar.liveShape')}</Badge>
           </div>
-          <div className="min-h-0 flex-1">
+          <div className="relative mx-auto flex aspect-square w-full max-w-[420px] items-center justify-center rounded-xl border border-pebble-border/25 bg-pebble-canvas/55 p-3">
             <HexRadar
               current={derived.radarCurrent}
               previous={derived.radarPrevious}
               axisOrder={[...RADAR_AXIS_ORDER]}
               axisLabels={axisLabels}
-              currentLabel={t('insights.radar.current')}
-              previousLabel={t('insights.radar.previous')}
+              className="h-full w-full"
             />
+          </div>
+          <div className="flex items-center justify-center gap-4 text-xs text-pebble-text-secondary">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-pebble-text-primary/65" />
+              {t('insights.radar.current')}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-pebble-accent/40" />
+              {t('insights.radar.previous')}
+            </span>
           </div>
         </Card>
 
-        <div className="grid content-start gap-2.5 xl:col-span-7">
-          <StreakCalendar
-            dailyMap={dailyCompletions}
-            streak={streakStats.streak}
-            longest={longestStreak.longest}
-            isTodayComplete={streakStats.isTodayComplete}
-            timeZone={timeZone}
-          />
+        <div className="xl:col-span-7 grid content-start gap-3">
+          <div className="grid gap-3 md:grid-cols-7">
+            <Card padding="sm" interactive className="md:col-span-4">
+              <StreakCalendar
+                dailyMap={dailyCompletions}
+                streak={streakStats.streak}
+                longest={longestStreak.longest}
+                isTodayComplete={streakStats.isTodayComplete}
+                timeZone={timeZone}
+              />
+            </Card>
+            <Card padding="sm" interactive className="md:col-span-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
+                    {t('insights.issue.title')}
+                  </p>
+                  <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.issue.subtitle')}</p>
+                </div>
+                <Brain className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
+              </div>
+              <IssueBars rows={derived.issueProfile} labels={issueLabels} />
+            </Card>
+          </div>
+
           <Card padding="sm" interactive className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.next.title')}</p>
+                <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
+                  {t('insights.next.title')}
+                </p>
                 <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.next.subtitle')}</p>
               </div>
               <Target className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
@@ -289,8 +323,8 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-2">
-        <Card padding="sm" interactive className="space-y-3">
+      <div className="grid gap-3 xl:grid-cols-12">
+        <Card padding="sm" interactive className="space-y-3 xl:col-span-12">
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.trend.title')}</p>
@@ -303,17 +337,6 @@ export function DashboardPage() {
             flowLabel={t('insights.trend.flow')}
             loadLabel={t('insights.trend.load')}
           />
-        </Card>
-
-        <Card padding="sm" interactive className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.issue.title')}</p>
-              <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.issue.subtitle')}</p>
-            </div>
-            <Brain className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
-          </div>
-          <IssueBars rows={derived.issueProfile} labels={issueLabels} />
         </Card>
       </div>
 

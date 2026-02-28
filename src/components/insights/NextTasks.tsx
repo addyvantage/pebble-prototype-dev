@@ -44,24 +44,26 @@ function rowCopy(
 export function NextTasks({ items, titleByUnitId, labels }: NextTasksProps) {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-4 text-sm text-pebble-text-secondary">
+      <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-3 text-sm text-pebble-text-secondary">
         {labels.empty}
       </div>
     )
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-4">
-      {items.map((row) => {
+    <div className="space-y-2 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-3">
+      {items.slice(0, 3).map((row) => {
         const copy = rowCopy(row, labels, titleByUnitId)
         return (
           <div
             key={row.id}
-            className="rounded-xl border border-pebble-border/28 bg-pebble-canvas/45 p-3"
+            className="flex items-center justify-between gap-3 rounded-xl border border-pebble-border/28 bg-pebble-canvas/45 p-3"
           >
-            <p className="text-sm font-semibold text-pebble-text-primary">{copy.title}</p>
-            {copy.detail ? <p className="mt-1 text-xs text-pebble-text-secondary">{copy.detail}</p> : null}
-            <Link to={copy.path} className={`${buttonClass('secondary', 'sm')} mt-2 inline-flex`}>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-pebble-text-primary">{copy.title}</p>
+              {copy.detail ? <p className="truncate text-xs text-pebble-text-secondary">{copy.detail}</p> : null}
+            </div>
+            <Link to={copy.path} className={`${buttonClass('secondary', 'sm')} shrink-0`}>
               {labels.continueCta}
             </Link>
           </div>

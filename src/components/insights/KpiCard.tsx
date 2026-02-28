@@ -51,15 +51,15 @@ export function KpiCard({ title, value, suffix, trend, icon: Icon }: KpiCardProp
   }, [animatedValue])
 
   return (
-    <Card padding="none" interactive className="flex flex-col justify-between space-y-2 bg-pebble-overlay/[0.04] p-3.5">
+    <Card padding="none" interactive className="flex min-h-[108px] flex-col justify-between space-y-2 bg-pebble-overlay/[0.04] p-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-pebble-text-muted">{title}</p>
         <Icon className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
       </div>
       <div>
-        <p className="text-3xl font-bold tracking-tight text-pebble-text-primary">
+        <p className="text-[1.65rem] font-bold leading-none tracking-tight text-pebble-text-primary">
           {formattedValue}
-          {suffix ? <span className="ml-1 text-sm font-medium tracking-normal text-pebble-text-secondary">{suffix}</span> : null}
+          {suffix ? <span className="ml-1 text-xs font-medium tracking-normal text-pebble-text-secondary">{suffix}</span> : null}
         </p>
         {trend ? <p className="mt-1 text-xs text-pebble-text-secondary">{trend}</p> : <div className="h-4" />}
       </div>

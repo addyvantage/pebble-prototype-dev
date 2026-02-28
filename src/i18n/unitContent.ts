@@ -11,7 +11,7 @@ export type LocalizedUnitText = {
 
 const HI_UNIT_COPY: Record<string, LocalizedUnitText> = {
   'hello-world': {
-    title: 'हेलो वर्ल्ड',
+    title: 'हेलो पेबल',
     concept: 'stdout की बुनियाद',
     prompt: 'बिल्कुल यही लौटाएँ: Hello, Pebble!',
     description: 'यह एक वॉर्म-अप प्रश्न है। आउटपुट बिल्कुल सही होना चाहिए, अतिरिक्त स्पेस या लाइन ब्रेक न जोड़ें।',

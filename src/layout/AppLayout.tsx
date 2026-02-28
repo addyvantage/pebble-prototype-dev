@@ -171,8 +171,8 @@ export function AppLayout() {
         </div>
       ) : (
         <div className={`relative flex min-h-screen flex-col ${isLandingRoute ? 'overflow-hidden' : ''}`}>
-          <header className="w-full px-2 pt-1.5 sm:px-4 sm:pt-2 lg:px-6">
-            <div className="mx-auto w-full max-w-[1920px]">
+          <header className="w-full pt-1.5 sm:pt-2">
+            <PageContainer>
               <Card className={`p-2 sm:p-3 ${isLandingRoute ? 'mb-2' : 'mb-2 sm:mb-3'}`} interactive>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -273,7 +273,7 @@ export function AppLayout() {
                   ))}
                 </nav>
               </Card>
-            </div>
+            </PageContainer>
           </header>
 
           <main className={isLandingRoute ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1 pb-4'}>

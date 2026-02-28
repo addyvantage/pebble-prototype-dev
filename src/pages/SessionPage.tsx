@@ -132,6 +132,19 @@ function statusVariant(status: string): 'neutral' | 'success' | 'warning' {
   return 'neutral'
 }
 
+function resolveCurriculumDifficulty(level: PlacementLevel, unitId: string): 'Easy' | 'Medium' | 'Hard' {
+  if (unitId === 'hello-world') {
+    return 'Easy'
+  }
+  if (level === 'beginner') {
+    return 'Easy'
+  }
+  if (level === 'intermediate') {
+    return 'Medium'
+  }
+  return 'Hard'
+}
+
 function buildFailingSummary(resultsByIndex: Record<number, UnitTestResultItem>) {
   const failed = Object.entries(resultsByIndex)
     .map(([index, result]) => ({ index: Number(index), result }))
@@ -1242,6 +1255,18 @@ export function SessionPage() {
       t('constraints.scriptMode.3', { count: currentUnit.tests.length }),
     ]
   const resolvedConstraints = activeProblem?.statement.constraints ?? constraints
+  const curriculumDifficulty = resolveCurriculumDifficulty(selectedLevel, currentUnit.id)
+  const sessionDifficulty = activeProblem?.difficulty ?? curriculumDifficulty
+  const sessionDifficultyLabel = sessionDifficulty === 'Easy'
+    ? t('difficulty.easy')
+    : sessionDifficulty === 'Medium'
+      ? t('difficulty.medium')
+      : t('difficulty.hard')
+  const sessionTags = activeProblem
+    ? [...activeProblem.topics.slice(0, 2), `${activeProblem.estimatedMinutes}m`]
+    : currentUnit.id === 'hello-world'
+      ? [languageMeta.label, 'stdout basics', t('tags.practice')]
+      : [languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]
 
   return (
     <section className={`session-shell h-[100vh] overflow-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}>
@@ -1334,37 +1359,9 @@ export function SessionPage() {
             examples={activeProblem?.statement.examples}
             inputText={activeProblem?.statement.input}
             outputText={activeProblem?.statement.output}
-            difficulty={
-              activeProblem
-                ? activeProblem.difficulty
-                : currentUnit.id === 'hello-world'
-                  ? 'Easy'
-                  : selectedLevel === 'beginner'
-                    ? 'Easy'
-                    : selectedLevel === 'intermediate'
-                      ? 'Medium'
-                      : 'Hard'
-            }
-            difficultyLabel={
-              activeProblem
-                ? activeProblem.difficulty === 'Easy'
-                  ? t('difficulty.easy')
-                  : activeProblem.difficulty === 'Medium'
-                    ? t('difficulty.medium')
-                    : t('difficulty.hard')
-                : currentUnit.id === 'hello-world'
-                  ? t('difficulty.easy')
-                  : selectedLevel === 'beginner'
-                    ? t('difficulty.easy')
-                    : selectedLevel === 'intermediate'
-                      ? t('difficulty.medium')
-                      : t('difficulty.hard')
-            }
-            tags={activeProblem
-              ? [...activeProblem.topics.slice(0, 2), `${activeProblem.estimatedMinutes}m`]
-              : currentUnit.id === 'hello-world'
-                ? [languageMeta.label, 'stdout basics', t('tags.practice')]
-                : [languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]}
+            difficulty={sessionDifficulty}
+            difficultyLabel={sessionDifficultyLabel}
+            tags={sessionTags}
             language={sessionLanguage}
             functionMode={currentFunctionConfig?.evalMode === 'function'}
             submissions={currentUnitSubmissions}
