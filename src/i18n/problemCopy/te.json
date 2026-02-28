@@ -1,0 +1,9 @@
+{
+  "sql-second-highest-salary": {
+    "title": "రెండవ అత్యధిక జీతం",
+    "statement": {
+      "summary": "రెండవ అత్యధిక ప్రత్యేక జీతాన్ని కనుగొనండి."
+    },
+    "starterCodeComment": "మీ SQL query ని క్రింద రాయండి"
+  }
+}

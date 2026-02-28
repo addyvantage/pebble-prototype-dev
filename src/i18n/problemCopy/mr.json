@@ -1,0 +1,9 @@
+{
+  "sql-second-highest-salary": {
+    "title": "दुसरा सर्वाधिक पगार",
+    "statement": {
+      "summary": "दुसरा सर्वाधिक वेगळा पगार मिळवा."
+    },
+    "starterCodeComment": "तुमची SQL क्वेरी खाली लिहा"
+  }
+}

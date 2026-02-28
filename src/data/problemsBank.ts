@@ -5,6 +5,7 @@ export type ProblemDifficulty = 'Easy' | 'Medium' | 'Hard'
 
 export type ProblemTopicCount = {
   topic: string
+  topicId: string
   count: number
 }
 
@@ -44,9 +45,11 @@ export type ProblemDefinition = {
   title: string
   difficulty: ProblemDifficulty
   topics: string[]
+  topicIds?: string[]
   languageSupport: ProblemLanguage[]
   acceptanceRate: number
   estimatedMinutes: number
+  timeEstimateMinutes?: number
   keySkills: string[]
   statement: {
     summary: string
@@ -55,6 +58,7 @@ export type ProblemDefinition = {
     output: string
     constraints: string[]
     examples: ProblemExample[]
+    schemaText?: string
   }
   starterByLanguage: Partial<Record<ProblemLanguage, string>>
   tests: ProblemTestCase[]
@@ -76,35 +80,64 @@ const GENERIC_STARTERS: Record<Exclude<ProblemLanguage, 'sql'>, string> = {
 const SQL_STARTER = `-- Write your SQL query below\nSELECT p.firstName, p.lastName, a.city, a.state\nFROM Person p\nLEFT JOIN Address a ON p.personId = a.personId;\n`
 
 const TOPICS_CATALOG: ProblemTopicCount[] = [
-  { topic: 'Array', count: 23 },
-  { topic: 'String', count: 32 },
-  { topic: 'Hash Table', count: 29 },
-  { topic: 'Math', count: 15 },
-  { topic: 'Dynamic Programming', count: 18 },
-  { topic: 'Sorting', count: 11 },
-  { topic: 'Greedy', count: 9 },
-  { topic: 'Graph', count: 10 },
-  { topic: 'Tree', count: 9 },
-  { topic: 'DFS', count: 7 },
-  { topic: 'BFS', count: 6 },
-  { topic: 'Two Pointers', count: 12 },
-  { topic: 'Binary Search', count: 14 },
-  { topic: 'Heap', count: 8 },
-  { topic: 'Prefix Sum', count: 10 },
-  { topic: 'Stack', count: 8 },
-  { topic: 'Queue', count: 5 },
-  { topic: 'Bit Manipulation', count: 7 },
-  { topic: 'Union-Find', count: 4 },
-  { topic: 'Trie', count: 3 },
-  { topic: 'Segment Tree', count: 2 },
-  { topic: 'Sliding Window', count: 12 },
-  { topic: 'SQL', count: 35 },
-  { topic: 'Backtracking', count: 5 },
-  { topic: 'Monotonic Stack', count: 4 },
-  { topic: 'Eulerian Circuit', count: 1 },
-  { topic: 'Radix Sort', count: 3 },
-  { topic: 'Suffix Array', count: 1 },
+  { topic: 'Array', topicId: 'array', count: 23 },
+  { topic: 'String', topicId: 'string', count: 32 },
+  { topic: 'Hash Table', topicId: 'hash_table', count: 29 },
+  { topic: 'Math', topicId: 'math', count: 15 },
+  { topic: 'Dynamic Programming', topicId: 'dynamic_programming', count: 18 },
+  { topic: 'Sorting', topicId: 'sorting', count: 11 },
+  { topic: 'Greedy', topicId: 'greedy', count: 9 },
+  { topic: 'Graph', topicId: 'graph', count: 10 },
+  { topic: 'Tree', topicId: 'tree', count: 9 },
+  { topic: 'DFS', topicId: 'dfs', count: 7 },
+  { topic: 'BFS', topicId: 'bfs', count: 6 },
+  { topic: 'Two Pointers', topicId: 'two_pointers', count: 12 },
+  { topic: 'Binary Search', topicId: 'binary_search', count: 14 },
+  { topic: 'Heap', topicId: 'heap', count: 8 },
+  { topic: 'Prefix Sum', topicId: 'prefix_sum', count: 10 },
+  { topic: 'Stack', topicId: 'stack', count: 8 },
+  { topic: 'Queue', topicId: 'queue', count: 5 },
+  { topic: 'Bit Manipulation', topicId: 'bit_manipulation', count: 7 },
+  { topic: 'Union-Find', topicId: 'union_find', count: 4 },
+  { topic: 'Trie', topicId: 'trie', count: 3 },
+  { topic: 'Segment Tree', topicId: 'segment_tree', count: 2 },
+  { topic: 'Sliding Window', topicId: 'sliding_window', count: 12 },
+  { topic: 'SQL', topicId: 'sql', count: 35 },
+  { topic: 'Backtracking', topicId: 'backtracking', count: 5 },
+  { topic: 'Monotonic Stack', topicId: 'monotonic_stack', count: 4 },
+  { topic: 'Eulerian Circuit', topicId: 'eulerian_circuit', count: 1 },
+  { topic: 'Radix Sort', topicId: 'radix_sort', count: 3 },
+  { topic: 'Suffix Array', topicId: 'suffix_array', count: 1 },
 ]
+
+const TOPIC_ID_ALIASES: Record<string, string> = {
+  joins: 'join',
+  groupby: 'group_by',
+}
+
+export function toTopicId(topic: string) {
+  const normalized = topic
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  return TOPIC_ID_ALIASES[normalized] ?? normalized
+}
+
+export function getProblemTopicIds(problem: Pick<ProblemDefinition, 'topics' | 'topicIds'>) {
+  const source = problem.topicIds && problem.topicIds.length > 0 ? problem.topicIds : problem.topics
+  const unique = new Set(source.map((topic) => toTopicId(topic)))
+  return Array.from(unique)
+}
+
+export function getProblemTimeEstimateMinutes(
+  problem: Pick<ProblemDefinition, 'estimatedMinutes' | 'timeEstimateMinutes'>,
+) {
+  return typeof problem.timeEstimateMinutes === 'number'
+    ? problem.timeEstimateMinutes
+    : problem.estimatedMinutes
+}
 
 const CURATED_PROBLEMS: ProblemDefinition[] = [
   {
@@ -1540,7 +1573,11 @@ export const PROBLEMS_BANK: ProblemDefinition[] = [
   ...CURATED_PROBLEMS,
   ...ADDITIONAL_SQL_PROBLEMS,
   ...GENERATED_PROBLEMS,
-]
+].map((problem) => ({
+  ...problem,
+  topicIds: getProblemTopicIds(problem),
+  timeEstimateMinutes: getProblemTimeEstimateMinutes(problem),
+}))
 
 const problemsById = new Map(PROBLEMS_BANK.map((problem) => [problem.id, problem]))
 

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { TopicCloud } from '../components/problems/TopicCloud'
 import {
   ProblemsFilterPopover,
+  type ProblemTopicOption,
   type ProblemsFilterState,
 } from '../components/problems/ProblemsFilterPopover'
 import { ProblemsTable } from '../components/problems/ProblemsTable'
@@ -12,13 +13,14 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import {
   getDefaultProblemLanguage,
+  getProblemTopicIds,
   type ProblemDefinition,
   type ProblemLanguage,
   PROBLEMS_BANK,
-  TOPICS_WITH_COUNTS,
 } from '../data/problemsBank'
 import { useI18n } from '../i18n/useI18n'
 import { getLocalizedProblem } from '../i18n/problemContent'
+import { getEnglishTopicLabel, localizeTopicLabel } from '../i18n/topicCatalog'
 import { loadSolvedProblems, subscribeSolvedProblems, type SolvedProblemsMap } from '../lib/solvedProblemsStore'
 
 type SortMode = 'difficulty' | 'acceptance' | 'newest' | 'topic' | 'lastSolved'
@@ -55,15 +57,55 @@ export function ProblemsPage() {
   const [previewLanguage, setPreviewLanguage] = useState<ProblemLanguage>('python')
 
   const normalizedSearch = searchValue.trim().toLowerCase()
+  const englishProblemsById = useMemo(
+    () => new Map(PROBLEMS_BANK.map((problem) => [problem.id, problem] as const)),
+    [],
+  )
   const localizedProblems = useMemo(
     () => PROBLEMS_BANK.map((problem) => getLocalizedProblem(problem, lang)),
     [lang],
   )
+  const topicOptions = useMemo(
+    () => {
+      const counts = new Map<string, number>()
+      for (const problem of PROBLEMS_BANK) {
+        for (const topicId of getProblemTopicIds(problem)) {
+          counts.set(topicId, (counts.get(topicId) ?? 0) + 1)
+        }
+      }
+
+      return Array.from(counts.entries())
+        .map(([id, count]) => ({
+          id,
+          count,
+          englishLabel: getEnglishTopicLabel(id),
+          label: localizeTopicLabel(id, lang),
+        }))
+        .sort((left, right) => right.count - left.count || left.englishLabel.localeCompare(right.englishLabel))
+    },
+    [lang],
+  )
+  const topicLabelById = useMemo(
+    () => new Map(topicOptions.map((topic) => [topic.id, topic.label] as const)),
+    [topicOptions],
+  )
 
   const filteredProblems = useMemo(() => {
     const rows = localizedProblems.filter((problem) => {
+      const englishProblem = englishProblemsById.get(problem.id) ?? problem
+      const topicIds = getProblemTopicIds(problem)
+
       if (normalizedSearch) {
-        const haystack = `${problem.title} ${problem.topics.join(' ')} ${problem.keySkills.join(' ')}`.toLowerCase()
+        const localizedTopicLabels = topicIds.map((topicId) => topicLabelById.get(topicId) ?? topicId).join(' ')
+        const haystack = [
+          problem.title,
+          englishProblem.title,
+          problem.topics.join(' '),
+          englishProblem.topics.join(' '),
+          localizedTopicLabels,
+          problem.keySkills.join(' '),
+          englishProblem.keySkills.join(' '),
+        ].join(' ').toLowerCase()
         if (!haystack.includes(normalizedSearch)) {
           return false
         }
@@ -86,8 +128,8 @@ export function ProblemsPage() {
       }
 
       if (filters.topics.length > 0) {
-        const hasAll = filters.topics.every((topic) => problem.topics.includes(topic))
-        const hasAny = filters.topics.some((topic) => problem.topics.includes(topic))
+        const hasAll = filters.topics.every((topic) => topicIds.includes(topic))
+        const hasAny = filters.topics.some((topic) => topicIds.includes(topic))
         if (filters.matchMode === 'all' ? !hasAll : !hasAny) {
           return false
         }
@@ -106,7 +148,9 @@ export function ProblemsPage() {
       }
 
       if (sortMode === 'topic') {
-        return left.topics[0].localeCompare(right.topics[0]) || left.title.localeCompare(right.title)
+        const leftTopic = topicLabelById.get(getProblemTopicIds(left)[0] ?? '') ?? left.topics[0] ?? ''
+        const rightTopic = topicLabelById.get(getProblemTopicIds(right)[0] ?? '') ?? right.topics[0] ?? ''
+        return leftTopic.localeCompare(rightTopic) || left.title.localeCompare(right.title)
       }
 
       if (sortMode === 'lastSolved') {
@@ -115,7 +159,7 @@ export function ProblemsPage() {
 
       return left.createdAtRank - right.createdAtRank
     })
-  }, [filters, localizedProblems, normalizedSearch, solvedMap, sortMode])
+  }, [englishProblemsById, filters, localizedProblems, normalizedSearch, solvedMap, sortMode, topicLabelById])
 
   const solvedCount = useMemo(
     () => localizedProblems.filter((problem) => solvedMap[problem.id]?.solvedAt).length,
@@ -147,12 +191,12 @@ export function ProblemsPage() {
     openPreview(filteredProblems[randomIndex])
   }
 
-  function toggleTopicFromCloud(topic: string) {
+  function toggleTopicFromCloud(topicId: string) {
     setFilters((prev) => {
-      const selected = prev.topics.includes(topic)
+      const selected = prev.topics.includes(topicId)
       return {
         ...prev,
-        topics: selected ? prev.topics.filter((item) => item !== topic) : [...prev.topics, topic],
+        topics: selected ? prev.topics.filter((item) => item !== topicId) : [...prev.topics, topicId],
       }
     })
   }
@@ -182,7 +226,7 @@ export function ProblemsPage() {
       </Card>
 
       <TopicCloud
-        topics={TOPICS_WITH_COUNTS}
+        topics={topicOptions}
         selectedTopics={filters.topics}
         onToggleTopic={toggleTopicFromCloud}
         title={t('problems.topicsTitle')}
@@ -208,7 +252,7 @@ export function ProblemsPage() {
             value={filters}
             onApply={setFilters}
             onReset={() => setFilters(INITIAL_FILTERS)}
-            topicOptions={TOPICS_WITH_COUNTS.map((entry) => entry.topic)}
+            topicOptions={topicOptions.map((entry): ProblemTopicOption => ({ id: entry.id, label: entry.label }))}
             labels={{
               filter: t('problems.filters.button'),
               status: t('problems.filters.status'),
@@ -329,6 +373,7 @@ export function ProblemsPage() {
         }}
         difficultyLabels={difficultyLabels}
         languageLabels={languageLabels}
+        minuteSuffix={t('problem.minuteSuffix')}
         isUrdu={isUrdu}
       />
     </section>

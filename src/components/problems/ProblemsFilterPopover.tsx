@@ -12,11 +12,16 @@ export type ProblemsFilterState = {
   topics: string[]
 }
 
+export type ProblemTopicOption = {
+  id: string
+  label: string
+}
+
 type ProblemsFilterPopoverProps = {
   value: ProblemsFilterState
   onApply: (next: ProblemsFilterState) => void
   onReset: () => void
-  topicOptions: string[]
+  topicOptions: ProblemTopicOption[]
   labels: {
     filter: string
     status: string
@@ -99,12 +104,12 @@ export function ProblemsFilterPopover({
     }
   }, [open])
 
-  function toggleTopic(topic: string) {
+  function toggleTopic(topicId: string) {
     setDraft((prev) => {
-      const hasTopic = prev.topics.includes(topic)
+      const hasTopic = prev.topics.includes(topicId)
       const topics = hasTopic
-        ? prev.topics.filter((item) => item !== topic)
-        : [...prev.topics, topic]
+        ? prev.topics.filter((item) => item !== topicId)
+        : [...prev.topics, topicId]
       return { ...prev, topics }
     })
   }
@@ -202,12 +207,12 @@ export function ProblemsFilterPopover({
           <FilterSection title={labels.topic}>
             <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.04] p-2">
               {topicOptions.map((topic) => {
-                const selected = draft.topics.includes(topic)
+                const selected = draft.topics.includes(topic.id)
                 return (
                   <button
-                    key={topic}
+                    key={topic.id}
                     type="button"
-                    onClick={() => toggleTopic(topic)}
+                    onClick={() => toggleTopic(topic.id)}
                     className={classNames(
                       'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition',
                       selected
@@ -216,7 +221,7 @@ export function ProblemsFilterPopover({
                     )}
                   >
                     {selected ? <Check className="h-3 w-3" aria-hidden="true" /> : null}
-                    <span className="ltrSafe">{topic}</span>
+                    <span>{topic.label}</span>
                   </button>
                 )
               })}

@@ -29,6 +29,7 @@ type ProblemStatementPanelProps = {
   functionMode?: boolean
   submissions: UnitSubmission[]
   sqlSchema?: SqlTableSchema[]
+  sqlSchemaText?: string
   className?: string
 }
 
@@ -67,6 +68,7 @@ export function ProblemStatementPanel({
   functionMode = false,
   submissions,
   sqlSchema,
+  sqlSchemaText,
   className,
 }: ProblemStatementPanelProps) {
   const { lang, t, isRTL } = useI18n()
@@ -198,17 +200,17 @@ export function ProblemStatementPanel({
               <p className={classNames('text-sm leading-relaxed text-pebble-text-secondary', proseClass)}>{prompt}</p>
             </div>
 
-            <Section title={t('problem.description')}>
+            <Section title={t('problem.section.description')}>
               {description ?? t('problem.defaultDescription')}
             </Section>
 
-            <Section title={t('problem.input')}>
+            <Section title={t('problem.section.input')}>
               {inputText ?? (functionMode
                 ? t('problem.inputFunctionMode')
                 : t('problem.inputScriptMode'))}
             </Section>
 
-            <Section title={t('problem.output')}>
+            <Section title={t('problem.section.output')}>
               {outputText ?? (functionMode
                 ? t('problem.outputFunctionMode')
                 : t('problem.outputScriptMode'))}
@@ -221,7 +223,7 @@ export function ProblemStatementPanel({
             )}
 
             <section className="space-y-1">
-              <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.constraints')}</h3>
+              <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.section.constraints')}</h3>
               <ul className={classNames(
                 'list-disc space-y-1 text-sm text-pebble-text-secondary',
                 isUrdu ? 'rtlText pr-4 pl-0' : 'pl-4',
@@ -233,7 +235,7 @@ export function ProblemStatementPanel({
             </section>
 
             <section className="space-y-2">
-              <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.examples')}</h3>
+              <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.section.examples')}</h3>
               <div className="grid gap-2">
                 {resolvedExamples.map((example, index) => (
                   <div
@@ -267,6 +269,9 @@ export function ProblemStatementPanel({
             {sqlSchema && sqlSchema.length > 0 ? (
               <section className="space-y-2">
                 <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('sql.schema')}</h3>
+                {sqlSchemaText ? (
+                  <p className={classNames('text-sm text-pebble-text-secondary', proseClass)}>{sqlSchemaText}</p>
+                ) : null}
                 <div className="space-y-2">
                   {sqlSchema.map((table) => (
                     <div key={table.name} className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3" dir="ltr">

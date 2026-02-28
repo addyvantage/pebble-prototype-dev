@@ -1,0 +1,69 @@
+{
+  "sql-combine-two-tables": {
+    "title": "দুইটি টেবিল একত্র করুন",
+    "topics": ["SQL", "Join"],
+    "keySkills": ["left join", "column selection"],
+    "statement": {
+      "summary": "প্রতিটি Person-এর জন্য firstName, lastName, city এবং state দেখাও।",
+      "description": "একটি SQL query লিখুন যা Person টেবিলের প্রতিটি row-এর জন্য firstName, lastName, city এবং state ফেরত দেয়। Address টেবিলে মিলযুক্ত row না থাকলে city এবং state হিসেবে null ফেরত দিন।",
+      "input": "নিচের Person এবং Address টেবিল ব্যবহার করুন।",
+      "output": "firstName, lastName, city, state কলামসহ একটি টেবিল।",
+      "constraints": [
+        "Address row না থাকলেও Person row বাদ দেওয়া যাবে না।",
+        "আউটপুট row-এর order গুরুত্বপূর্ণ নয়।"
+      ],
+      "examples": [
+        {
+          "input": "Person + Address tables",
+          "output": "firstName lastName city state",
+          "explanation": "personId কলামে LEFT JOIN ব্যবহার করুন।"
+        }
+      ],
+      "schemaText": "Schema-র identifier (Person, Address, personId, firstName, lastName, city, state) অপরিবর্তিত রাখুন।"
+    },
+    "starterCodeComment": "নিচে আপনার SQL query লিখুন"
+  },
+  "sql-second-highest-salary": {
+    "title": "দ্বিতীয় সর্বোচ্চ বেতন",
+    "topics": ["SQL", "সাবকোয়ারি"],
+    "keySkills": ["distinct", "limit/offset"],
+    "statement": {
+      "summary": "দ্বিতীয় সর্বোচ্চ distinct বেতন বের করুন।",
+      "description": "Employee টেবিল থেকে দ্বিতীয় সর্বোচ্চ distinct বেতন পাওয়ার জন্য একটি SQL query লিখুন। এমন মান না থাকলে null ফেরত দিন।",
+      "input": "Employee(id, salary)",
+      "output": "SecondHighestSalary কলামসহ একটি one-row টেবিল।",
+      "constraints": [
+        "distinct salary values ব্যবহার করুন।",
+        "দ্বিতীয় value না থাকলে null ফেরত দিন।"
+      ],
+      "examples": [
+        {
+          "input": "Employee",
+          "output": "SecondHighestSalary"
+        }
+      ],
+      "schemaText": "Identifier যেমন Employee, id, salary এবং SecondHighestSalary অপরিবর্তিত রাখুন।"
+    },
+    "starterCodeComment": "নিচে আপনার SQL query লিখুন"
+  },
+  "p-two-sum": {
+    "title": "টু সাম",
+    "topics": ["Array", "Hash Table"],
+    "keySkills": ["index map", "single pass"],
+    "statement": {
+      "summary": "target যোগফল দেয় এমন দুইটি index খুঁজুন।",
+      "description": "nums এবং target দেওয়া আছে। nums থেকে এমন দুইটি index ফেরত দিন যাদের মানের যোগফল target-এর সমান।",
+      "input": "একটি integer array nums এবং একটি integer target।",
+      "output": "দুইটি index ascending ক্রমে, space দিয়ে আলাদা করে।"
+    }
+  },
+  "p-valid-anagram": {
+    "title": "বৈধ অ্যানাগ্রাম",
+    "topics": ["String", "Hash Table", "Sorting"],
+    "keySkills": ["frequency map"],
+    "statement": {
+      "summary": "দুটি string anagram কি না নির্ধারণ করুন।",
+      "description": "দুটি string s এবং t দেওয়া আছে। t যদি s-এর anagram হয় তাহলে true, না হলে false ফেরত দিন।"
+    }
+  }
+}

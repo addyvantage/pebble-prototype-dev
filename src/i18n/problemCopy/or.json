@@ -1,0 +1,9 @@
+{
+  "sql-second-highest-salary": {
+    "title": "ଦ୍ୱିତୀୟ ସର୍ବାଧିକ ଦରମା",
+    "statement": {
+      "summary": "ଦ୍ୱିତୀୟ ସର୍ବାଧିକ ଭିନ୍ନ ଦରମା ଖୋଜନ୍ତୁ।"
+    },
+    "starterCodeComment": "ନିମ୍ନରେ ଆପଣଙ୍କର SQL ପ୍ରଶ୍ନ ଲେଖନ୍ତୁ"
+  }
+}

@@ -19,6 +19,7 @@ type ProblemPreviewDrawerProps = {
   }
   difficultyLabels: Record<ProblemDefinition['difficulty'], string>
   languageLabels: Record<ProblemLanguage, string>
+  minuteSuffix?: string
   isUrdu: boolean
 }
 
@@ -32,6 +33,7 @@ export function ProblemPreviewDrawer({
   labels,
   difficultyLabels,
   languageLabels,
+  minuteSuffix = 'm',
   isUrdu,
 }: ProblemPreviewDrawerProps) {
   return (
@@ -78,7 +80,10 @@ export function ProblemPreviewDrawer({
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full border border-pebble-border/32 bg-pebble-overlay/[0.06] px-2 py-0.5 text-xs text-pebble-text-secondary">
                   <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="ltrSafe">{problem.estimatedMinutes}m</span>
+                  <span>
+                    <span className="ltrSafe">{problem.timeEstimateMinutes ?? problem.estimatedMinutes}</span>{' '}
+                    <span>{minuteSuffix}</span>
+                  </span>
                 </span>
                 <span className="ltrSafe rounded-full border border-pebble-border/32 bg-pebble-overlay/[0.06] px-2 py-0.5 text-xs text-pebble-text-secondary">
                   {problem.acceptanceRate}%

@@ -1,0 +1,9 @@
+{
+  "sql-second-highest-salary": {
+    "title": "രണ്ടാമത്തെ ഉയർന്ന ശമ്പളം",
+    "statement": {
+      "summary": "രണ്ടാമത്തെ ഉയർന്ന വ്യത്യസ്ത ശമ്പളം കണ്ടെത്തുക."
+    },
+    "starterCodeComment": "നിങ്ങളുടെ SQL ക്വറി താഴെ എഴുതുക"
+  }
+}

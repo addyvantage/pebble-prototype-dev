@@ -1,0 +1,71 @@
+{
+  "p-two-sum": {
+    "title": "ٹو سم",
+    "topics": ["ارے", "ہیش ٹیبل"],
+    "keySkills": ["انڈیکس میپ", "سنگل پاس"],
+    "statement": {
+      "summary": "ایسے دو انڈیکس تلاش کریں جن کی قدروں کا مجموعہ target ہو۔",
+      "description": "nums اور target دیے گئے ہیں۔ ایسے دو انڈیکس واپس کریں جن کی قدروں کا مجموعہ target کے برابر ہو۔",
+      "input": "ایک integer array nums اور ایک integer target۔",
+      "output": "دو انڈیکس ascending ترتیب میں space کے ساتھ۔"
+    }
+  },
+  "p-valid-anagram": {
+    "title": "ویلڈ ایناگرام",
+    "topics": ["سٹرنگ", "ہیش ٹیبل", "سورٹنگ"],
+    "keySkills": ["فریکوئنسی میپ"],
+    "statement": {
+      "summary": "چیک کریں کہ دو strings ایناگرام ہیں یا نہیں۔",
+      "description": "دو strings s اور t دی گئی ہیں۔ اگر t، s کا anagram ہو تو true ورنہ false واپس کریں۔",
+      "input": "دو lowercase strings، ہر ایک نئی لائن میں۔",
+      "output": "true یا false lowercase میں پرنٹ کریں۔"
+    }
+  },
+  "sql-combine-two-tables": {
+    "title": "دو ٹیبلز کو ملا کر رپورٹ",
+    "topics": ["SQL", "Join"],
+    "keySkills": ["left join", "column selection"],
+    "statement": {
+      "summary": "ہر Person کے لیے firstName، lastName، city اور state دکھائیں۔",
+      "description": "ایسی SQL query لکھیں جو Person table کے ہر record کے لیے firstName، lastName، city اور state واپس کرے۔ اگر Address میں matching row نہ ہو تو city اور state کے لیے null واپس کریں۔",
+      "input": "نیچے دیے گئے Person اور Address tables استعمال کریں۔",
+      "output": "firstName، lastName، city، state کالمز والی table۔",
+      "constraints": [
+        "Address row نہ ہونے پر بھی Person row خارج نہ کریں۔",
+        "Rows کا order اہم نہیں ہے۔"
+      ],
+      "examples": [
+        {
+          "input": "Person + Address tables",
+          "output": "firstName lastName city state",
+          "explanation": "personId پر LEFT JOIN استعمال کریں۔"
+        }
+      ],
+      "schemaText": "Identifiers جیسے Person، Address، personId، firstName، lastName، city، state کو تبدیل نہ کریں۔"
+    },
+    "starterCodeComment": "اپنی SQL query نیچے لکھیں"
+  },
+  "sql-second-highest-salary": {
+    "title": "دوسری سب سے زیادہ تنخواہ",
+    "topics": ["SQL", "سب کویری"],
+    "keySkills": ["distinct", "limit/offset"],
+    "statement": {
+      "summary": "دوسری سب سے زیادہ distinct تنخواہ حاصل کریں۔",
+      "description": "Employee table سے دوسری سب سے زیادہ distinct تنخواہ حاصل کرنے کے لیے SQL query لکھیں۔ اگر ایسا value موجود نہ ہو تو null واپس کریں۔",
+      "input": "Employee(id, salary)",
+      "output": "SecondHighestSalary کالم کے ساتھ ایک one-row table۔",
+      "constraints": [
+        "distinct salary values استعمال کریں۔",
+        "دوسرا value نہ ہونے پر null واپس کریں۔"
+      ],
+      "examples": [
+        {
+          "input": "Employee",
+          "output": "SecondHighestSalary"
+        }
+      ],
+      "schemaText": "Identifiers جیسے Employee, id, salary اور SecondHighestSalary کو تبدیل نہ کریں۔"
+    },
+    "starterCodeComment": "اپنی SQL query نیچے لکھیں"
+  }
+}

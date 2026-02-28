@@ -73,7 +73,7 @@ export function ProblemsTable({
                   {problem.topics.slice(0, 3).map((topic) => (
                     <span
                       key={`${problem.id}-${topic}`}
-                      className="ltrSafe rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.07] px-2 py-0.5 text-[10px] text-pebble-text-secondary"
+                      className="rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.07] px-2 py-0.5 text-[10px] text-pebble-text-secondary"
                     >
                       {topic}
                     </span>

@@ -1,14 +1,15 @@
 import { Card } from '../ui/Card'
 
 type TopicEntry = {
-  topic: string
+  id: string
+  label: string
   count: number
 }
 
 type TopicCloudProps = {
   topics: TopicEntry[]
   selectedTopics: string[]
-  onToggleTopic: (topic: string) => void
+  onToggleTopic: (topicId: string) => void
   title: string
   subtitle: string
   isUrdu: boolean
@@ -31,19 +32,19 @@ export function TopicCloud({
 
       <div className="flex flex-wrap gap-1.5">
         {topics.map((entry) => {
-          const selected = selectedTopics.includes(entry.topic)
+          const selected = selectedTopics.includes(entry.id)
           return (
             <button
-              key={entry.topic}
+              key={entry.id}
               type="button"
-              onClick={() => onToggleTopic(entry.topic)}
+              onClick={() => onToggleTopic(entry.id)}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
                 selected
                   ? 'border-pebble-accent/45 bg-pebble-accent/14 text-pebble-text-primary'
                   : 'border-pebble-border/32 bg-pebble-overlay/[0.07] text-pebble-text-secondary hover:bg-pebble-overlay/[0.14]'
               }`}
             >
-              <span className="ltrSafe">{entry.topic}</span>
+              <span>{entry.label}</span>
               <span className="ltrSafe rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-1.5 py-0.5 text-[10px] text-pebble-text-muted">
                 {entry.count}
               </span>

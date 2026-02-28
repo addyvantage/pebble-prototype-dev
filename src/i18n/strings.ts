@@ -309,19 +309,28 @@ export const EN_STRINGS = {
   'tabs.submissions': 'Submissions',
 
   'problem.description': 'Description',
+  'problem.section.description': 'Description',
   'problem.defaultDescription': 'Solve the task for every testcase. Keep output exact and avoid extra logs.',
   'problem.input': 'Input',
+  'problem.section.input': 'Input',
   'problem.inputFunctionMode': 'Input is handled automatically. Implement the function signature only.',
   'problem.inputScriptMode': 'Read values from standard input exactly as provided by each testcase.',
   'problem.output': 'Output',
+  'problem.section.output': 'Output',
   'problem.outputFunctionMode': 'Return the correct value from the function. Output formatting is handled internally.',
   'problem.outputScriptMode': 'Print only the expected output for the testcase.',
   'problem.constraints': 'Constraints',
+  'problem.section.constraints': 'Constraints',
   'problem.examples': 'Examples',
+  'problem.section.examples': 'Examples',
   'problem.example': 'Example',
   'problem.inputLabel': 'Input',
   'problem.outputLabel': 'Output',
   'problem.functionModeBanner': 'Function mode: input parsing and testcase execution are handled for you.',
+  'problem.chip.sql': 'SQL',
+  'problem.chip.subquery': 'Subquery',
+  'problem.minuteSuffix': 'm',
+  'session.sqlStarterComment': 'Write your SQL query below',
 
   'solutions.howToSolve': 'How to solve',
   'solutions.walkthrough': 'Pebble curated walkthrough for this unit.',
@@ -560,19 +569,27 @@ const HI_STRINGS: I18nDictionary = {
   'tabs.submissions': 'सबमिशन्स',
 
   'problem.description': 'विवरण',
+  'problem.section.description': 'विवरण',
   'problem.defaultDescription': 'हर टेस्टकेस के लिए प्रश्न हल करें। आउटपुट बिल्कुल सटीक रखें और अतिरिक्त लॉग न दें।',
   'problem.input': 'इनपुट',
+  'problem.section.input': 'इनपुट',
   'problem.inputFunctionMode': 'इनपुट स्वतः संभाला जाता है। सिर्फ फ़ंक्शन सिग्नेचर लागू करें।',
   'problem.inputScriptMode': 'हर टेस्टकेस के अनुसार इनपुट standard input से पढ़ें।',
   'problem.output': 'आउटपुट',
+  'problem.section.output': 'आउटपुट',
   'problem.outputFunctionMode': 'फ़ंक्शन से सही मान return करें। आउटपुट फ़ॉर्मेटिंग स्वतः होती है।',
   'problem.outputScriptMode': 'टेस्टकेस के लिए केवल अपेक्षित आउटपुट प्रिंट करें।',
   'problem.constraints': 'सीमाएँ',
+  'problem.section.constraints': 'सीमाएँ',
   'problem.examples': 'उदाहरण',
+  'problem.section.examples': 'उदाहरण',
   'problem.example': 'उदाहरण',
   'problem.inputLabel': 'इनपुट',
   'problem.outputLabel': 'आउटपुट',
   'problem.functionModeBanner': 'फ़ंक्शन मोड: इनपुट पार्सिंग और टेस्टकेस निष्पादन आपके लिए स्वतः संभाला जाता है।',
+  'problem.chip.sql': 'एसक्यूएल',
+  'problem.chip.subquery': 'सबक्वेरी',
+  'session.sqlStarterComment': 'अपनी SQL query नीचे लिखें',
 
   'solutions.howToSolve': 'कैसे हल करें',
   'solutions.walkthrough': 'इस यूनिट के लिए Pebble का क्यूरेटेड वॉकथ्रू।',
@@ -673,13 +690,21 @@ const CORE_TRANSLATIONS: Partial<Record<LanguageCode, I18nDictionary>> = {
     'tabs.solutions': 'সমাধান',
     'tabs.submissions': 'সাবমিশন',
     'problem.description': 'বিবরণ',
+    'problem.section.description': 'বিবরণ',
     'problem.input': 'ইনপুট',
+    'problem.section.input': 'ইনপুট',
     'problem.output': 'আউটপুট',
+    'problem.section.output': 'আউটপুট',
     'problem.constraints': 'শর্ত',
+    'problem.section.constraints': 'শর্ত',
     'problem.examples': 'উদাহরণ',
+    'problem.section.examples': 'উদাহরণ',
     'problem.example': 'উদাহরণ',
     'problem.inputLabel': 'ইনপুট',
     'problem.outputLabel': 'আউটপুট',
+    'problem.chip.sql': 'এসকিউএল',
+    'problem.chip.subquery': 'সাবকোয়ারি',
+    'session.sqlStarterComment': 'নিচে আপনার SQL query লিখুন',
     'solutions.howToSolve': 'কীভাবে সমাধান করবেন',
     'solutions.intuition': 'ধারণা',
     'solutions.approach': 'পদ্ধতি',
@@ -945,13 +970,21 @@ const CORE_TRANSLATIONS: Partial<Record<LanguageCode, I18nDictionary>> = {
     'tabs.solutions': 'حل',
     'tabs.submissions': 'سبمشنز',
     'problem.description': 'وضاحت',
+    'problem.section.description': 'وضاحت',
     'problem.input': 'ان پٹ',
+    'problem.section.input': 'ان پٹ',
     'problem.output': 'آؤٹ پٹ',
+    'problem.section.output': 'آؤٹ پٹ',
     'problem.constraints': 'حدود',
+    'problem.section.constraints': 'حدود',
     'problem.examples': 'مثالیں',
+    'problem.section.examples': 'مثالیں',
     'problem.example': 'مثال',
     'problem.inputLabel': 'ان پٹ',
     'problem.outputLabel': 'آؤٹ پٹ',
+    'problem.chip.sql': 'ایس کیو ایل',
+    'problem.chip.subquery': 'سب کویری',
+    'session.sqlStarterComment': 'اپنی SQL query نیچے لکھیں',
     'solutions.howToSolve': 'کیسے حل کریں',
     'solutions.intuition': 'خیال',
     'solutions.approach': 'طریقہ',
@@ -2831,4 +2864,107 @@ export const STRINGS: Record<LanguageCode, I18nDictionary> = {
     ...(PROBLEMS_TRANSLATIONS.as ?? {}),
     ...(GENERATED_STRINGS.as ?? {}),
   },
+}
+
+const PROBLEM_SECTION_KEY_FALLBACKS: ReadonlyArray<readonly [I18nKey, I18nKey]> = [
+  ['problem.section.description', 'problem.description'],
+  ['problem.section.input', 'problem.input'],
+  ['problem.section.output', 'problem.output'],
+  ['problem.section.constraints', 'problem.constraints'],
+  ['problem.section.examples', 'problem.examples'],
+]
+
+const PROBLEM_EXTRA_LABELS: Record<LanguageCode, { sqlChip: string; subqueryChip: string; sqlStarterComment: string; minuteSuffix: string }> = {
+  en: {
+    sqlChip: 'SQL',
+    subqueryChip: 'Subquery',
+    sqlStarterComment: 'Write your SQL query below',
+    minuteSuffix: 'm',
+  },
+  hi: {
+    sqlChip: 'एसक्यूएल',
+    subqueryChip: 'सबक्वेरी',
+    sqlStarterComment: 'अपनी SQL query नीचे लिखें',
+    minuteSuffix: 'मि',
+  },
+  bn: {
+    sqlChip: 'এসকিউএল',
+    subqueryChip: 'সাবকোয়ারি',
+    sqlStarterComment: 'নিচে আপনার SQL query লিখুন',
+    minuteSuffix: 'মি',
+  },
+  te: {
+    sqlChip: 'ఎస్‌క్యూఎల్',
+    subqueryChip: 'సబ్‌క్వెరీ',
+    sqlStarterComment: 'మీ SQL query ని క్రింద రాయండి',
+    minuteSuffix: 'నిమి',
+  },
+  mr: {
+    sqlChip: 'एसक्यूएल',
+    subqueryChip: 'सबक्वेरी',
+    sqlStarterComment: 'तुमची SQL क्वेरी खाली लिहा',
+    minuteSuffix: 'मि',
+  },
+  ta: {
+    sqlChip: 'எஸ் க்யூ எல்',
+    subqueryChip: 'சப் க்வெரி',
+    sqlStarterComment: 'உங்கள் SQL வினாவை கீழே எழுதுங்கள்',
+    minuteSuffix: 'நிமி',
+  },
+  ur: {
+    sqlChip: 'ایس کیو ایل',
+    subqueryChip: 'سب کویری',
+    sqlStarterComment: 'اپنی SQL query نیچے لکھیں',
+    minuteSuffix: 'منٹ',
+  },
+  gu: {
+    sqlChip: 'એસક્યુએલ',
+    subqueryChip: 'સબક્વેરી',
+    sqlStarterComment: 'તમારી SQL ક્વેરી નીચે લખો',
+    minuteSuffix: 'મિ',
+  },
+  kn: {
+    sqlChip: 'ಎಸ್‌ಕ್ಯೂಎಲ್',
+    subqueryChip: 'ಉಪಪ್ರಶ್ನೆ',
+    sqlStarterComment: 'ನಿಮ್ಮ SQL ಪ್ರಶ್ನೆಯನ್ನು ಕೆಳಗೆ ಬರೆಯಿರಿ',
+    minuteSuffix: 'ನಿಮಿ',
+  },
+  ml: {
+    sqlChip: 'എസ്‌ക്യുഎൽ',
+    subqueryChip: 'സബ്‌ക്വറി',
+    sqlStarterComment: 'നിങ്ങളുടെ SQL ക്വറി താഴെ എഴുതുക',
+    minuteSuffix: 'മി',
+  },
+  or: {
+    sqlChip: 'ଏସ୍‌କ୍ୟୁଏଲ୍',
+    subqueryChip: 'ସବକ୍ୱେରି',
+    sqlStarterComment: 'ନିମ୍ନରେ ଆପଣଙ୍କର SQL ପ୍ରଶ୍ନ ଲେଖନ୍ତୁ',
+    minuteSuffix: 'ମି',
+  },
+  pa: {
+    sqlChip: 'ਐਸਕਿਊਐਲ',
+    subqueryChip: 'ਸਬਕੁਏਰੀ',
+    sqlStarterComment: 'ਆਪਣੀ SQL ਕਵੈਰੀ ਹੇਠਾਂ ਲਿਖੋ',
+    minuteSuffix: 'ਮਿੰ',
+  },
+  as: {
+    sqlChip: 'এছ কিউ এল',
+    subqueryChip: 'চাব-কুৱেৰী',
+    sqlStarterComment: 'আপোনাৰ SQL কুৱেৰী তলত লিখক',
+    minuteSuffix: 'মিনিট',
+  },
+}
+
+for (const languageCode of Object.keys(STRINGS) as LanguageCode[]) {
+  const dictionary = STRINGS[languageCode]
+
+  for (const [sectionKey, legacyKey] of PROBLEM_SECTION_KEY_FALLBACKS) {
+    dictionary[sectionKey] = dictionary[sectionKey] ?? dictionary[legacyKey] ?? EN_STRINGS[legacyKey]
+  }
+
+  const labels = PROBLEM_EXTRA_LABELS[languageCode]
+  dictionary['problem.chip.sql'] = dictionary['problem.chip.sql'] ?? labels.sqlChip
+  dictionary['problem.chip.subquery'] = dictionary['problem.chip.subquery'] ?? labels.subqueryChip
+  dictionary['problem.minuteSuffix'] = dictionary['problem.minuteSuffix'] ?? labels.minuteSuffix
+  dictionary['session.sqlStarterComment'] = dictionary['session.sqlStarterComment'] ?? labels.sqlStarterComment
 }

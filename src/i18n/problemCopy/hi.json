@@ -1,0 +1,75 @@
+{
+  "p-two-sum": {
+    "title": "टू सम",
+    "topics": ["ऐरे", "हैश टेबल"],
+    "keySkills": ["इंडेक्स मैप", "सिंगल पास"],
+    "statement": {
+      "summary": "ऐसे दो इंडेक्स ढूंढें जिनके मानों का योग target हो।",
+      "description": "nums और target दिए हैं। ऐसे दो इंडेक्स लौटाएं जिनके मानों का योग target के बराबर हो।",
+      "input": "एक integer array nums और एक integer target।",
+      "output": "दो इंडेक्स ascending क्रम में, space से अलग।",
+      "constraints": [
+        "2 <= nums.length <= 10^5",
+        "-10^9 <= nums[i], target <= 10^9"
+      ]
+    }
+  },
+  "p-valid-anagram": {
+    "title": "वैध एनाग्राम",
+    "topics": ["स्ट्रिंग", "हैश टेबल", "सॉर्टिंग"],
+    "keySkills": ["फ्रीक्वेंसी मैप"],
+    "statement": {
+      "summary": "जांचें कि दो strings एनाग्राम हैं या नहीं।",
+      "description": "दो strings s और t दी गई हैं। यदि t, s का anagram है तो true, अन्यथा false लौटाएं।",
+      "input": "दो lowercase strings, हर एक नई लाइन में।",
+      "output": "true या false lowercase में प्रिंट करें।"
+    }
+  },
+  "sql-combine-two-tables": {
+    "title": "दो टेबल्स को जोड़ें",
+    "topics": ["SQL", "Join"],
+    "keySkills": ["left join", "column selection"],
+    "statement": {
+      "summary": "हर Person के लिए firstName, lastName, city और state रिपोर्ट करें।",
+      "description": "ऐसी SQL query लिखें जो Person table के हर रिकॉर्ड के लिए firstName, lastName, city और state लौटाए। यदि Address में matching row न हो, तो city और state के लिए null लौटाएं।",
+      "input": "नीचे दिए गए Person और Address tables का उपयोग करें।",
+      "output": "firstName, lastName, city, state कॉलम्स वाली एक table।",
+      "constraints": [
+        "Address row न होने पर भी Person row हटनी नहीं चाहिए।",
+        "Rows का order महत्वपूर्ण नहीं है।"
+      ],
+      "examples": [
+        {
+          "input": "Person + Address tables",
+          "output": "firstName lastName city state",
+          "explanation": "personId पर LEFT JOIN का उपयोग करें।"
+        }
+      ],
+      "schemaText": "Identifiers जैसे Person, Address, personId, firstName, lastName, city, state को जैसा है वैसा रखें।"
+    },
+    "starterCodeComment": "अपनी SQL query नीचे लिखें"
+  },
+  "sql-second-highest-salary": {
+    "title": "दूसरा सबसे अधिक वेतन",
+    "topics": ["SQL", "सबक्वेरी"],
+    "keySkills": ["distinct", "limit/offset"],
+    "statement": {
+      "summary": "दूसरा सबसे अधिक distinct वेतन प्राप्त करें।",
+      "description": "Employee table से दूसरा सबसे अधिक distinct वेतन प्राप्त करने के लिए SQL query लिखें। यदि ऐसा मान मौजूद नहीं है, तो null लौटाएँ।",
+      "input": "Employee(id, salary)",
+      "output": "SecondHighestSalary कॉलम के साथ एक single-row table।",
+      "constraints": [
+        "distinct salary values का उपयोग करें।",
+        "दूसरा मान न होने पर null लौटाएँ।"
+      ],
+      "examples": [
+        {
+          "input": "Employee",
+          "output": "SecondHighestSalary"
+        }
+      ],
+      "schemaText": "Identifiers जैसे Employee, id, salary और SecondHighestSalary को जैसा है वैसा रखें।"
+    },
+    "starterCodeComment": "अपनी SQL query नीचे लिखें"
+  }
+}

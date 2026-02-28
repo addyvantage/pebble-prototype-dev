@@ -50,7 +50,11 @@ import { useTheme } from '../hooks/useTheme'
 import { loadPagePrefs, savePagePrefs, type PagePrefs } from '../lib/pagePrefsStore'
 import { useI18n } from '../i18n/useI18n'
 import { getLocalizedUnitCopy } from '../i18n/unitContent'
-import { getLocalizedProblem } from '../i18n/problemContent'
+import {
+  applySqlStarterComment,
+  getLocalizedProblem,
+  getLocalizedStarter,
+} from '../i18n/problemContent'
 import {
   dateKeyForTimeZone,
   selectCurrentStreak,
@@ -67,6 +71,7 @@ import {
 import {
   getDefaultProblemLanguage,
   getProblemById,
+  getProblemTimeEstimateMinutes,
   getProblemStarterCode,
   getSqlCheckerFailures,
   isProblemLanguage,
@@ -76,6 +81,8 @@ import {
 } from '../data/problemsBank'
 import { markProblemAttempt } from '../lib/solvedProblemsStore'
 import { requestRunApi } from '../lib/runApi'
+import { localizeTopicLabel } from '../i18n/topicCatalog'
+import type { LanguageCode } from '../i18n/languages'
 import {
   createStruggleEngine,
   type StruggleAssistAction,
@@ -133,6 +140,21 @@ function statusVariant(status: string): 'neutral' | 'success' | 'warning' {
   return 'neutral'
 }
 
+function localizeProblemChip(
+  chip: string,
+  lang: LanguageCode,
+  t: (key: 'problem.chip.sql' | 'problem.chip.subquery') => string,
+) {
+  const normalized = chip.trim().toLowerCase()
+  if (normalized === 'sql') {
+    return t('problem.chip.sql')
+  }
+  if (normalized === 'subquery') {
+    return t('problem.chip.subquery')
+  }
+  return localizeTopicLabel(chip, lang)
+}
+
 function resolveCurriculumDifficulty(level: PlacementLevel, unitId: string): 'Easy' | 'Medium' | 'Hard' {
   if (unitId === 'hello-world') {
     return 'Easy'
@@ -171,8 +193,7 @@ function isStartUnit(value: string | null): value is StartUnit {
   return value === '1' || value === 'mid' || value === 'advanced'
 }
 
-function buildProblemUnit(problem: ProblemDefinition, language: ProblemLanguage): CurriculumUnit {
-  const starterCode = getProblemStarterCode(problem, language)
+function buildProblemUnit(problem: ProblemDefinition, starterCode: string): CurriculumUnit {
   return {
     id: problem.id,
     title: problem.title,
@@ -246,6 +267,18 @@ export function SessionPage() {
   }, [activeProblemBase, searchParams, selectedLanguage])
   const sessionLanguage: SessionEditorLanguage = activeProblem ? activeProblemLanguage : selectedLanguage
   const isSqlMode = activeProblemBase?.kind === 'sql' && sessionLanguage === 'sql'
+  const activeProblemStarter = useMemo(() => {
+    if (!activeProblemBase) {
+      return ''
+    }
+    const starter =
+      getLocalizedStarter(activeProblemBase, uiLanguage)
+      ?? getProblemStarterCode(activeProblemBase, activeProblemLanguage)
+    if (activeProblemBase.kind !== 'sql') {
+      return starter
+    }
+    return applySqlStarterComment(starter, t('session.sqlStarterComment'))
+  }, [activeProblemBase, activeProblemLanguage, t, uiLanguage])
 
   const [units, setUnits] = useState<CurriculumUnit[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -375,7 +408,7 @@ export function SessionPage() {
       setLoadError('')
       try {
         if (activeProblem) {
-          const problemUnit = buildProblemUnit(activeProblem, activeProblemLanguage)
+          const problemUnit = buildProblemUnit(activeProblem, activeProblemStarter)
           if (!mounted) {
             return
           }
@@ -463,7 +496,7 @@ export function SessionPage() {
     }
   }, [
     activeProblem,
-    activeProblemLanguage,
+    activeProblemStarter,
     queryUnit,
     selectedLanguage,
     storedState.curriculum?.currentUnitId,
@@ -478,8 +511,8 @@ export function SessionPage() {
   )
   const currentUnitCopy = currentUnit ? getLocalizedUnitCopy(currentUnit, uiLanguage) : null
   const currentDefaultCode = currentUnit
-    ? activeProblemBase
-      ? getProblemStarterCode(activeProblemBase, activeProblemLanguage)
+    ? activeProblem
+      ? activeProblemStarter
       : getUnitFunctionMode(selectedLanguage, currentUnit.id)?.starterStub ?? currentUnit.starterCode
     : ''
   const currentCode = currentUnit ? draftByUnitId[currentUnit.id] ?? currentDefaultCode : ''
@@ -1163,7 +1196,7 @@ export function SessionPage() {
     }
 
     const resetCode = activeProblem
-      ? getProblemStarterCode(activeProblem, activeProblemLanguage)
+      ? activeProblemStarter
       : currentFunctionConfig?.starterStub ?? currentUnit.starterCode
 
     previousCodeRef.current = resetCode
@@ -1273,8 +1306,12 @@ export function SessionPage() {
     : sessionDifficulty === 'Medium'
       ? t('difficulty.medium')
       : t('difficulty.hard')
+  const minuteSuffix = t('problem.minuteSuffix')
   const sessionTags = activeProblem
-    ? [...activeProblem.topics.slice(0, 2), `${activeProblem.estimatedMinutes}m`]
+    ? [
+      ...activeProblem.topics.slice(0, 2).map((chip) => localizeProblemChip(chip, uiLanguage, t)),
+      `${getProblemTimeEstimateMinutes(activeProblem)} ${minuteSuffix}`,
+    ]
     : currentUnit.id === 'hello-world'
       ? [languageMeta.label, 'stdout basics', t('tags.practice')]
       : [languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]
@@ -1377,6 +1414,7 @@ export function SessionPage() {
             functionMode={currentFunctionConfig?.evalMode === 'function'}
             submissions={currentUnitSubmissions}
             sqlSchema={activeProblem?.sqlMeta?.tables}
+            sqlSchemaText={activeProblem?.statement.schemaText}
             className="min-h-0"
           />
 

@@ -1,0 +1,9 @@
+{
+  "sql-second-highest-salary": {
+    "title": "দ্বিতীয় সৰ্বাধিক দৰমহা",
+    "statement": {
+      "summary": "দ্বিতীয় সৰ্বাধিক পৃথক দৰমহা বিচাৰক।"
+    },
+    "starterCodeComment": "আপোনাৰ SQL কুৱেৰী তলত লিখক"
+  }
+}
