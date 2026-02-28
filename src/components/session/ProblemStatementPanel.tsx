@@ -4,6 +4,7 @@ import type { ProblemExample, SqlTableSchema } from '../../data/problemsBank'
 import { getLocalizedUnitSolution } from '../../data/solutionsBank'
 import type { UnitSubmission } from '../../lib/submissionsStore'
 import { useI18n } from '../../i18n/useI18n'
+import { DifficultyPill } from '../ui/DifficultyPill'
 
 type ProblemTest = {
   input: string
@@ -21,6 +22,7 @@ type ProblemStatementPanelProps = {
   examples?: ProblemExample[]
   inputText?: string
   outputText?: string
+  difficulty?: 'Easy' | 'Medium' | 'Hard'
   difficultyLabel: string
   tags: string[]
   language: PlacementLanguage | 'sql'
@@ -58,6 +60,7 @@ export function ProblemStatementPanel({
   examples,
   inputText,
   outputText,
+  difficulty = 'Easy',
   difficultyLabel,
   tags,
   language,
@@ -179,9 +182,7 @@ export function ProblemStatementPanel({
             <div className="space-y-2">
               <h2 className={classNames('text-xl font-semibold text-pebble-text-primary', proseClass)}>{title}</h2>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary">
-                  {difficultyLabel}
-                </span>
+                <DifficultyPill difficulty={difficulty} label={difficultyLabel} className="px-2.5 py-1 text-xs" />
                 <span className="rounded-full border border-pebble-accent/35 bg-pebble-accent/12 px-2.5 py-1 text-xs text-pebble-accent">
                   {concept}
                 </span>

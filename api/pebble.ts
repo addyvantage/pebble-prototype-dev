@@ -1,6 +1,15 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
 import { PEBBLE_CLARIFY_RULE, PEBBLE_OUTPUT_RULE, PEBBLE_SYSTEM_PROMPT } from './_shared/pebblePromptRules.js'
 
+export const config = {
+  runtime: 'nodejs',
+  api: {
+    bodyParser: {
+      sizeLimit: '200kb',
+    },
+  },
+}
+
 type PebbleContext = {
   taskTitle?: unknown
   codeText?: unknown

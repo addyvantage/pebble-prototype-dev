@@ -68,7 +68,7 @@ export function StreakCalendar({
   )
 
   return (
-    <div className="space-y-2.5 rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-4">
+    <div className="space-y-2 rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.05] p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-0.5">
           <p className={`text-sm font-semibold text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
@@ -97,7 +97,7 @@ export function StreakCalendar({
         </div>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-pebble-border/25 bg-pebble-canvas/55 p-2.5">
+      <div className="space-y-1.5 rounded-xl border border-pebble-border/25 bg-pebble-canvas/55 p-2">
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
@@ -120,7 +120,7 @@ export function StreakCalendar({
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5">
           {weekdayLabels.map((label) => (
             <span
               key={label}
@@ -131,7 +131,7 @@ export function StreakCalendar({
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5">
           {monthGrid.weeks.flat().map((day) => (
             <div
               key={day.key}
@@ -140,7 +140,7 @@ export function StreakCalendar({
                   ? t('insights.calendar.completedCount', { count: day.count })
                   : t('insights.calendar.none')
               }
-              className={`relative flex h-7 w-7 items-center justify-center rounded-md border text-[11px] transition ${
+              className={`relative flex h-[26px] w-[26px] items-center justify-center rounded-md border text-[10px] transition ${
                 day.isComplete
                   ? 'border-pebble-success/45 bg-pebble-success/20 text-pebble-success shadow-[0_0_0_1px_rgba(74,222,128,0.15)]'
                   : 'border-pebble-border/25 bg-pebble-overlay/[0.06] text-pebble-text-secondary'

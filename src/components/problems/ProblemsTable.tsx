@@ -1,5 +1,6 @@
 import { CheckCircle2, ChevronRight, Circle, Lock, Sparkles } from 'lucide-react'
 import type { ProblemDefinition } from '../../data/problemsBank'
+import { DifficultyPill } from '../ui/DifficultyPill'
 
 type ProblemsTableProps = {
   rows: ProblemDefinition[]
@@ -86,17 +87,11 @@ export function ProblemsTable({
                 </span>
               </span>
 
-              <span
-                className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-xs ${
-                  problem.difficulty === 'Easy'
-                    ? 'border-pebble-success/35 bg-pebble-success/12 text-pebble-success'
-                    : problem.difficulty === 'Medium'
-                      ? 'border-pebble-warning/35 bg-pebble-warning/12 text-pebble-warning'
-                      : 'border-rose-400/35 bg-rose-400/12 text-rose-300'
-                }`}
-              >
-                {difficultyLabels[problem.difficulty]}
-              </span>
+              <DifficultyPill
+                difficulty={problem.difficulty}
+                label={difficultyLabels[problem.difficulty]}
+                className="w-fit px-2.5 py-1 text-xs"
+              />
 
               <span className="ltrSafe text-sm text-pebble-text-secondary">{problem.acceptanceRate}%</span>
 

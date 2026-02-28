@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
 import { Badge } from '../components/ui/Badge'
@@ -75,6 +75,14 @@ import {
 } from '../data/problemsBank'
 import { markProblemAttempt } from '../lib/solvedProblemsStore'
 import { requestRunApi } from '../lib/runApi'
+import {
+  createStruggleEngine,
+  type StruggleAssistAction,
+  type StruggleEvent,
+  type StruggleContextSummary,
+  type StruggleEngineState,
+  type StruggleLevel,
+} from '../lib/struggleEngine'
 
 type RunResponse = {
   ok: boolean
@@ -83,6 +91,11 @@ type RunResponse = {
   stderr: string
   timedOut: boolean
   durationMs: number
+}
+
+type StruggleNudgeState = {
+  level: StruggleLevel
+  visible: boolean
 }
 
 type SessionEditorLanguage = PlacementLanguage | 'sql'
@@ -253,6 +266,20 @@ export function SessionPage() {
   )
   const [editorFontSize, setEditorFontSize] = useState(14)
   const [wordWrapEnabled, setWordWrapEnabled] = useState(true)
+  const [liveCodeSnapshot, setLiveCodeSnapshot] = useState('')
+  const [struggleNudge, setStruggleNudge] = useState<StruggleNudgeState>({
+    level: 0,
+    visible: false,
+  })
+
+  const struggleEngineRef = useRef<ReturnType<typeof createStruggleEngine> | null>(null)
+  if (!struggleEngineRef.current) {
+    struggleEngineRef.current = createStruggleEngine()
+  }
+  const struggleStateRef = useRef<StruggleEngineState>(struggleEngineRef.current.getState())
+  const previousCodeRef = useRef('')
+  const liveCodeRef = useRef('')
+  const liveCodeDebounceRef = useRef<number | null>(null)
 
   const completedUnitIds = useMemo(
     () =>
@@ -307,6 +334,14 @@ export function SessionPage() {
       setRunMessage(t('run.evaluateAll'))
     }
   }, [runStatus, t])
+
+  useEffect(() => {
+    return () => {
+      if (liveCodeDebounceRef.current !== null) {
+        window.clearTimeout(liveCodeDebounceRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -431,6 +466,119 @@ export function SessionPage() {
     return getUnitFunctionMode(selectedLanguage, currentUnit.id)
   }, [activeProblem, currentUnit, selectedLanguage])
 
+  const syncStruggle = useCallback((nextState: StruggleEngineState) => {
+    struggleStateRef.current = nextState
+    setStruggleNudge((previous) => {
+      const next = {
+        level: nextState.level,
+        visible: nextState.nudgeVisible && nextState.level > 0,
+      }
+      if (previous.level === next.level && previous.visible === next.visible) {
+        return previous
+      }
+      return next
+    })
+  }, [])
+
+  const queueLiveCodeSnapshot = useCallback((nextCode: string, immediate = false) => {
+    liveCodeRef.current = nextCode
+
+    if (liveCodeDebounceRef.current !== null) {
+      window.clearTimeout(liveCodeDebounceRef.current)
+      liveCodeDebounceRef.current = null
+    }
+
+    if (immediate) {
+      setLiveCodeSnapshot(nextCode)
+      return
+    }
+
+    liveCodeDebounceRef.current = window.setTimeout(() => {
+      setLiveCodeSnapshot(liveCodeRef.current)
+      liveCodeDebounceRef.current = null
+    }, 200)
+  }, [])
+
+  const ingestStruggleEvent = useCallback(
+    (event: StruggleEvent) => {
+      const nextState = struggleEngineRef.current?.ingest(event)
+      if (!nextState) {
+        return
+      }
+      syncStruggle(nextState)
+      if (import.meta.env.DEV) {
+        const shouldLog =
+          event.type === 'RUN_RESULT' ||
+          event.type === 'SUBMIT_RESULT' ||
+          event.type === 'CHAT_ASSIST_USED' ||
+          event.type === 'DISMISS_NUDGE'
+        if (shouldLog) {
+          console.debug('[struggle-engine]', event.type, {
+            level: nextState.level,
+            score: nextState.score,
+            visible: nextState.nudgeVisible,
+            failStreak: nextState.runFailStreak,
+            reason: nextState.reason,
+          })
+        }
+      }
+    },
+    [syncStruggle],
+  )
+
+  const ingestRunOutcome = useCallback(
+    (mode: 'run' | 'submit', passed: boolean, errorType: string | null) => {
+      ingestStruggleEvent({
+        type: mode === 'submit' ? 'SUBMIT_RESULT' : 'RUN_RESULT',
+        passed,
+        errorType,
+      })
+    },
+    [ingestStruggleEvent],
+  )
+
+  const getStruggleContextSummary = useCallback((): StruggleContextSummary => {
+    return struggleEngineRef.current?.getContextSummary() ?? {
+      level: 0,
+      runFailStreak: 0,
+      timeStuckSeconds: 0,
+      lastErrorType: null,
+    }
+  }, [])
+  const getLiveCodeSnapshot = useCallback(() => {
+    return liveCodeRef.current
+  }, [])
+
+  useEffect(() => {
+    if (!currentUnit) {
+      return
+    }
+
+    const nextCode = draftByUnitId[currentUnit.id] ?? currentDefaultCode
+    previousCodeRef.current = nextCode
+    queueLiveCodeSnapshot(nextCode, true)
+    const resetState = struggleEngineRef.current?.reset()
+    if (resetState) {
+      syncStruggle(resetState)
+    }
+  }, [
+    activeProblem?.id,
+    currentDefaultCode,
+    currentUnit?.id,
+    queueLiveCodeSnapshot,
+    sessionLanguage,
+    syncStruggle,
+  ])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      ingestStruggleEvent({ type: 'TICK' })
+    }, 1000)
+    return () => {
+      window.clearInterval(timer)
+    }
+  }, [ingestStruggleEvent])
+
   const failingSummary = useMemo(
     () => buildFailingSummary(testResultsByIndex),
     [testResultsByIndex],
@@ -455,12 +603,29 @@ export function SessionPage() {
       return
     }
 
+    const previousCode = previousCodeRef.current
+    previousCodeRef.current = value
+
+    const addedChars = Math.max(0, value.length - previousCode.length)
+    const removedChars = Math.max(0, previousCode.length - value.length)
+    const isDeletionHeavy = removedChars >= Math.max(2, addedChars + 2)
+
+    queueLiveCodeSnapshot(value)
+    if (addedChars > 0 || removedChars > 0) {
+      ingestStruggleEvent({
+        type: 'EDITOR_CHANGE',
+        addedChars,
+        removedChars,
+        isDeletionHeavy,
+      })
+    }
+
     setDraftByUnitId((prev) => ({
       ...prev,
       [currentUnit.id]: value,
     }))
     setSubmitAccepted(false)
-  }, [currentUnit])
+  }, [currentUnit, ingestStruggleEvent, queueLiveCodeSnapshot])
 
   async function executeTest(index: number): Promise<UnitTestResultItem> {
     if (!currentUnit) {
@@ -607,6 +772,7 @@ export function SessionPage() {
               errorType,
             })
           }
+          ingestRunOutcome(mode, false, errorType ?? null)
           return
         }
 
@@ -669,6 +835,7 @@ export function SessionPage() {
                 errorType,
               })
             }
+            ingestRunOutcome(mode, false, errorType ?? null)
             return
           }
 
@@ -814,6 +981,7 @@ export function SessionPage() {
         stderr: firstFailed?.stderr ?? '',
         exitCode: firstFailed?.exitCode ?? runExitCode,
       })
+      ingestRunOutcome(mode, allPassed, derivedErrorType ?? null)
 
       if (mode === 'run') {
         logRunEvent({
@@ -871,12 +1039,21 @@ export function SessionPage() {
           .map(([index, result]) => ({ index: Number(index), result }))
           .find(({ result }) => !result.passed)
 
+        const runnerError = firstFailedEntry?.result.stderr.trim()
+        const runnerErrorSnippet = runnerError
+          ? runnerError.replace(/\s+/g, ' ').slice(0, 140)
+          : ''
         const failPreview = firstFailedEntry
-          ? t('run.failedPreview', {
-              index: firstFailedEntry.index + 1,
-              expected: firstFailedEntry.result.expected,
-              actual: normalizeOutput(firstFailedEntry.result.actual) || t('common.empty'),
-            })
+          ? runnerErrorSnippet
+            ? t('run.runnerErrorPreview', {
+                index: firstFailedEntry.index + 1,
+                message: runnerErrorSnippet,
+              })
+            : t('run.failedPreview', {
+                index: firstFailedEntry.index + 1,
+                expected: firstFailedEntry.result.expected,
+                actual: normalizeOutput(firstFailedEntry.result.actual) || t('common.empty'),
+              })
           : t('run.someTestsFailed')
 
         setRunStatus('error')
@@ -920,6 +1097,7 @@ export function SessionPage() {
     currentFunctionConfig,
     currentUnit,
     executeTest,
+    ingestRunOutcome,
     isRunningAll,
     isSqlMode,
     runtimeLanguage,
@@ -960,11 +1138,15 @@ export function SessionPage() {
       return
     }
 
+    const resetCode = activeProblem
+      ? getProblemStarterCode(activeProblem, activeProblemLanguage)
+      : currentFunctionConfig?.starterStub ?? currentUnit.starterCode
+
+    previousCodeRef.current = resetCode
+    queueLiveCodeSnapshot(resetCode, true)
     setDraftByUnitId((prev) => ({
       ...prev,
-      [currentUnit.id]: activeProblem
-        ? getProblemStarterCode(activeProblem, activeProblemLanguage)
-        : currentFunctionConfig?.starterStub ?? currentUnit.starterCode,
+      [currentUnit.id]: resetCode,
     }))
     setRunStatus('idle')
     setRunMessage(t('run.editorReset'))
@@ -1027,6 +1209,21 @@ export function SessionPage() {
   })
   const currentUnitSubmissions = submissionsByUnit[currentUnit.id] ?? []
   const sqlPreviewTable = isSqlMode && activeProblem?.sqlMeta ? activeProblem.sqlMeta.expectedResult : null
+  const handleAssistAction = useCallback((action: StruggleAssistAction) => {
+    logAssistEvent({
+      unitId: currentUnit.id,
+      trackId,
+      language: selectedLanguage,
+      action,
+    })
+    ingestStruggleEvent({
+      type: 'CHAT_ASSIST_USED',
+      action,
+    })
+  }, [currentUnit.id, ingestStruggleEvent, selectedLanguage, trackId])
+  const handleStruggleDismiss = useCallback(() => {
+    ingestStruggleEvent({ type: 'DISMISS_NUDGE' })
+  }, [ingestStruggleEvent])
 
   const constraints = currentFunctionConfig?.evalMode === 'function'
     ? [
@@ -1043,7 +1240,7 @@ export function SessionPage() {
 
   return (
     <section className={`session-shell h-[100vh] overflow-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}>
-      <header className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-pebble-border/25 bg-pebble-overlay/[0.04] px-4">
+      <header className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-2.5 border-b border-pebble-border/25 bg-pebble-overlay/[0.04] px-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <Link
             to="/"
@@ -1120,8 +1317,8 @@ export function SessionPage() {
         </div>
       </header>
 
-      <main className="h-[calc(100vh-64px)] overflow-hidden p-3">
-        <div className="grid h-full min-h-0 grid-cols-[clamp(380px,24vw,420px)_minmax(0,1fr)_clamp(360px,24vw,400px)] gap-3">
+      <main className="h-[calc(100vh-64px)] overflow-hidden p-2.5">
+        <div className="grid h-full min-h-0 grid-cols-[clamp(380px,24vw,420px)_minmax(0,1fr)_clamp(360px,24vw,400px)] gap-2.5">
           <ProblemStatementPanel
             unitId={currentUnit.id}
             title={activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
@@ -1133,6 +1330,15 @@ export function SessionPage() {
             examples={activeProblem?.statement.examples}
             inputText={activeProblem?.statement.input}
             outputText={activeProblem?.statement.output}
+            difficulty={
+              activeProblem
+                ? activeProblem.difficulty
+                : selectedLevel === 'beginner'
+                  ? 'Easy'
+                  : selectedLevel === 'intermediate'
+                    ? 'Medium'
+                    : 'Hard'
+            }
             difficultyLabel={
               activeProblem
                 ? activeProblem.difficulty === 'Easy'
@@ -1157,7 +1363,7 @@ export function SessionPage() {
           />
 
           <div
-            className="grid min-h-0 gap-3"
+            className="grid min-h-0 gap-2.5"
             style={{
               gridTemplateRows: 'minmax(0,1fr) clamp(280px,33vh,360px)',
             }}
@@ -1285,22 +1491,23 @@ export function SessionPage() {
           </div>
 
           <PebbleChatPanel
+            unitId={currentUnit.id}
+            problemId={activeProblem?.id ?? null}
             unitTitle={activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
             unitConcept={activeProblem?.topics[0] ?? currentUnitCopy?.concept ?? currentUnit.concept}
-            codeText={currentCode}
+            language={sessionLanguage}
+            liveCode={liveCodeSnapshot}
+            getLiveCode={getLiveCodeSnapshot}
             runStatus={runStatus}
             runMessage={runMessage}
             failingSummary={failingSummary}
             initialSummary={recentChatSummary}
             onSummaryChange={setRecentChatSummary}
-            onAssistAction={(action) => {
-              logAssistEvent({
-                unitId: currentUnit.id,
-                trackId,
-                language: selectedLanguage,
-                action,
-              })
-            }}
+            struggleLevel={struggleNudge.level}
+            showStruggleNudge={struggleNudge.visible}
+            getStruggleContext={getStruggleContextSummary}
+            onAssistAction={handleAssistAction}
+            onStruggleDismiss={handleStruggleDismiss}
             className="h-full min-h-0"
           />
         </div>

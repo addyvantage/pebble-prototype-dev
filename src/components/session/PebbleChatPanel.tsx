@@ -5,6 +5,8 @@ import { askPebble } from '../../utils/pebbleLLM'
 import { ArrowUp, Check, Globe, Settings2 } from 'lucide-react'
 import { LANGUAGES, type LanguageCode } from '../../i18n/languages'
 import { useI18n } from '../../i18n/useI18n'
+import { StruggleNudgeBar, type StruggleNudgeAction } from './StruggleNudgeBar'
+import type { StruggleContextSummary, StruggleLevel } from '../../lib/struggleEngine'
 
 type ChatMessage = {
   id: string
@@ -14,15 +16,23 @@ type ChatMessage = {
 }
 
 type PebbleChatPanelProps = {
+  unitId: string
+  problemId: string | null
   unitTitle: string
   unitConcept: string
-  codeText: string
+  language: string
+  liveCode: string
+  getLiveCode?: () => string
   runStatus: string
   runMessage: string
   failingSummary: string
   initialSummary: string
   onSummaryChange: (summary: string) => void
-  onAssistAction?: (action: 'hint' | 'explain' | 'next') => void
+  struggleLevel: StruggleLevel
+  showStruggleNudge: boolean
+  getStruggleContext?: () => StruggleContextSummary
+  onAssistAction?: (action: StruggleNudgeAction) => void
+  onStruggleDismiss?: () => void
   className?: string
 }
 
@@ -46,19 +56,32 @@ function buildPrompt(input: {
   question: string
   unitTitle: string
   unitConcept: string
+  language: string
   runStatus: string
   runMessage: string
   failingSummary: string
   recentSummary: string
+  helpTier: 1 | 2 | 3
+  struggleContext: StruggleContextSummary
   chatLanguage: LanguageCode
   chatLanguageLabel: string
 }) {
+  const tierInstruction =
+    input.helpTier === 1
+      ? 'Help tier: 1 (hint only, no full solution code).'
+      : input.helpTier === 2
+        ? 'Help tier: 2 (explain root cause and provide guided next steps).'
+        : 'Help tier: 3 (full solution allowed with clear explanation).'
+
   const contextLines = [
     `Unit: ${input.unitTitle}`,
     `Concept: ${input.unitConcept}`,
+    `Language: ${input.language}`,
     `Run status: ${input.runStatus}`,
     input.runMessage ? `Run output summary: ${input.runMessage}` : '',
     input.failingSummary ? `Failing tests: ${input.failingSummary}` : '',
+    `Struggle context: failStreak=${input.struggleContext.runFailStreak}, stuck=${input.struggleContext.timeStuckSeconds}s, lastError=${input.struggleContext.lastErrorType ?? 'none'}, level=${input.struggleContext.level}`,
+    tierInstruction,
     input.recentSummary ? `Recent chat summary: ${input.recentSummary}` : '',
     `SYSTEM_LANGUAGE: ${input.chatLanguage} (${input.chatLanguageLabel}) [direction: ${
       input.chatLanguage === 'ur' ? 'rtl' : 'ltr'
@@ -70,15 +93,23 @@ function buildPrompt(input: {
 }
 
 export function PebbleChatPanel({
+  unitId,
+  problemId,
   unitTitle,
   unitConcept,
-  codeText,
+  language,
+  liveCode,
+  getLiveCode,
   runStatus,
   runMessage,
   failingSummary,
   initialSummary,
   onSummaryChange,
+  struggleLevel,
+  showStruggleNudge,
+  getStruggleContext,
   onAssistAction,
+  onStruggleDismiss,
   className,
 }: PebbleChatPanelProps) {
   const { lang, setLang, t, isRTL } = useI18n()
@@ -104,6 +135,7 @@ export function PebbleChatPanel({
   const recentSummary = useMemo(() => summarizeRecentChat(messages), [messages])
   const hasRunContext = runStatus !== 'idle' && runMessage.trim().length > 0
   const selectedLanguageOption = LANGUAGES.find((language) => language.code === lang) ?? LANGUAGES[0]
+  const nudgeLevel = showStruggleNudge && struggleLevel > 0 ? (struggleLevel as Exclude<StruggleLevel, 0>) : null
 
   const runStatusLabel = useMemo(() => {
     if (runStatus === 'success') {
@@ -194,10 +226,17 @@ export function PebbleChatPanel({
   )
 
   const submitQuestion = useCallback(
-    async (question: string, appendUser = true) => {
+    async (
+      question: string,
+      options?: {
+        appendUser?: boolean
+        helpTier?: 1 | 2 | 3
+      },
+    ) => {
       if (!question.trim()) {
         return
       }
+      const appendUser = options?.appendUser ?? true
 
       const requestId = requestIdRef.current + 1
       requestIdRef.current = requestId
@@ -217,14 +256,26 @@ export function PebbleChatPanel({
       setTypedDraft('')
 
       const usesRunOutput = hasRunContext
+      const helpTier =
+        options?.helpTier ?? (struggleLevel >= 3 ? 3 : struggleLevel >= 2 ? 2 : 1)
+      const struggleContext = getStruggleContext?.() ?? {
+        level: struggleLevel,
+        runFailStreak: runStatus === 'error' ? 1 : 0,
+        timeStuckSeconds: 0,
+        lastErrorType: null,
+      }
+      const codeNow = (getLiveCode?.() ?? liveCode).trimEnd()
       const prompt = buildPrompt({
         question,
         unitTitle,
         unitConcept,
+        language,
         runStatus,
         runMessage,
         failingSummary,
         recentSummary,
+        helpTier,
+        struggleContext,
         chatLanguage: lang,
         chatLanguageLabel: selectedLanguageOption.nativeName,
       })
@@ -235,14 +286,19 @@ export function PebbleChatPanel({
           signal: controller.signal,
           context: {
             taskTitle: unitTitle,
-            codeText: codeText.length > 4000 ? `${codeText.slice(0, 4000)}\n...[trimmed]` : codeText,
+            codeText: codeNow.length > 6000 ? `${codeNow.slice(0, 6000)}\n...[trimmed]` : codeNow,
             runStatus,
             runMessage,
+            language,
+            unitId,
+            problemId: problemId ?? undefined,
+            helpTier,
+            struggleContext,
             currentErrorKey: null,
-            nudgeVisible: false,
+            nudgeVisible: nudgeLevel !== null,
             guidedActive: false,
-            struggleScore: runStatus === 'error' ? 70 : 35,
-            repeatErrorCount: runStatus === 'error' ? 1 : 0,
+            struggleScore: Math.min(100, Math.max(10, struggleContext.level * 30 + struggleContext.runFailStreak * 6)),
+            repeatErrorCount: struggleContext.runFailStreak,
             errorHistory: failingSummary ? [failingSummary] : [],
           },
         })
@@ -260,35 +316,65 @@ export function PebbleChatPanel({
       }
     },
     [
-      codeText,
       failingSummary,
+      getLiveCode,
+      getStruggleContext,
       hasRunContext,
+      language,
       lang,
+      liveCode,
+      nudgeLevel,
+      problemId,
       pushAssistantWithTypewriter,
       recentSummary,
       runMessage,
       runStatus,
+      struggleLevel,
       selectedLanguageOption.nativeName,
+      unitId,
       unitConcept,
       unitTitle,
     ],
   )
 
+  const assistPromptByAction: Record<StruggleNudgeAction, string> = {
+    hint: 'Give me one concise hint. Do not provide the full solution.',
+    explain: 'Explain what is wrong in my current approach using failing tests.',
+    next: 'What is the next smallest step I should implement?',
+    solution:
+      'Show the full solution and explain each key step clearly. Include the corrected code.',
+  }
+
+  const assistTierByAction: Record<StruggleNudgeAction, 1 | 2 | 3> = {
+    hint: 1,
+    explain: 2,
+    next: 2,
+    solution: 3,
+  }
+
+  const triggerAssistAction = useCallback(
+    (action: StruggleNudgeAction) => {
+      onAssistAction?.(action)
+      void submitQuestion(assistPromptByAction[action], {
+        appendUser: true,
+        helpTier: assistTierByAction[action],
+      })
+    },
+    [onAssistAction, submitQuestion],
+  )
+
   const quickActions = [
     {
-      action: 'hint' as const,
+      action: 'hint' as StruggleNudgeAction,
       label: t('chat.quickHint'),
-      prompt: 'Give me one concise hint. Do not provide the full solution.',
     },
     {
-      action: 'explain' as const,
+      action: 'explain' as StruggleNudgeAction,
       label: t('chat.quickExplain'),
-      prompt: 'Explain what is wrong in my current approach using failing tests.',
     },
     {
-      action: 'next' as const,
+      action: 'next' as StruggleNudgeAction,
       label: t('chat.quickNextStep'),
-      prompt: 'What is the next smallest step I should implement?',
     },
   ]
 
@@ -388,8 +474,7 @@ export function PebbleChatPanel({
               type="button"
               className="rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-1 text-xs font-medium text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16] disabled:opacity-50"
               onClick={() => {
-                onAssistAction?.(action.action)
-                void submitQuestion(action.prompt, true)
+                triggerAssistAction(action.action)
               }}
               disabled={isGenerating}
             >
@@ -437,6 +522,16 @@ export function PebbleChatPanel({
         )}
       </div>
 
+      {nudgeLevel ? (
+        <StruggleNudgeBar
+          level={nudgeLevel}
+          visible={!isGenerating}
+          busy={isGenerating}
+          onAction={triggerAssistAction}
+          onDismiss={() => onStruggleDismiss?.()}
+        />
+      ) : null}
+
       <div className="space-y-1.5">
         {(isGenerating || !!lastAsked) && (
           <div className="flex items-center justify-end gap-1.5">
@@ -446,7 +541,11 @@ export function PebbleChatPanel({
               </Button>
             ) : null}
             {!!lastAsked && !isGenerating ? (
-              <Button variant="secondary" size="sm" onClick={() => void submitQuestion(lastAsked, false)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void submitQuestion(lastAsked, { appendUser: false })}
+              >
                 {t('actions.retry')}
               </Button>
             ) : null}

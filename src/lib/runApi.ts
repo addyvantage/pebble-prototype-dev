@@ -44,16 +44,38 @@ function normalizeRunResponse(payload: unknown): RunApiResponse {
   }
 }
 
-async function parseJsonSafely(response: Response) {
+type ParsedRunResponse = {
+  json: unknown
+  rawText: string
+}
+
+async function parseResponseSafely(response: Response): Promise<ParsedRunResponse> {
   const text = await response.text().catch(() => '')
   if (!text) {
-    return null
+    return {
+      json: null,
+      rawText: '',
+    }
   }
   try {
-    return JSON.parse(text) as unknown
+    return {
+      json: JSON.parse(text) as unknown,
+      rawText: text,
+    }
   } catch {
-    return null
+    return {
+      json: null,
+      rawText: text,
+    }
   }
+}
+
+function compactTextSnippet(rawText: string) {
+  const snippet = rawText.trim().replace(/\s+/g, ' ')
+  if (!snippet) {
+    return ''
+  }
+  return snippet.slice(0, 280)
 }
 
 export async function requestRunApi(
@@ -79,15 +101,27 @@ export async function requestRunApi(
       signal: controller.signal,
     })
 
-    const parsed = await parseJsonSafely(response)
-    const normalized = normalizeRunResponse(parsed)
+    const parsed = await parseResponseSafely(response)
+    const normalized = normalizeRunResponse(parsed.json)
     if (!response.ok) {
-      const message = normalized.stderr.trim() || `Runner request failed with status ${response.status}.`
+      const textSnippet = compactTextSnippet(parsed.rawText)
+      const message =
+        normalized.stderr.trim() ||
+        `Runner request failed with status ${response.status}.${textSnippet ? ` ${textSnippet}` : ''}`
       return {
         ...normalized,
         ok: false,
         stderr: message,
       }
+    }
+
+    if (import.meta.env.DEV && parsed.rawText) {
+      console.debug('[runApi] /api/run response', {
+        status: response.status,
+        ok: normalized.ok,
+        stderr: normalized.stderr,
+        preview: compactTextSnippet(parsed.rawText),
+      })
     }
 
     return normalized
@@ -107,7 +141,7 @@ export async function requestRunApi(
       ok: false,
       exitCode: null,
       stdout: '',
-      stderr: 'Failed to reach /api/run.',
+      stderr: 'Failed to reach /api/run. Check network or Vercel function logs.',
       timedOut: false,
       durationMs: 0,
     }

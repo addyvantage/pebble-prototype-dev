@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ProfileMenu } from '../components/modals/ProfileMenu'
 import { SettingsModal } from '../components/modals/SettingsModal'
 import { Card } from '../components/ui/Card'
+import { PageContainer } from '../components/ui/PageContainer'
 import { StreakPill } from '../components/ui/StreakPill'
 import { getDemoMode, setDemoMode, subscribeDemoMode } from '../utils/demoMode'
 import {
@@ -156,96 +157,98 @@ export function AppLayout() {
           <Outlet />
         </div>
       ) : (
-        <div
-          className={`relative mx-auto flex w-full max-w-[1520px] flex-col px-3 pt-3 sm:px-6 lg:px-8 ${
-            isLandingRoute ? 'h-screen overflow-hidden pb-4' : 'min-h-screen pb-8 pt-5'
-          }`}
-        >
-          <Card className={`p-4 sm:p-5 ${isLandingRoute ? 'mb-4' : 'mb-6 sm:mb-7'}`} interactive>
-            <div className="flex items-center justify-between gap-3 sm:gap-4">
-              <img
-                src="/assets/pebble/master/brand/pebble_app_icon_primary_1024.png"
-                alt="Pebble mark"
-                className="h-8 w-8 rounded-xl sm:h-10 sm:w-10"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-xl font-semibold tracking-[-0.015em] text-pebble-text-primary sm:text-2xl">
-                  Pebble
-                </p>
-                <p className="mt-0.5 text-sm text-pebble-text-secondary">
-                  {t('app.tagline')}
-                </p>
-              </div>
+        <div className={`relative flex min-h-screen flex-col ${isLandingRoute ? 'overflow-hidden' : ''}`}>
+          <header className="w-full pt-2 sm:pt-3">
+            <PageContainer>
+              <Card className={`p-4 sm:p-5 ${isLandingRoute ? 'mb-3' : 'mb-4 sm:mb-5'}`} interactive>
+                <div className="flex items-center justify-between gap-3 sm:gap-4">
+                  <img
+                    src="/assets/pebble/master/brand/pebble_app_icon_primary_1024.png"
+                    alt="Pebble mark"
+                    className="h-8 w-8 rounded-xl sm:h-10 sm:w-10"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xl font-semibold tracking-[-0.015em] text-pebble-text-primary sm:text-2xl">
+                      Pebble
+                    </p>
+                    <p className="mt-0.5 text-sm text-pebble-text-secondary">
+                      {t('app.tagline')}
+                    </p>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <StreakPill
-                  streak={currentStreak.streak}
-                  isTodayComplete={currentStreak.isTodayComplete}
-                  compact
-                />
-                <button
-                  aria-label={t('layout.notificationsAria')}
-                  className={iconButtonClass}
-                  type="button"
-                >
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
-                    <path d="M10 3.5a4.25 4.25 0 0 0-4.25 4.25v2.4L4.6 12.2a.9.9 0 0 0 .8 1.3h9.2a.9.9 0 0 0 .8-1.3l-1.15-2.05v-2.4A4.25 4.25 0 0 0 10 3.5Z" stroke="currentColor" strokeWidth="1.25" />
-                    <path d="M8.1 14.8a2.1 2.1 0 0 0 3.8 0" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-                  </svg>
-                </button>
-                <button
-                  aria-label={t('layout.settingsAria')}
-                  onClick={() => setIsSettingsOpen(true)}
-                  className={iconButtonClass}
-                  type="button"
-                >
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
-                    <path d="M8.35 3.75h3.3l.35 1.57c.36.12.7.27 1.02.46l1.49-.66 1.65 2.85-1.15 1.12c.03.23.04.46.04.7s-.01.47-.04.7l1.15 1.12-1.65 2.85-1.49-.66c-.32.19-.66.34-1.02.46l-.35 1.57h-3.3l-.35-1.57a4.95 4.95 0 0 1-1.02-.46l-1.49.66-1.65-2.85 1.15-1.12a5.86 5.86 0 0 1 0-1.4L3.85 7.97 5.5 5.12l1.49.66c.32-.19.66-.34 1.02-.46l.35-1.57Z" stroke="currentColor" strokeWidth="1.15" strokeLinejoin="round" />
-                    <circle cx="10" cy="10" r="1.95" stroke="currentColor" strokeWidth="1.15" />
-                  </svg>
-                </button>
+                  <div className="flex items-center gap-2">
+                    <StreakPill
+                      streak={currentStreak.streak}
+                      isTodayComplete={currentStreak.isTodayComplete}
+                      compact
+                    />
+                    <button
+                      aria-label={t('layout.notificationsAria')}
+                      className={iconButtonClass}
+                      type="button"
+                    >
+                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                        <path d="M10 3.5a4.25 4.25 0 0 0-4.25 4.25v2.4L4.6 12.2a.9.9 0 0 0 .8 1.3h9.2a.9.9 0 0 0 .8-1.3l-1.15-2.05v-2.4A4.25 4.25 0 0 0 10 3.5Z" stroke="currentColor" strokeWidth="1.25" />
+                        <path d="M8.1 14.8a2.1 2.1 0 0 0 3.8 0" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label={t('layout.settingsAria')}
+                      onClick={() => setIsSettingsOpen(true)}
+                      className={iconButtonClass}
+                      type="button"
+                    >
+                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                        <path d="M8.35 3.75h3.3l.35 1.57c.36.12.7.27 1.02.46l1.49-.66 1.65 2.85-1.15 1.12c.03.23.04.46.04.7s-.01.47-.04.7l1.15 1.12-1.65 2.85-1.49-.66c-.32.19-.66.34-1.02.46l-.35 1.57h-3.3l-.35-1.57a4.95 4.95 0 0 1-1.02-.46l-1.49.66-1.65-2.85 1.15-1.12a5.86 5.86 0 0 1 0-1.4L3.85 7.97 5.5 5.12l1.49.66c.32-.19.66-.34 1.02-.46l.35-1.57Z" stroke="currentColor" strokeWidth="1.15" strokeLinejoin="round" />
+                        <circle cx="10" cy="10" r="1.95" stroke="currentColor" strokeWidth="1.15" />
+                      </svg>
+                    </button>
 
-                <button
-                  ref={profileButtonRef}
-                  aria-label={t('layout.profileAria')}
-                  aria-expanded={isProfileOpen}
-                  aria-haspopup="menu"
-                  onClick={() => {
-                    updateProfileAnchorRect()
-                    setIsProfileOpen((current) => !current)
-                  }}
-                  className={iconButtonClass}
-                  type="button"
-                >
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
-                    <circle cx="10" cy="7" r="2.6" stroke="currentColor" strokeWidth="1.25" />
-                    <path d="M4.9 15.25c.85-2.05 2.88-3.25 5.1-3.25s4.25 1.2 5.1 3.25" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+                    <button
+                      ref={profileButtonRef}
+                      aria-label={t('layout.profileAria')}
+                      aria-expanded={isProfileOpen}
+                      aria-haspopup="menu"
+                      onClick={() => {
+                        updateProfileAnchorRect()
+                        setIsProfileOpen((current) => !current)
+                      }}
+                      className={iconButtonClass}
+                      type="button"
+                    >
+                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                        <circle cx="10" cy="7" r="2.6" stroke="currentColor" strokeWidth="1.25" />
+                        <path d="M4.9 15.25c.85-2.05 2.88-3.25 5.1-3.25s4.25 1.2 5.1 3.25" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
 
-            <nav className="mt-4 flex items-center gap-1 overflow-x-auto rounded-xl border border-pebble-border/28 bg-pebble-overlay/7 p-1">
-              {navItems.map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    `whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium tracking-[0.01em] transition ${
-                      isActive
-                        ? 'border border-pebble-border/45 bg-pebble-overlay/16 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]'
-                        : 'border border-transparent text-pebble-text-secondary hover:bg-pebble-overlay/12 hover:text-pebble-text-primary'
-                    }`
-                  }
-                >
-                  {label}
-                </NavLink>
-              ))}
-            </nav>
-          </Card>
+                <nav className="mt-3 flex items-center gap-1 overflow-x-auto rounded-xl border border-pebble-border/28 bg-pebble-overlay/7 p-1">
+                  {navItems.map(({ to, label }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      className={({ isActive }) =>
+                        `whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium tracking-[0.01em] transition ${
+                          isActive
+                            ? 'border border-pebble-border/45 bg-pebble-overlay/16 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]'
+                            : 'border border-transparent text-pebble-text-secondary hover:bg-pebble-overlay/12 hover:text-pebble-text-primary'
+                        }`
+                      }
+                    >
+                      {label}
+                    </NavLink>
+                  ))}
+                </nav>
+              </Card>
+            </PageContainer>
+          </header>
 
-          <main className={isLandingRoute ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1'}>
-            <Outlet />
+          <main className={isLandingRoute ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1 pb-6'}>
+            <PageContainer className={isLandingRoute ? 'h-full min-h-0' : ''}>
+              <Outlet />
+            </PageContainer>
           </main>
         </div>
       )}

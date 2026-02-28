@@ -45,7 +45,7 @@ export type SubmitAnalyticsEvent = AnalyticsEventBase & {
 
 export type AssistAnalyticsEvent = AnalyticsEventBase & {
   type: 'assist'
-  action: 'hint' | 'explain' | 'next'
+  action: 'hint' | 'explain' | 'next' | 'solution'
 }
 
 export type PlacementSkipAnalyticsEvent = AnalyticsEventBase & {
@@ -172,7 +172,12 @@ function readFromStorage(): AnalyticsState {
     }
 
     if (item.type === 'assist') {
-      if (item.action === 'hint' || item.action === 'explain' || item.action === 'next') {
+      if (
+        item.action === 'hint' ||
+        item.action === 'explain' ||
+        item.action === 'next' ||
+        item.action === 'solution'
+      ) {
         events.push({
           ...base,
           type: 'assist',

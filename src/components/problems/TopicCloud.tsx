@@ -23,8 +23,8 @@ export function TopicCloud({
   isUrdu,
 }: TopicCloudProps) {
   return (
-    <Card padding="sm" interactive className="space-y-3">
-      <div className="space-y-1">
+    <Card padding="sm" interactive className="space-y-2">
+      <div className="space-y-0.5">
         <h2 className={`text-base font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{title}</h2>
         <p className={`text-sm text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>{subtitle}</p>
       </div>

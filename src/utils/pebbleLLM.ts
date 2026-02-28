@@ -5,6 +5,16 @@ type PebbleLLMContext = {
   codeText: string
   runStatus: string
   runMessage: string
+  language?: string
+  unitId?: string
+  problemId?: string
+  helpTier?: 1 | 2 | 3
+  struggleContext?: {
+    runFailStreak?: number
+    timeStuckSeconds?: number
+    lastErrorType?: string | null
+    level?: number
+  }
   currentErrorKey: string | null
   nudgeVisible: boolean
   guidedStep?: { current: number; total: number }

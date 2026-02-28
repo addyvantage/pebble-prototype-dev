@@ -5,7 +5,7 @@ import {
   normalizeRunnerResponse,
   runCodeLocally,
   type RunRequestBody,
-} from '../../server/runner.ts'
+} from '../../server/runner'
 
 export const config = {
   runtime: 'nodejs',
@@ -16,6 +16,7 @@ export const config = {
   },
 }
 const MAX_BODY_CHARS = 120_000
+const UPSTREAM_TIMEOUT_MS = 20_000
 
 function sendJson(
   res: { status: (code: number) => { json: (payload: unknown) => void }; json: (payload: unknown) => void },
@@ -120,6 +121,69 @@ async function runViaLambda(body: {
   }
 }
 
+async function runViaRunnerUrl(body: {
+  language: 'python' | 'javascript' | 'cpp' | 'java'
+  code: string
+  stdin: string
+  timeoutMs: number
+}) {
+  const runnerUrlRaw = process.env.RUNNER_URL
+  if (!runnerUrlRaw) {
+    throw new Error('Runner not configured. Set RUNNER_URL or AWS runner env vars.')
+  }
+
+  let runnerUrl: URL
+  try {
+    runnerUrl = new URL(runnerUrlRaw)
+  } catch {
+    throw new Error('RUNNER_URL is invalid. It must be a full URL (https://...).')
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
+  try {
+    const upstreamResponse = await fetch(runnerUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+    const upstreamText = await upstreamResponse.text().catch(() => '')
+    let upstreamJson: unknown = null
+    if (upstreamText) {
+      try {
+        upstreamJson = JSON.parse(upstreamText) as unknown
+      } catch {
+        upstreamJson = null
+      }
+    }
+
+    const normalized = normalizeRunnerResponse(upstreamJson)
+    if (!upstreamResponse.ok) {
+      const snippet = upstreamText.trim().replace(/\s+/g, ' ').slice(0, 220)
+      throw new Error(
+        `Remote runner failed with status ${upstreamResponse.status}.${snippet ? ` Body: ${snippet}` : ''}`,
+      )
+    }
+    if (!normalized) {
+      const snippet = upstreamText.trim().replace(/\s+/g, ' ').slice(0, 220)
+      throw new Error(
+        `Remote runner returned invalid JSON shape.${snippet ? ` Body: ${snippet}` : ''}`,
+      )
+    }
+    return normalized
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Remote runner timed out after ${UPSTREAM_TIMEOUT_MS}ms.`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 function buildErrorResponse(stderr: string) {
   return {
     ok: false,
@@ -137,6 +201,10 @@ function getCodeLength(body: unknown) {
   }
   const code = (body as { code?: unknown }).code
   return typeof code === 'string' ? code.length : 0
+}
+
+function getBodyLength(rawBody: string) {
+  return Buffer.byteLength(rawBody, 'utf8')
 }
 
 export default async function handler(
@@ -178,13 +246,25 @@ export default async function handler(
     }
 
     const mode = getRunnerMode()
+    const hasRunnerUrl = Boolean(process.env.RUNNER_URL)
+    const hasLambdaConfig = Boolean(process.env.AWS_REGION && process.env.RUNNER_LAMBDA_NAME)
     console.info(
-      `[api/run] request mode=${mode} lang=${normalized.value.language} codeChars=${getCodeLength(body)} timeoutMs=${normalized.value.timeoutMs}`,
+      `[api/run] request method=${req.method ?? 'unknown'} mode=${mode} lang=${normalized.value.language} codeChars=${getCodeLength(body)} bodyBytes=${getBodyLength(rawBody)} timeoutMs=${normalized.value.timeoutMs} runnerUrl=${hasRunnerUrl ? 'set' : 'unset'} lambda=${hasLambdaConfig ? 'set' : 'unset'}`,
     )
 
-    const result = mode === 'local'
-      ? await runCodeLocally(normalized.value)
-      : await runViaLambda(normalized.value)
+    let result
+    if (mode === 'local') {
+      result = await runCodeLocally(normalized.value)
+    } else if (hasRunnerUrl) {
+      result = await runViaRunnerUrl(normalized.value)
+    } else if (hasLambdaConfig) {
+      result = await runViaLambda(normalized.value)
+    } else {
+      const message = 'Runner not configured. Set RUNNER_URL or AWS_REGION + RUNNER_LAMBDA_NAME.'
+      console.error('[api/run] misconfigured remote runner', message)
+      sendJson(res, 200, buildErrorResponse(message))
+      return
+    }
 
     console.info(
       `[api/run] success lang=${normalized.value.language} ok=${result.ok} exit=${result.exitCode} timedOut=${result.timedOut} durationMs=${result.durationMs}`,
@@ -194,6 +274,6 @@ export default async function handler(
     const message = error instanceof Error ? `${error.name}: ${error.message}` : 'Runner invoke failed.'
     const stack = error instanceof Error ? error.stack ?? error.message : String(error)
     console.error('[api/run] unhandled failure', stack)
-    sendJson(res, 502, buildErrorResponse(message))
+    sendJson(res, 200, buildErrorResponse(message))
   }
 }

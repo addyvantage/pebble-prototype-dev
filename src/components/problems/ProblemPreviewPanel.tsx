@@ -1,10 +1,11 @@
 import { ChevronRight, Clock3, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { Button } from '../ui/Button'
+import { DifficultyPill } from '../ui/DifficultyPill'
+import { useTheme } from '../../hooks/useTheme'
 import type { ProblemDefinition, ProblemLanguage } from '../../data/problemsBank'
 
 type ProblemPreviewPanelProps = {
-  mode?: 'overlay' | 'docked'
   open: boolean
   problem: ProblemDefinition | null
   selectedLanguage: ProblemLanguage
@@ -25,7 +26,6 @@ type ProblemPreviewPanelProps = {
 }
 
 export function ProblemPreviewPanel({
-  mode = 'overlay',
   open,
   problem,
   selectedLanguage,
@@ -37,16 +37,15 @@ export function ProblemPreviewPanel({
   languageLabels,
   isUrdu,
 }: ProblemPreviewPanelProps) {
+  const { theme } = useTheme()
+
   useEffect(() => {
     if (!open) {
       return
     }
 
-    const shouldLockBody = mode === 'overlay'
     const previousOverflow = document.body.style.overflow
-    if (shouldLockBody) {
-      document.body.style.overflow = 'hidden'
-    }
+    document.body.style.overflow = 'hidden'
 
     function onEsc(event: KeyboardEvent) {
       if (event.key === 'Escape') {
@@ -56,19 +55,17 @@ export function ProblemPreviewPanel({
 
     window.addEventListener('keydown', onEsc)
     return () => {
-      if (shouldLockBody) {
-        document.body.style.overflow = previousOverflow
-      }
+      document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', onEsc)
     }
-  }, [mode, onClose, open])
+  }, [onClose, open])
 
   if (!open || !problem) {
     return null
   }
 
   const surfaceClass =
-    'border border-pebble-border/35 bg-[rgba(var(--pebble-panel),0.74)] shadow-[0_24px_64px_rgba(2,8,23,0.36)] backdrop-blur-2xl [background-image:linear-gradient(180deg,rgba(var(--pebble-overlay),0.22)_0%,rgba(var(--pebble-overlay),0.08)_100%)]'
+    'border border-pebble-border/30 bg-[rgba(var(--pebble-panel),0.78)] shadow-[0_24px_64px_rgba(2,8,23,0.36)] backdrop-blur-xl [background-image:linear-gradient(180deg,rgba(var(--pebble-overlay),0.2)_0%,rgba(var(--pebble-overlay),0.06)_100%)]'
 
   const panelContent = (
     <div className="flex h-full min-h-0 flex-col">
@@ -95,17 +92,11 @@ export function ProblemPreviewPanel({
         <p className={`text-sm text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>{problem.statement.summary}</p>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-flex rounded-full border px-2 py-0.5 text-xs ${
-              problem.difficulty === 'Easy'
-                ? 'border-pebble-success/35 bg-pebble-success/12 text-pebble-success'
-                : problem.difficulty === 'Medium'
-                  ? 'border-pebble-warning/35 bg-pebble-warning/12 text-pebble-warning'
-                  : 'border-rose-400/35 bg-rose-400/12 text-rose-300'
-            }`}
-          >
-            {difficultyLabels[problem.difficulty]}
-          </span>
+          <DifficultyPill
+            difficulty={problem.difficulty}
+            label={difficultyLabels[problem.difficulty]}
+            className="px-2.5 py-1 text-xs"
+          />
           <span className="inline-flex items-center gap-1 rounded-full border border-pebble-border/32 bg-pebble-overlay/[0.08] px-2 py-0.5 text-xs text-pebble-text-secondary">
             <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="ltrSafe">{problem.estimatedMinutes}m</span>
@@ -164,29 +155,18 @@ export function ProblemPreviewPanel({
     </div>
   )
 
-  if (mode === 'docked') {
-    return (
-      <aside
-        className={`h-full min-h-[520px] max-h-[calc(100vh-210px)] overflow-hidden rounded-2xl ${surfaceClass}`}
-        role="dialog"
-        aria-modal="false"
-        aria-label={labels.preview}
-      >
-        {panelContent}
-      </aside>
-    )
-  }
-
   return (
-    <div className="fixed inset-0 z-[70] lg:hidden">
+    <div className="fixed inset-0 z-[70]">
       <div
-        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+        className={`absolute inset-0 backdrop-blur-md ${
+          theme === 'light' ? 'bg-white/50' : 'bg-black/40'
+        }`}
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 flex items-center justify-center p-4">
+      <div className="absolute inset-0 flex justify-end p-0 lg:p-3">
         <aside
-          className={`h-[min(88vh,760px)] w-full max-w-[560px] overflow-hidden rounded-2xl ${surfaceClass}`}
+          className={`h-full w-full max-w-[520px] overflow-hidden rounded-none lg:rounded-2xl ${surfaceClass}`}
           role="dialog"
           aria-modal="true"
           aria-label={labels.preview}

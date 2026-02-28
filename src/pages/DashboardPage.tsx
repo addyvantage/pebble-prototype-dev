@@ -177,7 +177,7 @@ export function DashboardPage() {
   )
 
   return (
-    <section className="page-enter space-y-4">
+    <section className="page-enter space-y-3">
       <Card padding="md" interactive className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Badge>{t('insights.hero.chipGrowth')}</Badge>
@@ -197,7 +197,7 @@ export function DashboardPage() {
         </p>
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
           title={t('insights.kpi.recoveryEffectiveness')}
           value={derived.kpis.recoveryEffectiveness}
@@ -235,7 +235,7 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+      <div className="grid gap-2.5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <Card padding="md" interactive className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -254,7 +254,7 @@ export function DashboardPage() {
           />
         </Card>
 
-        <div className="grid content-start gap-3">
+        <div className="grid content-start gap-2.5">
           <StreakCalendar
             dailyMap={dailyCompletions}
             streak={streakStats.streak}
@@ -287,7 +287,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-2">
+      <div className="grid gap-2.5 xl:grid-cols-2">
         <Card padding="md" interactive className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
