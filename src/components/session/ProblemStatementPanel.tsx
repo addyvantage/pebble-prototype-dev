@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { PlacementLanguage } from '../../data/onboardingData'
-import { getUnitSolution } from '../../data/solutionsBank'
+import { getLocalizedUnitSolution } from '../../data/solutionsBank'
 import type { UnitSubmission } from '../../lib/submissionsStore'
+import { useI18n } from '../../i18n/useI18n'
 
 type ProblemTest = {
   input: string
@@ -13,6 +14,7 @@ type ProblemStatementPanelProps = {
   title: string
   concept: string
   prompt: string
+  description?: string
   constraints: string[]
   tests: ProblemTest[]
   difficultyLabel: string
@@ -23,8 +25,8 @@ type ProblemStatementPanelProps = {
   className?: string
 }
 
-function compactText(value: string) {
-  return value.trim() || '(empty)'
+function compactText(value: string, fallback: string) {
+  return value.trim() || fallback
 }
 
 function classNames(...values: Array<string | undefined>) {
@@ -44,6 +46,7 @@ export function ProblemStatementPanel({
   title,
   concept,
   prompt,
+  description,
   constraints,
   tests,
   difficultyLabel,
@@ -53,12 +56,13 @@ export function ProblemStatementPanel({
   submissions,
   className,
 }: ProblemStatementPanelProps) {
+  const { lang, t, isRTL } = useI18n()
   const [activeTab, setActiveTab] = useState<'problem' | 'solutions' | 'submissions'>('problem')
   const [solutionLanguage, setSolutionLanguage] = useState<PlacementLanguage>(language)
   const [copied, setCopied] = useState(false)
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
 
-  const solution = useMemo(() => getUnitSolution(unitId), [unitId])
+  const solution = useMemo(() => getLocalizedUnitSolution(unitId, lang), [lang, unitId])
   const examples = tests.slice(0, 2)
 
   useEffect(() => {
@@ -129,6 +133,7 @@ export function ProblemStatementPanel({
 
   return (
     <section
+      dir={isRTL ? 'rtl' : 'ltr'}
       className={classNames(
         'flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-pebble-border/30 bg-gradient-to-b from-pebble-overlay/[0.12] to-pebble-overlay/[0.04]',
         className,
@@ -138,17 +143,17 @@ export function ProblemStatementPanel({
         <TabButton
           active={activeTab === 'problem'}
           onClick={() => setActiveTab('problem')}
-          label="Problem"
+          label={t('tabs.problem')}
         />
         <TabButton
           active={activeTab === 'solutions'}
           onClick={() => setActiveTab('solutions')}
-          label="Solutions"
+          label={t('tabs.solutions')}
         />
         <TabButton
           active={activeTab === 'submissions'}
           onClick={() => setActiveTab('submissions')}
-          label="Submissions"
+          label={t('tabs.submissions')}
         />
       </div>
 
@@ -176,30 +181,30 @@ export function ProblemStatementPanel({
               <p className="text-sm leading-relaxed text-pebble-text-secondary">{prompt}</p>
             </div>
 
-            <Section title="Description">
-              Solve the task for every testcase. Keep output exact and avoid extra logs.
+            <Section title={t('problem.description')}>
+              {description ?? t('problem.defaultDescription')}
             </Section>
 
-            <Section title="Input">
+            <Section title={t('problem.input')}>
               {functionMode
-                ? 'Input is handled automatically. Implement the function signature only.'
-                : 'Read values from standard input exactly as provided by each testcase.'}
+                ? t('problem.inputFunctionMode')
+                : t('problem.inputScriptMode')}
             </Section>
 
-            <Section title="Output">
+            <Section title={t('problem.output')}>
               {functionMode
-                ? 'Return the correct value from the function. Output formatting is handled internally.'
-                : 'Print only the expected output for the testcase.'}
+                ? t('problem.outputFunctionMode')
+                : t('problem.outputScriptMode')}
             </Section>
 
             {functionMode && (
               <div className="rounded-xl border border-pebble-accent/35 bg-pebble-accent/10 px-3 py-2 text-xs text-pebble-text-primary">
-                Function mode: input parsing and testcase execution are handled for you.
+                {t('problem.functionModeBanner')}
               </div>
             )}
 
             <section className="space-y-1">
-              <h3 className="text-sm font-semibold text-pebble-text-primary">Constraints</h3>
+              <h3 className="text-sm font-semibold text-pebble-text-primary">{t('problem.constraints')}</h3>
               <ul className="list-disc space-y-1 pl-4 text-sm text-pebble-text-secondary">
                 {constraints.map((constraint) => (
                   <li key={constraint}>{constraint}</li>
@@ -208,20 +213,24 @@ export function ProblemStatementPanel({
             </section>
 
             <section className="space-y-2">
-              <h3 className="text-sm font-semibold text-pebble-text-primary">Examples</h3>
+              <h3 className="text-sm font-semibold text-pebble-text-primary">{t('problem.examples')}</h3>
               <div className="grid gap-2">
                 {examples.map((example, index) => (
                   <div
                     key={`${title}-example-${index}`}
                     className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-2"
                   >
-                    <p className="text-xs font-medium text-pebble-text-primary">Example {index + 1}</p>
+                    <p className="text-xs font-medium text-pebble-text-primary">
+                      {t('problem.example')} {index + 1}
+                    </p>
                     <div className="mt-1 grid gap-1 text-xs text-pebble-text-secondary">
                       <p className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 px-2 py-1">
-                        <span className="font-medium text-pebble-text-primary">Input:</span> {compactText(example.input)}
+                        <span className="font-medium text-pebble-text-primary">{t('problem.inputLabel')}:</span>{' '}
+                        {compactText(example.input, t('common.empty'))}
                       </p>
                       <p className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 px-2 py-1">
-                        <span className="font-medium text-pebble-text-primary">Output:</span> {compactText(example.expected)}
+                        <span className="font-medium text-pebble-text-primary">{t('problem.outputLabel')}:</span>{' '}
+                        {compactText(example.expected, t('common.empty'))}
                       </p>
                     </div>
                   </div>
@@ -234,25 +243,25 @@ export function ProblemStatementPanel({
         {activeTab === 'solutions' && (
           <div className="space-y-4">
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold text-pebble-text-primary">How to solve</h3>
+              <h3 className="text-lg font-semibold text-pebble-text-primary">{t('solutions.howToSolve')}</h3>
               <p className="text-sm text-pebble-text-secondary">
-                Pebble curated walkthrough for this unit.
+                {t('solutions.walkthrough')}
               </p>
             </div>
 
             {!solution || availableSolutionLanguages.length === 0 ? (
               <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3 text-sm text-pebble-text-secondary">
-                Solution not published yet. Try <span className="font-medium text-pebble-text-primary">Ask Pebble</span>.
+                {t('solutions.notPublished')}
               </div>
             ) : (
               <>
                 <section className="space-y-1">
-                  <h4 className="text-sm font-semibold text-pebble-text-primary">Intuition</h4>
+                  <h4 className="text-sm font-semibold text-pebble-text-primary">{t('solutions.intuition')}</h4>
                   <p className="text-sm text-pebble-text-secondary">{solution.intuition}</p>
                 </section>
 
                 <section className="space-y-1">
-                  <h4 className="text-sm font-semibold text-pebble-text-primary">Approach</h4>
+                  <h4 className="text-sm font-semibold text-pebble-text-primary">{t('solutions.approach')}</h4>
                   <ul className="list-disc space-y-1 pl-4 text-sm text-pebble-text-secondary">
                     {solution.approach.map((step) => (
                       <li key={step}>{step}</li>
@@ -261,27 +270,25 @@ export function ProblemStatementPanel({
                 </section>
 
                 <section className="space-y-1">
-                  <h4 className="text-sm font-semibold text-pebble-text-primary">Complexity</h4>
-                  <p className="text-sm text-pebble-text-secondary">Time: {solution.complexity.time}</p>
-                  <p className="text-sm text-pebble-text-secondary">Space: {solution.complexity.space}</p>
+                  <h4 className="text-sm font-semibold text-pebble-text-primary">{t('solutions.complexity')}</h4>
+                  <p className="text-sm text-pebble-text-secondary">{t('solutions.time')}: {solution.complexity.time}</p>
+                  <p className="text-sm text-pebble-text-secondary">{t('solutions.space')}: {solution.complexity.space}</p>
                 </section>
 
                 <section className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="text-sm font-semibold text-pebble-text-primary">Implementation</h4>
+                    <h4 className="text-sm font-semibold text-pebble-text-primary">{t('solutions.implementation')}</h4>
                     <button
                       type="button"
                       onClick={() => void copySolution()}
                       className="rounded-lg border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
                     >
-                      {copied ? 'Copied' : 'Copy'}
+                      {copied ? t('actions.copied') : t('actions.copy')}
                     </button>
                   </div>
 
                   {!solution?.implementations[language] && solution?.implementations.python ? (
-                    <p className="text-xs text-pebble-text-secondary">
-                      Solution not available in {LANGUAGE_LABELS[language]} yet. Showing Python fallback.
-                    </p>
+                    <p className="text-xs text-pebble-text-secondary">{t('solutions.languageFallback', { language: LANGUAGE_LABELS[language] })}</p>
                   ) : null}
 
                   <div className="flex flex-wrap gap-1.5">
@@ -301,7 +308,10 @@ export function ProblemStatementPanel({
                     ))}
                   </div>
 
-                  <pre className="max-h-72 overflow-auto rounded-xl border border-pebble-border/30 bg-pebble-canvas/55 p-3 text-[12px] leading-relaxed text-pebble-text-primary">
+                  <pre
+                    dir="ltr"
+                    className="max-h-72 overflow-auto rounded-xl border border-pebble-border/30 bg-pebble-canvas/55 p-3 text-[12px] leading-relaxed text-pebble-text-primary"
+                  >
                     <code>{selectedSolutionCode}</code>
                   </pre>
                 </section>
@@ -314,12 +324,12 @@ export function ProblemStatementPanel({
           <div className="space-y-3">
             {submissions.length === 0 ? (
               <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3 text-sm text-pebble-text-secondary">
-                No submissions yet. Click <span className="font-medium text-pebble-text-primary">Submit</span> after a run to save your result.
+                {t('submissions.none')}
               </div>
             ) : (
               <>
                 <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3">
-                  <p className="text-xs uppercase tracking-[0.06em] text-pebble-text-muted">Last Accepted</p>
+                  <p className="text-xs uppercase tracking-[0.06em] text-pebble-text-muted">{t('submissions.lastAccepted')}</p>
                   {lastAcceptedSubmission ? (
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <div className="space-y-0.5">
@@ -330,20 +340,21 @@ export function ProblemStatementPanel({
                       </div>
                       <div className="text-right">
                         <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-2 py-0.5 text-[11px] text-pebble-success">
-                          Accepted
+                          {t('submissions.accepted')}
                         </span>
                         <p className="mt-1 text-xs text-pebble-text-secondary">
-                          {lastAcceptedSubmission.runtimeMs}ms • exit {lastAcceptedSubmission.exitCode ?? 'null'}
+                          {lastAcceptedSubmission.runtimeMs}ms • {t('summary.exitLabel')}{' '}
+                          {lastAcceptedSubmission.exitCode ?? 'null'}
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-2 text-xs text-pebble-text-secondary">No accepted submission yet.</p>
+                    <p className="mt-2 text-xs text-pebble-text-secondary">{t('submissions.noAcceptedYet')}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-pebble-text-primary">Recent submissions</h3>
+                  <h3 className="text-sm font-semibold text-pebble-text-primary">{t('submissions.recent')}</h3>
                   <div className="grid gap-1.5">
                     {submissions.map((submission) => {
                       const active = (selectedSubmission?.id ?? submissions[0]?.id) === submission.id
@@ -366,7 +377,7 @@ export function ProblemStatementPanel({
                                   : 'border-pebble-warning/35 bg-pebble-warning/15 text-pebble-warning'
                               }`}
                             >
-                              {submission.status === 'accepted' ? 'Accepted' : 'Failed'}
+                              {submission.status === 'accepted' ? t('submissions.accepted') : t('submissions.failed')}
                             </span>
                             <span className="text-xs text-pebble-text-secondary">{new Date(submission.timestamp).toLocaleString()}</span>
                           </div>
@@ -392,6 +403,7 @@ export function ProblemStatementPanel({
 }
 
 function SubmissionDetail({ submission }: { submission: UnitSubmission }) {
+  const { t } = useI18n()
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -414,7 +426,7 @@ function SubmissionDetail({ submission }: { submission: UnitSubmission }) {
   return (
     <div className="space-y-2 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-semibold text-pebble-text-primary">Submission detail</h4>
+        <h4 className="text-sm font-semibold text-pebble-text-primary">{t('submissions.detail')}</h4>
         <span
           className={`rounded-full border px-2 py-0.5 text-[11px] ${
             submission.status === 'accepted'
@@ -422,37 +434,41 @@ function SubmissionDetail({ submission }: { submission: UnitSubmission }) {
               : 'border-pebble-warning/35 bg-pebble-warning/15 text-pebble-warning'
           }`}
         >
-          {submission.status === 'accepted' ? 'Accepted' : 'Failed'}
+          {submission.status === 'accepted' ? t('submissions.accepted') : t('submissions.failed')}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 p-2">
-          <p className="text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted">Runtime</p>
+          <p className="text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted">{t('submissions.runtime')}</p>
           <p className="mt-1 text-sm font-medium text-pebble-text-primary">{submission.runtimeMs}ms</p>
-          <p className="text-xs text-pebble-text-secondary">Beats --%</p>
+          <p className="text-xs text-pebble-text-secondary">{t('submissions.beatsPlaceholder')}</p>
         </div>
         <div className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 p-2">
-          <p className="text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted">Memory</p>
+          <p className="text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted">{t('submissions.memory')}</p>
           <p className="mt-1 text-sm font-medium text-pebble-text-primary">--</p>
-          <p className="text-xs text-pebble-text-secondary">Pending benchmark</p>
+          <p className="text-xs text-pebble-text-secondary">{t('submissions.pendingBenchmark')}</p>
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-pebble-text-secondary">
-          {LANGUAGE_LABELS[submission.language]} • exit {submission.exitCode ?? 'null'} • {new Date(submission.timestamp).toLocaleString()}
+          {LANGUAGE_LABELS[submission.language]} • {t('summary.exitLabel')} {submission.exitCode ?? 'null'} •{' '}
+          {new Date(submission.timestamp).toLocaleString()}
         </p>
         <button
           type="button"
           onClick={() => void copyCode()}
           className="rounded-lg border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
         >
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t('actions.copied') : t('actions.copy')}
         </button>
       </div>
 
-      <pre className="max-h-60 overflow-auto rounded-xl border border-pebble-border/30 bg-pebble-canvas/55 p-3 text-[12px] leading-relaxed text-pebble-text-primary">
+      <pre
+        dir="ltr"
+        className="max-h-60 overflow-auto rounded-xl border border-pebble-border/30 bg-pebble-canvas/55 p-3 text-[12px] leading-relaxed text-pebble-text-primary"
+      >
         <code>{submission.code}</code>
       </pre>
     </div>

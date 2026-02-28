@@ -1,4 +1,6 @@
 import type { PlacementLanguage } from './onboardingData'
+import type { LanguageCode } from '../i18n/languages'
+import { SOLUTION_COPY, type LocalizedSolutionCopy } from '../i18n/solutionCopy'
 
 export type UnitSolution = {
   unitId: string
@@ -10,6 +12,7 @@ export type UnitSolution = {
     space: string
   }
   implementations: Partial<Record<PlacementLanguage, string>>
+  localized?: Partial<Record<LanguageCode, LocalizedSolutionCopy>>
 }
 
 const solutions: UnitSolution[] = [
@@ -188,7 +191,34 @@ const solutions: UnitSolution[] = [
 ]
 
 const solutionByUnitId = new Map(solutions.map((solution) => [solution.unitId, solution]))
+const warnedMissingSolutionCopy = new Set<string>()
 
 export function getUnitSolution(unitId: string) {
   return solutionByUnitId.get(unitId) ?? null
+}
+
+export function getLocalizedUnitSolution(unitId: string, lang: LanguageCode) {
+  const solution = getUnitSolution(unitId)
+  if (!solution) {
+    return null
+  }
+
+  const localized = solution.localized?.[lang] ?? SOLUTION_COPY[lang]?.[unitId]
+  if (import.meta.env.DEV && lang !== 'en' && !localized) {
+    const warningId = `${lang}:${unitId}`
+    if (!warnedMissingSolutionCopy.has(warningId)) {
+      warnedMissingSolutionCopy.add(warningId)
+      console.warn(`[i18n] Missing solution prose for "${unitId}" in "${lang}". Falling back to English.`)
+    }
+  }
+  if (!localized) {
+    return solution
+  }
+
+  return {
+    ...solution,
+    title: localized.title ?? solution.title,
+    intuition: localized.intuition ?? solution.intuition,
+    approach: localized.approach ?? solution.approach,
+  }
 }

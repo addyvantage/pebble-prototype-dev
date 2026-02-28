@@ -1,4 +1,5 @@
 import { Card } from '../ui/Card'
+import { useI18n } from '../../i18n/useI18n'
 
 export type UnitTestCase = {
   input: string
@@ -25,8 +26,8 @@ type TestResultsPanelProps = {
   className?: string
 }
 
-function normalizeOutput(value: string) {
-  return value.replace(/\r\n/g, '\n').trim() || '(empty)'
+function normalizeOutput(value: string, emptyLabel: string) {
+  return value.replace(/\r\n/g, '\n').trim() || emptyLabel
 }
 
 export function TestResultsPanel({
@@ -37,13 +38,19 @@ export function TestResultsPanel({
   onSelectTest,
   className,
 }: TestResultsPanelProps) {
+  const { t, isRTL } = useI18n()
   const selectedTest = tests[selectedTestIndex]
   const selectedResult = resultsByIndex[selectedTestIndex]
 
   return (
-    <Card padding="sm" className={`flex h-full min-h-0 flex-col gap-2.5 ${className ?? ''}`} interactive>
+    <Card
+      padding="sm"
+      className={`flex h-full min-h-0 flex-col gap-2.5 ${className ?? ''}`}
+      interactive
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       <div className="flex items-center justify-between gap-2 border-b border-pebble-border/25 pb-1.5">
-        <p className="text-sm font-semibold text-pebble-text-primary">Testcases</p>
+        <p className="text-sm font-semibold text-pebble-text-primary">{t('tests.title')}</p>
         <p className="text-xs text-pebble-text-secondary">{summaryLabel}</p>
       </div>
 
@@ -62,7 +69,7 @@ export function TestResultsPanel({
                   : 'border-pebble-border/30 bg-pebble-overlay/[0.06] text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]'
               }`}
             >
-              Case {index + 1}
+              {t('problem.example')} {index + 1}
               {result ? (
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${result.passed ? 'bg-pebble-success' : 'bg-pebble-warning'}`}
@@ -75,15 +82,29 @@ export function TestResultsPanel({
 
       <div className="min-h-0 flex-1 rounded-xl border border-pebble-border/30 bg-pebble-canvas/45 p-2.5">
         {!selectedTest ? (
-          <p className="text-sm text-pebble-text-secondary">No testcases configured.</p>
+          <p className="text-sm text-pebble-text-secondary">{t('tests.noCases')}</p>
         ) : (
           <div className="grid h-full content-start gap-2">
-            <FieldBlock label="Input" value={selectedTest.input || '(empty)'} />
-            <FieldBlock label="Expected" value={normalizeOutput(selectedTest.expected)} />
+            <FieldBlock label={t('tests.input')} value={selectedTest.input || t('common.empty')} />
             <FieldBlock
-              label="Actual"
-              value={selectedResult ? normalizeOutput(selectedResult.actual) : 'not run'}
+              label={t('tests.expected')}
+              value={normalizeOutput(selectedTest.expected, t('common.empty'))}
+            />
+            <FieldBlock
+              label={t('tests.actual')}
+              value={
+                selectedResult
+                  ? normalizeOutput(selectedResult.actual, t('common.empty'))
+                  : t('tests.notRun')
+              }
               status={selectedResult ? (selectedResult.passed ? 'pass' : 'fail') : 'not run'}
+              statusLabel={
+                selectedResult
+                  ? selectedResult.passed
+                    ? t('tests.pass')
+                    : t('tests.fail')
+                  : t('tests.notRun')
+              }
             />
 
             {selectedResult ? (
@@ -95,20 +116,20 @@ export function TestResultsPanel({
                       : 'border-pebble-warning/35 bg-pebble-warning/15 text-pebble-warning'
                   }`}
                 >
-                  {selectedResult.passed ? 'pass' : 'fail'}
+                  {selectedResult.passed ? t('tests.pass') : t('tests.fail')}
                 </span>
-                <span className="text-pebble-text-secondary">runtime {selectedResult.durationMs}ms</span>
-                <span className="text-pebble-text-secondary">exit {selectedResult.exitCode ?? 'null'}</span>
+                <span className="text-pebble-text-secondary">{t('summary.runtimeLabel')} {selectedResult.durationMs}ms</span>
+                <span className="text-pebble-text-secondary">{t('summary.exitLabel')} {selectedResult.exitCode ?? 'null'}</span>
                 {selectedResult.timedOut ? (
                   <span className="rounded-full border border-pebble-warning/35 bg-pebble-warning/10 px-2 py-0.5 text-pebble-warning">
-                    timed out
+                    {t('tests.timedOut')}
                   </span>
                 ) : null}
               </div>
             ) : null}
 
             {selectedResult?.stderr ? (
-              <FieldBlock label="stderr" value={selectedResult.stderr} warning />
+              <FieldBlock label={t('tests.stderr')} value={selectedResult.stderr} warning />
             ) : null}
           </div>
         )}
@@ -121,11 +142,13 @@ function FieldBlock({
   label,
   value,
   status,
+  statusLabel,
   warning,
 }: {
   label: string
   value: string
   status?: 'pass' | 'fail' | 'not run'
+  statusLabel?: string
   warning?: boolean
 }) {
   return (
@@ -142,7 +165,7 @@ function FieldBlock({
                   : 'border-pebble-border/30 bg-pebble-overlay/[0.06] text-pebble-text-secondary'
             }`}
           >
-            {status}
+            {statusLabel ?? status}
           </span>
         )}
       </div>

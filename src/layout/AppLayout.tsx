@@ -10,17 +10,13 @@ import {
   getLocalUserProfile,
 } from '../utils/storageKeys'
 import { clearTaskProgress } from '../utils/taskProgress'
-
-const navItems = [
-  { to: '/', label: 'Home' },
-  { to: '/session/1', label: 'Session' },
-  { to: '/dashboard', label: 'Insights' },
-]
+import { useI18n } from '../i18n/useI18n'
 
 const iconButtonClass =
   'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-pebble-border/35 bg-pebble-overlay/8 text-pebble-text-secondary transition hover:bg-pebble-overlay/14 hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
 
 export function AppLayout() {
+  const { t, isRTL } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -34,6 +30,14 @@ export function AppLayout() {
     return profile.personaSummary === 'Not set' ? 'Not set' : profile.personaSummary
   }, [profile.personaSummary])
   const isImmersiveRoute = location.pathname.startsWith('/session/') || location.pathname.startsWith('/placement')
+  const navItems = useMemo(
+    () => [
+      { to: '/', label: t('nav.home') },
+      { to: '/session/1', label: t('nav.session') },
+      { to: '/dashboard', label: t('nav.insights') },
+    ],
+    [t],
+  )
 
   const updateProfileAnchorRect = useCallback(() => {
     setProfileAnchorRect(profileButtonRef.current?.getBoundingClientRect() ?? null)
@@ -123,7 +127,10 @@ export function AppLayout() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-pebble-deep text-pebble-text-primary">
+    <div
+      dir={isRTL ? 'rtl' : 'ltr'}
+      className="relative min-h-screen overflow-hidden bg-pebble-deep text-pebble-text-primary"
+    >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-14rem] top-[-12rem] h-[28rem] w-[28rem] rounded-full bg-pebble-accent/8 blur-3xl" />
         <div className="absolute bottom-[-14rem] right-[-12rem] h-[34rem] w-[34rem] rounded-full bg-pebble-accent/6 blur-3xl" />
@@ -147,13 +154,13 @@ export function AppLayout() {
                   Pebble
                 </p>
                 <p className="mt-0.5 text-sm text-pebble-text-secondary">
-                  Cognitive recovery companion
+                  {t('app.tagline')}
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
-                  aria-label="Notifications"
+                  aria-label={t('layout.notificationsAria')}
                   className={iconButtonClass}
                   type="button"
                 >
@@ -163,7 +170,7 @@ export function AppLayout() {
                   </svg>
                 </button>
                 <button
-                  aria-label="Settings"
+                  aria-label={t('layout.settingsAria')}
                   onClick={() => setIsSettingsOpen(true)}
                   className={iconButtonClass}
                   type="button"
@@ -176,7 +183,7 @@ export function AppLayout() {
 
                 <button
                   ref={profileButtonRef}
-                  aria-label="Profile"
+                  aria-label={t('layout.profileAria')}
                   aria-expanded={isProfileOpen}
                   aria-haspopup="menu"
                   onClick={() => {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Badge } from '../ui/Badge'
+import { useI18n } from '../../i18n/useI18n'
 
 type UnitNavItem = {
   id: string
@@ -24,6 +25,7 @@ export function UnitsDrawer({
   onClose,
   onSelectUnit,
 }: UnitsDrawerProps) {
+  const { t, isRTL } = useI18n()
   const [query, setQuery] = useState('')
 
   const filteredUnits = useMemo(() => {
@@ -61,6 +63,7 @@ export function UnitsDrawer({
       />
 
       <aside
+        dir={isRTL ? 'rtl' : 'ltr'}
         className={`relative h-full w-[360px] max-w-[92vw] border-r border-pebble-border/30 bg-gradient-to-b from-pebble-panel/95 to-pebble-canvas/85 p-4 shadow-[0_24px_80px_rgba(2,8,23,0.38)] transition-transform duration-200 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -68,21 +71,21 @@ export function UnitsDrawer({
         <div className="flex h-full min-h-0 flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">Curriculum</p>
-              <h2 className="text-lg font-semibold text-pebble-text-primary">Units</h2>
+              <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">{t('units.curriculum')}</p>
+              <h2 className="text-lg font-semibold text-pebble-text-primary">{t('units.units')}</h2>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-sm text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16] hover:text-pebble-text-primary"
             >
-              Close
+              {t('actions.close')}
             </button>
           </div>
 
           <div className="space-y-2 rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-pebble-text-secondary">Progress</p>
+              <p className="text-xs text-pebble-text-secondary">{t('units.progress')}</p>
               <Badge variant="neutral">
                 {completedCount}/{units.length}
               </Badge>
@@ -96,11 +99,11 @@ export function UnitsDrawer({
           </div>
 
           <label className="space-y-1">
-            <span className="text-xs text-pebble-text-muted">Search units</span>
+            <span className="text-xs text-pebble-text-muted">{t('units.search')}</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Loops, arrays, strings..."
+              placeholder={t('units.searchPlaceholder')}
               className="w-full rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-2 text-sm text-pebble-text-primary outline-none placeholder:text-pebble-text-muted focus:border-pebble-accent/45"
             />
           </label>

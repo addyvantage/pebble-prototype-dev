@@ -48,6 +48,8 @@ import {
 import { useBodyScrollLock } from '../utils/useBodyScrollLock'
 import { useTheme } from '../hooks/useTheme'
 import { loadPagePrefs, savePagePrefs, type PagePrefs } from '../lib/pagePrefsStore'
+import { useI18n } from '../i18n/useI18n'
+import { getLocalizedUnitCopy } from '../i18n/unitContent'
 
 type RunResponse = {
   ok: boolean
@@ -131,17 +133,8 @@ function isStartUnit(value: string | null): value is StartUnit {
   return value === '1' || value === 'mid' || value === 'advanced'
 }
 
-function difficultyByLevel(level: PlacementLevel) {
-  if (level === 'beginner') {
-    return 'Easy'
-  }
-  if (level === 'intermediate') {
-    return 'Medium'
-  }
-  return 'Hard'
-}
-
 export function SessionPage() {
+  const { lang: uiLanguage, t, format } = useI18n()
   const [searchParams] = useSearchParams()
   const storedState = useMemo(() => getPebbleUserState(), [])
   const queryUnit = searchParams.get('unit')
@@ -200,7 +193,7 @@ export function SessionPage() {
   const [submissionsByUnit, setSubmissionsByUnit] = useState<SubmissionsByUnit>(() => loadSubmissions())
 
   const [runStatus, setRunStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')
-  const [runMessage, setRunMessage] = useState('Run to evaluate all testcases.')
+  const [runMessage, setRunMessage] = useState(t('run.evaluateAll'))
   const [selectedTestIndex, setSelectedTestIndex] = useState(0)
   const [testResultsByIndex, setTestResultsByIndex] = useState<Record<number, UnitTestResultItem>>({})
   const [isRunningAll, setIsRunningAll] = useState(false)
@@ -241,6 +234,12 @@ export function SessionPage() {
     const root = document.documentElement
     root.classList.toggle('reduced-motion', pagePrefs.reduceMotion)
   }, [pagePrefs.reduceMotion])
+
+  useEffect(() => {
+    if (runStatus === 'idle') {
+      setRunMessage(t('run.evaluateAll'))
+    }
+  }, [runStatus, t])
 
   useEffect(() => {
     let mounted = true
@@ -295,7 +294,7 @@ export function SessionPage() {
         setSelectedTestIndex(0)
         setTestResultsByIndex({})
         setRunStatus('idle')
-        setRunMessage('Run to evaluate all testcases.')
+        setRunMessage(t('run.evaluateAll'))
         setTotalDurationMs(0)
         setSubmitAccepted(false)
       } catch (error) {
@@ -321,9 +320,15 @@ export function SessionPage() {
     selectedLanguage,
     storedState.curriculum?.currentUnitId,
     storedState.placement?.startUnitIndex,
+    t,
   ])
 
   const currentUnit = units[currentUnitIndex] ?? null
+  const localizedUnits = useMemo(
+    () => units.map((unit) => ({ unit, copy: getLocalizedUnitCopy(unit, uiLanguage) })),
+    [uiLanguage, units],
+  )
+  const currentUnitCopy = currentUnit ? getLocalizedUnitCopy(currentUnit, uiLanguage) : null
   const currentDefaultCode = currentUnit
     ? getUnitFunctionMode(selectedLanguage, currentUnit.id)?.starterStub ?? currentUnit.starterCode
     : ''
@@ -433,7 +438,12 @@ export function SessionPage() {
     setIsRunningAll(true)
     setActiveAction(mode)
     setRunStatus('running')
-    setRunMessage(`${mode === 'submit' ? 'Submitting' : 'Running'} ${currentUnit.tests.length} testcases...`)
+    setRunMessage(
+      t('run.runningAll', {
+        mode: mode === 'submit' ? t('run.modeSubmitting') : t('run.modeRunning'),
+        count: currentUnit.tests.length,
+      }),
+    )
     setTestResultsByIndex({})
     setTotalDurationMs(0)
     if (mode === 'run') {
@@ -452,7 +462,7 @@ export function SessionPage() {
               input: test.input,
               expected: test.expected,
               actual: '',
-              stderr: 'Failed to parse testcase into function arguments.',
+              stderr: t('run.parseFunctionCasesFailed'),
               passed: false,
               timedOut: false,
               durationMs: 0,
@@ -461,7 +471,7 @@ export function SessionPage() {
           )
           setTestResultsByIndex(nextResults)
           setRunStatus('error')
-          setRunMessage('Failed to prepare function-mode testcases.')
+          setRunMessage(t('run.prepareFunctionCasesFailed'))
           setSubmitAccepted(false)
           return
         }
@@ -493,7 +503,7 @@ export function SessionPage() {
             )
             setTestResultsByIndex(nextResults)
             setRunStatus('error')
-            setRunMessage(`Function mode unavailable for ${selectedLanguage}.`)
+            setRunMessage(t('run.functionModeUnavailable', { language: selectedLanguage }))
             setSubmitAccepted(false)
             return
           }
@@ -678,7 +688,13 @@ export function SessionPage() {
 
       if (allPassed) {
         setRunStatus('success')
-        setRunMessage(`${passedCount}/${currentUnit.tests.length} passed • ${durationTotal}ms`)
+        setRunMessage(
+          t('run.passedSummary', {
+            passed: passedCount,
+            total: currentUnit.tests.length,
+            duration: durationTotal,
+          }),
+        )
         setUnitProgress((prev) => markUnitCompleted(prev, currentUnit.id, durationTotal))
 
         if (mode === 'submit') {
@@ -690,11 +706,22 @@ export function SessionPage() {
           .find(({ result }) => !result.passed)
 
         const failPreview = firstFailed
-          ? `Fail #${firstFailed.index + 1}: expected ${firstFailed.result.expected}, got ${normalizeOutput(firstFailed.result.actual) || '(empty)'}`
-          : 'Some tests failed.'
+          ? t('run.failedPreview', {
+              index: firstFailed.index + 1,
+              expected: firstFailed.result.expected,
+              actual: normalizeOutput(firstFailed.result.actual) || t('common.empty'),
+            })
+          : t('run.someTestsFailed')
 
         setRunStatus('error')
-        setRunMessage(`${passedCount}/${currentUnit.tests.length} passed • ${durationTotal}ms • ${failPreview}`)
+        setRunMessage(
+          t('run.failedSummary', {
+            passed: passedCount,
+            total: currentUnit.tests.length,
+            duration: durationTotal,
+            preview: failPreview,
+          }),
+        )
         if (mode === 'submit') {
           setSubmitAccepted(false)
         }
@@ -718,13 +745,13 @@ export function SessionPage() {
       setIsRunningAll(false)
       setActiveAction(null)
     }
-  }, [currentCode, currentFunctionConfig, currentUnit, executeTest, isRunningAll, runtimeLanguage, selectedLanguage])
+  }, [currentCode, currentFunctionConfig, currentUnit, executeTest, isRunningAll, runtimeLanguage, selectedLanguage, t])
 
   function selectUnit(index: number) {
     setCurrentUnitIndex(index)
     setSelectedTestIndex(0)
     setRunStatus('idle')
-    setRunMessage('Run to evaluate all testcases.')
+    setRunMessage(t('run.evaluateAll'))
     setTestResultsByIndex({})
     setTotalDurationMs(0)
     setSubmitAccepted(false)
@@ -747,7 +774,7 @@ export function SessionPage() {
       return
     }
 
-    const confirmed = window.confirm('Reset editor to starter code?')
+    const confirmed = window.confirm(t('confirm.resetEditor'))
     if (!confirmed) {
       return
     }
@@ -757,7 +784,7 @@ export function SessionPage() {
       [currentUnit.id]: currentFunctionConfig?.starterStub ?? currentUnit.starterCode,
     }))
     setRunStatus('idle')
-    setRunMessage('Editor reset to starter code.')
+    setRunMessage(t('run.editorReset'))
     setTestResultsByIndex({})
     setTotalDurationMs(0)
     setSubmitAccepted(false)
@@ -767,8 +794,10 @@ export function SessionPage() {
     return (
       <section className="h-[100vh] overflow-hidden bg-pebble-deep p-3">
         <Card className="space-y-2" padding="md" interactive>
-          <p className="text-sm font-medium text-pebble-text-primary">Loading curriculum...</p>
-          <p className="text-sm text-pebble-text-secondary">Preparing {languageMeta.label} path.</p>
+          <p className="text-sm font-medium text-pebble-text-primary">{t('loading.curriculum')}</p>
+          <p className="text-sm text-pebble-text-secondary">
+            {t('loading.preparePath', { language: languageMeta.label })}
+          </p>
         </Card>
       </section>
     )
@@ -778,8 +807,8 @@ export function SessionPage() {
     return (
       <section className="h-[100vh] overflow-hidden bg-pebble-deep p-3">
         <Card className="space-y-2" padding="md" interactive>
-          <p className="text-sm font-medium text-pebble-warning">Unable to load this session.</p>
-          <p className="text-sm text-pebble-text-secondary">{loadError || 'No units found.'}</p>
+          <p className="text-sm font-medium text-pebble-warning">{t('error.loadSession')}</p>
+          <p className="text-sm text-pebble-text-secondary">{loadError || t('error.noUnits')}</p>
         </Card>
       </section>
     )
@@ -794,20 +823,37 @@ export function SessionPage() {
   const lastExitCode = Object.values(testResultsByIndex)
     .map((result) => result.exitCode)
     .find((exitCode) => exitCode !== null)
-  const levelLabel = `${selectedLevel[0]?.toUpperCase() ?? ''}${selectedLevel.slice(1)}`
-  const summaryLabel = `${passedCount}/${currentUnit.tests.length} passed • ${completedCount}/${currentUnit.tests.length} run${totalDurationMs > 0 ? ` • ${totalDurationMs}ms` : ''}${typeof lastExitCode === 'number' ? ` • exit ${lastExitCode}` : ''}`
+  const levelLabelMap: Record<PlacementLevel, string> = {
+    beginner: t('level.beginner'),
+    intermediate: t('level.intermediate'),
+    pro: t('level.pro'),
+  }
+  const levelLabel = levelLabelMap[selectedLevel]
+  const statusLabelMap: Record<typeof runStatus, string> = {
+    idle: t('status.idle'),
+    running: t('status.running'),
+    success: t('status.success'),
+    error: t('status.error'),
+  }
+  const summaryLabel = format.formatTestsSummary({
+    passed: passedCount,
+    total: currentUnit.tests.length,
+    runCount: completedCount,
+    durationMs: totalDurationMs,
+    exitCode: typeof lastExitCode === 'number' ? lastExitCode : null,
+  })
   const currentUnitSubmissions = submissionsByUnit[currentUnit.id] ?? []
 
   const constraints = currentFunctionConfig?.evalMode === 'function'
     ? [
-        'Implement only the Solution method for this unit.',
-        'Input parsing, testcase looping, and output checks are handled automatically.',
-        `Pass all ${currentUnit.tests.length} unit tests before submitting.`,
+        t('constraints.functionMode.1'),
+        t('constraints.functionMode.2'),
+        t('constraints.functionMode.3', { count: currentUnit.tests.length }),
       ]
     : [
-        'Read input from stdin exactly as provided.',
-        'Write output to stdout in the exact expected format.',
-        `Pass all ${currentUnit.tests.length} unit tests before submitting.`,
+        t('constraints.scriptMode.1'),
+        t('constraints.scriptMode.2'),
+        t('constraints.scriptMode.3', { count: currentUnit.tests.length }),
       ]
 
   return (
@@ -832,17 +878,21 @@ export function SessionPage() {
             type="button"
             onClick={moveToPreviousUnit}
             disabled={!previousEnabled}
-            title="Previous question"
+            title={t('topBar.prevUnit')}
+            aria-label={t('a11y.prevUnit')}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] text-pebble-text-primary transition hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16] disabled:cursor-not-allowed disabled:opacity-45"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
-          <p className="max-w-[420px] truncate px-1 text-sm font-semibold text-pebble-text-primary">{currentUnit.title}</p>
+          <p className="max-w-[420px] truncate px-1 text-sm font-semibold text-pebble-text-primary">
+            {currentUnitCopy?.title ?? currentUnit.title}
+          </p>
           <button
             type="button"
             onClick={moveToNextUnit}
             disabled={!nextEnabled}
-            title="Next question"
+            title={t('topBar.nextUnit')}
+            aria-label={t('a11y.nextUnit')}
             className={`inline-flex h-8 w-8 items-center justify-center rounded-full border bg-pebble-overlay/[0.08] text-pebble-text-primary transition hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16] disabled:cursor-not-allowed disabled:opacity-45 ${
               allTestsPassed && nextEnabled
                 ? 'border-pebble-success/45 shadow-[0_0_0_1px_rgba(74,222,128,0.28),0_0_16px_rgba(74,222,128,0.22)]'
@@ -858,7 +908,8 @@ export function SessionPage() {
             type="button"
             variant="secondary"
             size="sm"
-            title="Page settings"
+            title={t('topBar.pageSettings')}
+            aria-label={t('a11y.openPageSettings')}
             onClick={() => setPageSettingsOpen(true)}
             className="h-8 w-8 rounded-full border-pebble-border/30 bg-pebble-overlay/[0.08] p-0 text-pebble-text-primary hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16]"
           >
@@ -867,12 +918,13 @@ export function SessionPage() {
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
+            aria-label={t('a11y.openUnits')}
             className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-1.5 text-sm text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
           >
-            ☰ Units
+            ☰ {t('topBar.units')}
           </button>
 
-          <Badge variant={statusVariant(runStatus)}>{runStatus}</Badge>
+          <Badge variant={statusVariant(runStatus)}>{statusLabelMap[runStatus]}</Badge>
         </div>
       </header>
 
@@ -880,13 +932,20 @@ export function SessionPage() {
         <div className="grid h-full min-h-0 grid-cols-[clamp(380px,24vw,420px)_minmax(0,1fr)_clamp(360px,24vw,400px)] gap-3">
           <ProblemStatementPanel
             unitId={currentUnit.id}
-            title={currentUnit.title}
-            concept={currentUnit.concept}
-            prompt={currentUnit.prompt}
+            title={currentUnitCopy?.title ?? currentUnit.title}
+            concept={currentUnitCopy?.concept ?? currentUnit.concept}
+            prompt={currentUnitCopy?.prompt ?? currentUnit.prompt}
+            description={currentUnitCopy?.description}
             constraints={constraints}
             tests={currentUnit.tests}
-            difficultyLabel={difficultyByLevel(selectedLevel)}
-            tags={[languageMeta.label, 'Practice', 'Runtime verified']}
+            difficultyLabel={
+              selectedLevel === 'beginner'
+                ? t('difficulty.easy')
+                : selectedLevel === 'intermediate'
+                  ? t('difficulty.medium')
+                  : t('difficulty.hard')
+            }
+            tags={[languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]}
             language={selectedLanguage}
             functionMode={currentFunctionConfig?.evalMode === 'function'}
             submissions={currentUnitSubmissions}
@@ -902,8 +961,10 @@ export function SessionPage() {
             <section className="session-panel flex min-h-0 flex-col overflow-hidden">
               <div className="flex items-center justify-between gap-3 border-b border-pebble-border/25 px-3 py-2">
                 <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">Code</p>
-                  <p className="truncate text-sm font-medium text-pebble-text-primary">{currentUnit.title}</p>
+                  <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">{t('editor.code')}</p>
+                  <p className="truncate text-sm font-medium text-pebble-text-primary">
+                    {currentUnitCopy?.title ?? currentUnit.title}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -912,14 +973,14 @@ export function SessionPage() {
                   </span>
                   {currentFunctionConfig?.evalMode === 'function' && (
                     <span className="rounded-full border border-pebble-accent/35 bg-pebble-accent/12 px-2.5 py-1 text-xs text-pebble-accent">
-                      Function mode
+                      {t('editor.functionMode')}
                     </span>
                   )}
                   <Button
                     type="button"
                     variant="secondary"
                     size="sm"
-                    title="Reset code"
+                    title={t('editor.resetCode')}
                     onClick={handleResetCode}
                     className="h-9 w-9 rounded-xl border-pebble-border/35 bg-pebble-overlay/[0.09] p-0 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16]"
                   >
@@ -929,7 +990,8 @@ export function SessionPage() {
                     type="button"
                     variant="secondary"
                     size="sm"
-                    title="Editor settings"
+                    title={t('topBar.sessionSettings')}
+                    aria-label={t('a11y.openSessionSettings')}
                     onClick={() => setSessionSettingsOpen(true)}
                     className="h-9 w-9 rounded-xl border-pebble-border/35 bg-pebble-overlay/[0.09] p-0 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16]"
                   >
@@ -943,7 +1005,7 @@ export function SessionPage() {
                     className="gap-2"
                   >
                     <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                    {isRunningAll && activeAction === 'run' ? 'Running...' : 'Run'}
+                    {isRunningAll && activeAction === 'run' ? t('actions.running') : t('actions.run')}
                   </Button>
 
                   <Button
@@ -953,7 +1015,11 @@ export function SessionPage() {
                     disabled={isRunningAll}
                     className={submitAccepted ? '!border-pebble-success/45 !bg-pebble-success/18 !text-pebble-success' : ''}
                   >
-                    {isRunningAll && activeAction === 'submit' ? 'Submitting...' : submitAccepted ? 'Accepted' : 'Submit'}
+                    {isRunningAll && activeAction === 'submit'
+                      ? t('actions.submitting')
+                      : submitAccepted
+                        ? t('actions.accepted')
+                        : t('actions.submit')}
                   </Button>
                 </div>
               </div>
@@ -989,7 +1055,7 @@ export function SessionPage() {
 
               {currentFunctionConfig?.evalMode === 'function' && (
                 <p className="border-t border-pebble-border/25 px-3 py-1.5 text-xs text-pebble-text-secondary">
-                  Implement the function only. Input/output and testcase looping are handled automatically.
+                  {t('editor.functionModeHint')}
                 </p>
               )}
 
@@ -997,7 +1063,7 @@ export function SessionPage() {
                 <p className="truncate">{runMessage}</p>
                 {currentIsCompleted ? (
                   <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-2 py-0.5 text-[11px] text-pebble-success">
-                    Completed
+                    {t('editor.completed')}
                   </span>
                 ) : null}
               </div>
@@ -1014,8 +1080,8 @@ export function SessionPage() {
           </div>
 
           <PebbleChatPanel
-            unitTitle={currentUnit.title}
-            unitConcept={currentUnit.concept}
+            unitTitle={currentUnitCopy?.title ?? currentUnit.title}
+            unitConcept={currentUnitCopy?.concept ?? currentUnit.concept}
             codeText={currentCode}
             runStatus={runStatus}
             runMessage={runMessage}
@@ -1029,7 +1095,11 @@ export function SessionPage() {
 
       <UnitsDrawer
         open={drawerOpen}
-        units={units}
+        units={localizedUnits.map(({ unit, copy }) => ({
+          id: unit.id,
+          title: copy.title,
+          concept: copy.concept,
+        }))}
         currentUnitIndex={currentUnitIndex}
         completedUnitIds={completedUnitIds}
         onClose={() => setDrawerOpen(false)}
@@ -1040,22 +1110,22 @@ export function SessionPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-pebble-border/35 bg-pebble-panel/95 p-4 shadow-[0_20px_60px_rgba(2,8,23,0.32)]">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-pebble-text-primary">Page settings</h2>
+              <h2 className="text-base font-semibold text-pebble-text-primary">{t('settings.pageTitle')}</h2>
               <button
                 type="button"
                 onClick={() => setPageSettingsOpen(false)}
                 className="rounded-lg border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2 py-1 text-xs text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16]"
               >
-                Close
+                {t('actions.close')}
               </button>
             </div>
 
             <div className="mt-4 space-y-3 text-sm text-pebble-text-secondary">
               <div className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Theme</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">{t('settings.theme')}</span>
                 <div
                   role="tablist"
-                  aria-label="Theme mode"
+                  aria-label={t('settings.theme')}
                   className="grid grid-cols-2 gap-2 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-1"
                 >
                   {(['dark', 'light'] as const).map((mode) => {
@@ -1075,7 +1145,7 @@ export function SessionPage() {
                         }`}
                       >
                         {selected ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                        {mode === 'dark' ? 'Dark' : 'Light'}
+                        {mode === 'dark' ? t('settings.themeDark') : t('settings.themeLight')}
                       </button>
                     )
                   })}
@@ -1083,7 +1153,7 @@ export function SessionPage() {
               </div>
 
               <label className="flex items-center justify-between gap-3">
-                <span>Reduce motion</span>
+                <span>{t('settings.reduceMotion')}</span>
                 <button
                   type="button"
                   onClick={() =>
@@ -1095,12 +1165,12 @@ export function SessionPage() {
                       : 'border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
                   }`}
                 >
-                  {pagePrefs.reduceMotion ? 'On' : 'Off'}
+                  {pagePrefs.reduceMotion ? t('actions.on') : t('actions.off')}
                 </button>
               </label>
 
               <label className="flex items-center justify-between gap-3">
-                <span>Density</span>
+                <span>{t('settings.density')}</span>
                 <button
                   type="button"
                   onClick={() =>
@@ -1112,7 +1182,7 @@ export function SessionPage() {
                       : 'border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
                   }`}
                 >
-                  {pagePrefs.compactDensity ? 'Compact' : 'Comfortable'}
+                  {pagePrefs.compactDensity ? t('settings.densityCompact') : t('settings.densityComfortable')}
                 </button>
               </label>
             </div>
@@ -1124,19 +1194,19 @@ export function SessionPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-pebble-border/35 bg-pebble-panel/95 p-4 shadow-[0_20px_60px_rgba(2,8,23,0.32)]">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-pebble-text-primary">Session settings</h2>
+              <h2 className="text-base font-semibold text-pebble-text-primary">{t('settings.sessionTitle')}</h2>
               <button
                 type="button"
                 onClick={() => setSessionSettingsOpen(false)}
                 className="rounded-lg border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2 py-1 text-xs text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16]"
               >
-                Close
+                {t('actions.close')}
               </button>
             </div>
 
             <div className="mt-4 space-y-3 text-sm text-pebble-text-secondary">
               <label className="flex items-center justify-between gap-3">
-                <span>Font size</span>
+                <span>{t('settings.fontSize')}</span>
                 <input
                   type="range"
                   min={14}
@@ -1149,13 +1219,13 @@ export function SessionPage() {
               </label>
 
               <label className="flex items-center justify-between gap-3">
-                <span>Word wrap</span>
+                <span>{t('settings.wordWrap')}</span>
                 <button
                   type="button"
                   onClick={() => setWordWrapEnabled((prev) => !prev)}
                   className="rounded-lg border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
                 >
-                  {wordWrapEnabled ? 'On' : 'Off'}
+                  {wordWrapEnabled ? t('actions.on') : t('actions.off')}
                 </button>
               </label>
             </div>
