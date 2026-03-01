@@ -16,8 +16,18 @@ export type NormalizedRunRequest = {
   timeoutMs: number
 }
 
+export type RunnerStatus =
+  | 'ok'
+  | 'compile_error'
+  | 'runtime_error'
+  | 'timeout'
+  | 'internal_error'
+  | 'toolchain_unavailable'
+  | 'validation_error'
+
 export type RunnerResponse = {
   ok: boolean
+  status: RunnerStatus
   exitCode: number | null
   stdout: string
   stderr: string
@@ -116,6 +126,7 @@ export function normalizeRunnerResponse(payload: unknown): RunnerResponse | null
   const stderr = payload.stderr
   const timedOut = payload.timedOut
   const durationMs = payload.durationMs
+  const status = payload.status
 
   if (typeof ok !== 'boolean') {
     return null
@@ -133,14 +144,36 @@ export function normalizeRunnerResponse(payload: unknown): RunnerResponse | null
     return null
   }
 
+  const normalizedStatus: RunnerStatus =
+    typeof status === 'string' && isRunnerStatus(status)
+      ? status
+      : timedOut
+        ? 'timeout'
+        : ok
+          ? 'ok'
+          : 'runtime_error'
+
   return {
     ok,
+    status: normalizedStatus,
     exitCode,
     stdout,
     stderr,
     timedOut,
     durationMs,
   }
+}
+
+function isRunnerStatus(value: string): value is RunnerStatus {
+  return (
+    value === 'ok'
+    || value === 'compile_error'
+    || value === 'runtime_error'
+    || value === 'timeout'
+    || value === 'internal_error'
+    || value === 'toolchain_unavailable'
+    || value === 'validation_error'
+  )
 }
 
 export function decodeLambdaPayload(payload: Uint8Array | undefined) {

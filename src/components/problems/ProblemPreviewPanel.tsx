@@ -75,7 +75,7 @@ export function ProblemPreviewPanel({
       <header className="sticky top-0 z-10 border-b border-pebble-border/25 bg-[rgba(var(--pebble-panel),0.86)] px-4 py-3 backdrop-blur-xl">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className={`text-[11px] uppercase tracking-[0.08em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>
+            <p className={`text-xs uppercase tracking-[0.08em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>
               {labels.preview}
             </p>
             <h3 className={`truncate text-lg font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{problem.title}</h3>

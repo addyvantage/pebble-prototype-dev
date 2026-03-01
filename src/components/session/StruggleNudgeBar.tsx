@@ -44,7 +44,7 @@ export function StruggleNudgeBar({
               onClick={() => onAction('hint')}
               disabled={busy}
             >
-              {t('chat.nudge.hint')}
+              {t('coach.hint')}
             </Button>
           ) : null}
           {level === 2 ? (
@@ -55,7 +55,7 @@ export function StruggleNudgeBar({
                 onClick={() => onAction('explain')}
                 disabled={busy}
               >
-                {t('chat.nudge.explain')}
+                {t('coach.explain')}
               </Button>
               <Button
                 variant="secondary"
@@ -64,7 +64,7 @@ export function StruggleNudgeBar({
                 onClick={() => onAction('next')}
                 disabled={busy}
               >
-                {t('chat.nudge.next')}
+                {t('coach.nextStep')}
               </Button>
             </>
           ) : null}

@@ -1,6 +1,7 @@
 import type { CurriculumUnit } from '../content/pathLoader'
 import type { UnitProgressMap } from './progressStore'
 import type { SubmissionsByUnit } from './submissionsStore'
+import { getAnalyticsState } from './analyticsStore'
 import type {
   AnalyticsErrorType,
   AnalyticsEvent,
@@ -119,6 +120,26 @@ export function dateKeyForTimeZone(ts: number, timeZone: string) {
   const month = parts.find((part) => part.type === 'month')?.value ?? '01'
   const day = parts.find((part) => part.type === 'day')?.value ?? '01'
   return `${year}-${month}-${day}`
+}
+
+/** Returns a YYYY-MM-DD key in the user's local (wall-clock) time zone. */
+export function toDateKeyLocal(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Returns the persisted daily solve-count map: { [YYYY-MM-DD]: count }.
+ *
+ * Reads directly from analyticsStore.dailySolved — the same field that is
+ * incremented on every successful run (passed) or submit (accepted) event,
+ * which is also the source behind "Today done" in the streak calendar.
+ * Keys are in local wall-clock date (no UTC shift).
+ */
+export function getDailySolveMap(): Record<string, number> {
+  return getAnalyticsState().dailySolved
 }
 
 function shiftDateKey(dateKey: string, dayOffset: number) {

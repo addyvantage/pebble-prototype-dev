@@ -1,4 +1,5 @@
 import { buttonClass } from '../ui/buttonStyles'
+import { useI18n } from '../../i18n/useI18n'
 
 type GuidedFixPanelProps = {
   open: boolean
@@ -31,6 +32,8 @@ export function GuidedFixPanel({
   onBackStep,
   onExit,
 }: GuidedFixPanelProps) {
+  const { t } = useI18n()
+
   if (!open) {
     return null
   }
@@ -38,9 +41,9 @@ export function GuidedFixPanel({
   return (
     <aside className="nudge-enter space-y-3 rounded-xl border border-pebble-accent/30 bg-pebble-accent/10 p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-pebble-text-primary">Guided fix</p>
+        <p className="text-sm font-semibold text-pebble-text-primary">{t('guidedFix.title')}</p>
         <span className="rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs font-medium text-pebble-text-secondary">
-          Step {step}/{totalSteps}
+          {t('guidedFix.step', { step, total: totalSteps })}
         </span>
       </div>
 
@@ -57,13 +60,13 @@ export function GuidedFixPanel({
 
       {isAfk && (
         <p className="text-xs text-pebble-text-secondary">
-          AFK detected. Guided fix is paused until activity resumes.
+          {t('guidedFix.afkPaused')}
         </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={buttonClass('primary', 'sm')} onClick={onApplyFix}>
-          Apply fix
+          {t('guidedFix.applyFix')}
         </button>
         <button
           type="button"
@@ -71,7 +74,7 @@ export function GuidedFixPanel({
           onClick={onNextStep}
           disabled={!canGoNext}
         >
-          Next step
+          {t('guidedFix.nextStep')}
         </button>
         <button
           type="button"
@@ -79,10 +82,10 @@ export function GuidedFixPanel({
           onClick={onBackStep}
           disabled={!canGoBack}
         >
-          Back
+          {t('guidedFix.back')}
         </button>
         <button type="button" className={buttonClass('secondary', 'sm')} onClick={onExit}>
-          Exit
+          {t('guidedFix.exit')}
         </button>
       </div>
     </aside>

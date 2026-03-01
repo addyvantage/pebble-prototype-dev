@@ -1562,7 +1562,6 @@ function buildGeneratedProblem(index: number): ProblemDefinition {
       { input: `5\n1 1 1 1 1\n${modulus}\n`, expected: String(5 + (index % 4)) },
     ],
     kind: 'code',
-    premium: index % 9 === 0,
     createdAtRank: 100 + index,
   }
 }

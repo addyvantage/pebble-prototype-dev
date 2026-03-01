@@ -53,7 +53,7 @@ export function KpiCard({ title, value, suffix, trend, icon: Icon }: KpiCardProp
   return (
     <Card padding="none" interactive className="flex min-h-[108px] flex-col justify-between space-y-2 bg-pebble-overlay/[0.04] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-pebble-text-muted">{title}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.06em] text-pebble-text-muted">{title}</p>
         <Icon className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
       </div>
       <div>

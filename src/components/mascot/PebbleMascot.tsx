@@ -820,7 +820,7 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
           )}
         </div>
         {showNudgeBadge && (
-          <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-pebble-warning px-1 text-[10px] font-semibold text-pebble-canvas">
+          <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-pebble-warning px-1 text-xs font-semibold text-pebble-canvas">
             !
           </span>
         )}
@@ -847,7 +847,7 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
             Module progress: {data.moduleProgress.completedCount}/{data.moduleProgress.totalCount}
           </p>
           <p className="mt-1 text-xs text-pebble-text-secondary">{data.mascotLine}</p>
-          <p className="mt-1 line-clamp-2 text-[11px] text-pebble-text-muted">{data.runMessage}</p>
+          <p className="mt-1 line-clamp-2 text-xs text-pebble-text-muted">{data.runMessage}</p>
           {data.guidedStep && (
             <p className="mt-1 text-xs text-pebble-text-secondary">
               Guided fix active: Step {data.guidedStep.current} / {data.guidedStep.total}
@@ -862,7 +862,7 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
             <p className="mt-1 text-xs text-pebble-text-secondary">Paused while you're away.</p>
           )}
           <div className="mt-3 rounded-lg border border-pebble-border/28 bg-pebble-overlay/[0.06] p-2.5">
-            <p className="text-[11px] font-medium text-pebble-text-secondary">Ask Pebble</p>
+            <p className="text-xs font-medium text-pebble-text-secondary">Ask Pebble</p>
             <div className="mt-2 flex items-center gap-2">
               <input
                 value={question}
@@ -897,7 +897,7 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
 
             {(assistantState !== 'idle' || typedAnswer) && (
               <div className="mt-2 rounded-md border border-pebble-border/30 bg-pebble-canvas/70 p-2">
-                <div className="mb-1 h-4 text-[11px] uppercase tracking-[0.04em] text-pebble-text-muted">
+                <div className="mb-1 h-4 text-xs uppercase tracking-[0.04em] text-pebble-text-muted">
                   {assistantState === 'thinking' && (
                     <p className="flex items-center gap-1">
                       <span>Thinking</span>
@@ -918,7 +918,7 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
                         type="button"
                         onClick={() => void onRetryLastQuestion()}
                         disabled={isGenerating || !lastAskedQuestion}
-                        className="mr-2 rounded-md border border-pebble-border/35 px-2 py-1 text-[11px] text-pebble-text-secondary transition hover:bg-pebble-overlay/10 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="mr-2 rounded-md border border-pebble-border/35 px-2 py-1 text-xs text-pebble-text-secondary transition hover:bg-pebble-overlay/10 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Retry
                       </button>
@@ -926,7 +926,7 @@ export function PebbleMascot({ data }: { data: MascotContextData }) {
                     <button
                       type="button"
                       onClick={onClearAnswer}
-                      className="rounded-md border border-pebble-border/35 px-2 py-1 text-[11px] text-pebble-text-secondary transition hover:bg-pebble-overlay/10"
+                      className="rounded-md border border-pebble-border/35 px-2 py-1 text-xs text-pebble-text-secondary transition hover:bg-pebble-overlay/10"
                     >
                       Clear
                     </button>

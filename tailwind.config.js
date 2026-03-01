@@ -26,6 +26,20 @@ export default {
         sans: ['"Space Grotesk"', 'ui-sans-serif', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
+      animation: {
+        shimmer: 'shimmer var(--shimmer-duration, 2.6s) linear infinite',
+        fadeInScale: 'fadeInScale 180ms ease-out',
+      },
+      keyframes: {
+        shimmer: {
+          from: { backgroundPosition: '200% center, center' },
+          to: { backgroundPosition: '-200% center, center' },
+        },
+        fadeInScale: {
+          from: { opacity: '0', transform: 'scale(0.97)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
+      },
     },
   },
   plugins: [],

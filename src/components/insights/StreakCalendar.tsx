@@ -1,11 +1,9 @@
-import { Check, ChevronLeft, ChevronRight, Flame, Trophy } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Check, Flame, Trophy } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/useI18n'
-import { getLanguageOption } from '../../i18n/languages'
-import {
-  selectMonthGrid,
-  type DailyCompletionMap,
-} from '../../lib/analyticsDerivers'
+import type { DailyCompletionMap } from '../../lib/analyticsDerivers'
+import { useCodingDaysStore } from '../../lib/codingDaysStore'
+import { Calendar } from '../ui/calendar'
 
 type StreakCalendarProps = {
   dailyMap: DailyCompletionMap
@@ -16,86 +14,103 @@ type StreakCalendarProps = {
   className?: string
 }
 
-const WEEKDAY_BASE = new Date(Date.UTC(2024, 0, 1))
-
-function addDays(base: Date, days: number) {
-  const next = new Date(base)
-  next.setUTCDate(base.getUTCDate() + days)
-  return next
-}
-
 function classNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(' ')
 }
 
+// Helper: get YYYY-MM-DD from a local Date
+function toDateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+function isPast(target: Date, today: Date) {
+  const t = new Date(target)
+  t.setHours(0, 0, 0, 0)
+  const now = new Date(today)
+  now.setHours(0, 0, 0, 0)
+  return t < now
+}
+
 export function StreakCalendar({
-  dailyMap,
   streak,
   longest,
   isTodayComplete,
-  timeZone,
   className,
 }: StreakCalendarProps) {
-  const { t, lang, isRTL } = useI18n()
-  const locale = getLanguageOption(lang).locale
-  const [cursor, setCursor] = useState(() => {
-    const now = new Date()
-    return new Date(now.getFullYear(), now.getMonth(), 1)
-  })
-  const [nowTick, setNowTick] = useState(() => Date.now())
-  const weekStart = useMemo(() => {
-    try {
-      // @ts-expect-error weekInfo is not available in all TS lib versions.
-      const info = new Intl.Locale(locale).weekInfo
-      if (typeof info?.firstDay === 'number') {
-        return info.firstDay
-      }
-    } catch {
-      // Fallback below.
-    }
-    return 1
-  }, [locale])
-  const weekStartJs = useMemo(() => (weekStart % 7), [weekStart])
-
-  const monthGrid = useMemo(
-    () => selectMonthGrid(dailyMap, cursor.getFullYear(), cursor.getMonth(), timeZone, weekStartJs, nowTick),
-    [cursor, dailyMap, timeZone, weekStartJs, nowTick],
-  )
-
-  const weekdayLabels = useMemo(
-    () => {
-      const orderedWeekdays = Array.from({ length: 7 }, (_, index) => (weekStartJs + index) % 7)
-      return orderedWeekdays.map((weekday) =>
-        new Intl.DateTimeFormat(locale, {
-          weekday: 'short',
-          timeZone: 'UTC',
-        }).format(addDays(WEEKDAY_BASE, (weekday + 6) % 7)),
-      )
-    },
-    [locale, weekStartJs],
-  )
-
-  const monthLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat(locale, {
-        month: 'long',
-        year: 'numeric',
-        timeZone,
-      }).format(cursor),
-    [cursor, locale, timeZone],
-  )
-  const completedDays = useMemo(
-    () => Object.values(dailyMap).filter((entry) => entry.completed).length,
-    [dailyMap],
-  )
+  const { t, isRTL } = useI18n()
+  const { codedDaysSet, refreshCodedDays } = useCodingDaysStore()
+  const [today, setToday] = useState(new Date())
+  // Track the initial today for the month — never changes navigation
+  const baseMonth = useRef(today)
 
   useEffect(() => {
-    const id = window.setInterval(() => setNowTick(Date.now()), 60_000)
+    refreshCodedDays()
+    const id = window.setInterval(() => setToday(new Date()), 60_000)
     return () => window.clearInterval(id)
-  }, [])
+  }, [refreshCodedDays])
+
+  const modifiers = useMemo(() => {
+    // coded = any day user coded (includes today if isTodayComplete)
+    const coded = (d: Date) => {
+      if (isTodayComplete && isSameDay(d, today)) return true
+      return codedDaysSet.has(toDateKey(d))
+    }
+
+    // pastCoded = past day AND coded (today excluded — today uses `coded`)
+    const pastCoded = (d: Date) => {
+      if (isSameDay(d, today)) return false
+      if (!isPast(d, today)) return false
+      return codedDaysSet.has(toDateKey(d))
+    }
+
+    // pastNotCoded = past day AND not coded
+    const pastNotCoded = (d: Date) => {
+      if (isSameDay(d, today)) return false
+      if (!isPast(d, today)) return false
+      return !codedDaysSet.has(toDateKey(d))
+    }
+
+    // Disable ALL days so clicks do nothing / no blue selection
+    const disabled = () => true
+
+    return { coded, pastCoded, pastNotCoded, disabled }
+  }, [codedDaysSet, today, isTodayComplete])
+
+  const modifiersClassNames = {
+    // Green glow + tint for coded / today-done days — strong readable text
+    coded:
+      '!bg-emerald-500/18 !border-green-400/45 !text-pebble-text-primary font-semibold ' +
+      'shadow-[inset_0_0_0_1px_rgba(74,222,128,0.55),0_0_0_1.5px_rgba(74,222,128,0.40),0_0_14px_6px_rgba(74,222,128,0.28),0_6px_20px_rgba(74,222,128,0.15)]',
+
+    // Duller green for past coded — still readable via pebble-text-primary, slightly dimmed
+    pastCoded:
+      '!bg-emerald-500/10 !border-emerald-500/18 !text-pebble-text-primary ' +
+      'shadow-[0_0_0_1px_rgba(16,185,129,0.12)] !opacity-80',
+
+    // Dull grey for past non-coded
+    pastNotCoded:
+      '!bg-pebble-overlay/[0.03] !border-pebble-border/15 ' +
+      '!text-pebble-text-muted !opacity-60',
+
+    // Disable visual: no pointer, no hover effect
+    disabled: 'cursor-default pointer-events-none',
+  }
 
   return (
-    <div className={classNames('space-y-2.5', className)}>
+    <div
+      className={classNames(
+        'space-y-4 rounded-2xl border border-pebble-border/40 bg-pebble-canvas/60 backdrop-blur-md p-4 w-full mx-auto max-w-[380px]',
+        className
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5">
           <p className={`text-sm font-semibold text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
@@ -105,28 +120,8 @@ export function StreakCalendar({
             {t('insights.streakCalendar.subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.14] hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
-            aria-label={t('insights.calendar.prevMonth')}
-          >
-            <ChevronLeft className="h-3 w-3" aria-hidden="true" />
-          </button>
-          <p className={`w-[94px] text-center text-[11px] font-medium text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
-            {monthLabel}
-          </p>
-          <button
-            type="button"
-            onClick={() => setCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.14] hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
-            aria-label={t('insights.calendar.nextMonth')}
-          >
-            <ChevronRight className="h-3 w-3" aria-hidden="true" />
-          </button>
-        </div>
       </div>
+
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-full border border-pebble-warning/35 bg-pebble-warning/12 px-2 py-0.5 text-[10px] text-pebble-warning">
           <Flame className="h-2.5 w-2.5" aria-hidden="true" />
@@ -145,45 +140,17 @@ export function StreakCalendar({
         ) : null}
       </div>
 
-      <div className="space-y-1.5 rounded-xl border border-pebble-border/25 bg-pebble-canvas/55 p-2">
-        <div className="grid grid-cols-7 gap-1">
-          {weekdayLabels.map((label, index) => (
-            <span
-              key={`${label}-${index}`}
-              className={`text-center text-[11px] font-medium text-pebble-text-muted ${isRTL ? 'rtlText' : ''}`}
-            >
-              {label}
-            </span>
-          ))}
+      <div className="pt-2">
+        <div className="relative overflow-hidden rounded-2xl border border-pebble-border/25 bg-pebble-overlay/[0.03] p-1.5 sm:p-2">
+          <Calendar
+            month={baseMonth.current}
+            disableNavigation
+            showOutsideDays={false}
+            modifiers={modifiers}
+            modifiersClassNames={modifiersClassNames}
+            className="w-full flex justify-center"
+          />
         </div>
-
-        <div className="grid grid-cols-7 gap-1">
-          {monthGrid.weeks.flat().map((day) => (
-            <div
-              key={day.key}
-              title={
-                day.isComplete
-                  ? t('insights.calendar.completedCount', { count: day.count })
-                  : t('insights.calendar.none')
-              }
-              className={`relative flex h-7 w-7 items-center justify-center rounded-lg border text-[12px] font-medium transition sm:h-8 sm:w-8 ${day.isComplete
-                ? 'border-pebble-success/40 bg-pebble-success/18 text-pebble-success'
-                : 'border-pebble-border/25 bg-pebble-overlay/[0.05] text-pebble-text-secondary hover:bg-pebble-overlay/[0.1]'
-              } ${day.isInMonth ? '' : 'opacity-40'} ${day.isToday ? 'ring-2 ring-pebble-accent/35' : ''}`}
-            >
-              {day.isComplete && day.count > 1 ? (
-                <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-pebble-success/80" />
-              ) : null}
-              <span className="ltrSafe">{day.dayNumber}</span>
-            </div>
-          ))}
-        </div>
-
-        {completedDays === 0 ? (
-          <p className={`text-xs text-pebble-text-secondary ${isRTL ? 'rtlText' : ''}`}>
-            {t('insights.streakCalendar.empty')}
-          </p>
-        ) : null}
       </div>
     </div>
   )

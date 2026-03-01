@@ -7,8 +7,8 @@ import {
   normalizeRunRequest,
   normalizeRunnerResponse,
   type RunRequestBody,
-} from '../api/run/runnerShared.ts'
-import { runCodeLocally } from '../api/run/runnerLocal.ts'
+} from './runnerShared.ts'
+import { runCodeLocally } from './runnerLocal.ts'
 
 dotenv.config({ path: '.env.local' })
 
@@ -42,12 +42,12 @@ async function runViaLambda(body: {
 
   const client = accessKeyId && secretAccessKey
     ? new LambdaClient({
-        region: awsRegion,
-        credentials: {
-          accessKeyId,
-          secretAccessKey,
-        },
-      })
+      region: awsRegion,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    })
     : new LambdaClient({ region: awsRegion })
 
   try {
@@ -81,6 +81,7 @@ app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (error instanceof SyntaxError && 'body' in error) {
     res.status(400).json({
       ok: false,
+      status: 'validation_error',
       exitCode: null,
       stdout: '',
       stderr: 'Invalid JSON body.',
@@ -117,6 +118,7 @@ app.post('/api/run', async (req: Request, res: Response) => {
   if (!normalized.ok) {
     res.status(normalized.status).json({
       ok: false,
+      status: 'validation_error',
       exitCode: null,
       stdout: '',
       stderr: normalized.error,
@@ -138,6 +140,7 @@ app.post('/api/run', async (req: Request, res: Response) => {
     const message = error instanceof Error ? error.message : 'Runner invoke failed.'
     res.status(502).json({
       ok: false,
+      status: 'internal_error',
       exitCode: null,
       stdout: '',
       stderr: message,

@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react'
 import { useTheme } from '../../hooks/useTheme'
+import { useI18n } from '../../i18n/useI18n'
 
 type DifficultyValue = 'Easy' | 'Medium' | 'Hard'
 
@@ -39,6 +40,10 @@ export function DifficultyPill({
   ...props
 }: DifficultyPillProps) {
   const { theme } = useTheme()
+  const { t } = useI18n()
+
+  const fallbackLabel = t(`difficulty.${difficulty.toLowerCase()}` as any) || difficulty
+
   return (
     <span
       className={classNames(
@@ -48,7 +53,7 @@ export function DifficultyPill({
       )}
       {...props}
     >
-      {label ?? difficulty}
+      {label ?? fallbackLabel}
     </span>
   )
 }

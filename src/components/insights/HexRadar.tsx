@@ -10,12 +10,12 @@ type HexRadarProps = {
   className?: string
 }
 
-const SIZE = 360
+const SIZE = 440
 const CENTER = SIZE / 2
-const OUTER_RADIUS = 120
+const OUTER_RADIUS = 136
 const RINGS = 5
-const LABEL_OFFSET = 24
-const LABEL_EDGE_PADDING = 14
+const LABEL_OFFSET = 32
+const LABEL_EDGE_PADDING = 12
 
 function toPoint(index: number, total: number, score01: number) {
   const angle = (-Math.PI / 2) + (index / total) * Math.PI * 2
@@ -79,33 +79,38 @@ export function HexRadar({
   const chartStyle = useMemo(() => {
     const dark = theme === 'dark'
     return {
-      gridStroke: dark ? 'rgba(var(--pebble-border), 0.25)' : 'rgba(var(--pebble-border), 0.22)',
-      boundaryStroke: dark ? 'rgba(var(--pebble-border), 0.46)' : 'rgba(var(--pebble-border), 0.38)',
-      axisStroke: dark ? 'rgba(var(--pebble-border), 0.22)' : 'rgba(var(--pebble-border), 0.2)',
+      gridStroke: dark ? 'rgb(var(--pebble-border) / 0.25)' : 'rgb(var(--pebble-border) / 0.22)',
+      boundaryStroke: dark ? 'rgb(var(--pebble-border) / 0.46)' : 'rgb(var(--pebble-border) / 0.38)',
+      axisStroke: dark ? 'rgb(var(--pebble-border) / 0.22)' : 'rgb(var(--pebble-border) / 0.2)',
       currentFill: dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.18)',
       currentStroke: dark ? 'rgba(255, 255, 255, 0.74)' : 'rgba(15, 23, 42, 0.66)',
-      previousStroke: dark ? 'rgba(var(--pebble-accent), 0.58)' : 'rgba(var(--pebble-accent), 0.52)',
-      labelFill: dark ? 'rgba(var(--pebble-text-primary), 0.97)' : 'rgba(var(--pebble-text-primary), 0.9)',
-      labelStroke: dark ? 'rgba(var(--pebble-canvas), 0.78)' : 'rgba(255, 255, 255, 0.7)',
+      previousStroke: dark ? 'rgb(var(--pebble-accent) / 0.58)' : 'rgb(var(--pebble-accent) / 0.52)',
+      labelFill: dark ? 'rgb(var(--pebble-text-primary) / 0.97)' : 'rgb(var(--pebble-text-primary) / 0.9)',
+      labelStroke: dark ? 'rgb(var(--pebble-canvas) / 0.78)' : 'rgba(255, 255, 255, 0.7)',
       currentDotFill: dark ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.9)',
-      currentDotStroke: dark ? 'rgba(var(--pebble-canvas), 0.9)' : 'rgba(var(--pebble-canvas), 0.85)',
-      centerDot: dark ? 'rgba(var(--pebble-border), 0.8)' : 'rgba(var(--pebble-border), 0.85)',
+      currentDotStroke: dark ? 'rgb(var(--pebble-canvas) / 0.9)' : 'rgb(var(--pebble-canvas) / 0.85)',
+      centerDot: dark ? 'rgb(var(--pebble-border) / 0.8)' : 'rgb(var(--pebble-border) / 0.85)',
       polygonFilter: dark ? 'drop-shadow(0 0 10px rgba(248,250,252,0.16))' : 'drop-shadow(0 2px 8px rgba(15,23,42,0.1))',
+      gridFillOdd: dark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.015)',
+      gridFillEven: 'transparent',
     }
   }, [theme])
 
   return (
     <div className={classNames('h-full w-full', className)}>
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-full w-full overflow-visible">
-        {ringPolygons.map((ring, index) => (
-          <polygon
-            key={`ring-${index}`}
-            points={pointsToPath(ring)}
-            fill="none"
-            stroke={index === RINGS - 1 ? chartStyle.boundaryStroke : chartStyle.gridStroke}
-            strokeWidth={index === RINGS - 1 ? 1.55 : 1}
-          />
-        ))}
+        {[...ringPolygons].reverse().map((ring, reverseIndex) => {
+          const originalIndex = RINGS - 1 - reverseIndex
+          return (
+            <polygon
+              key={`ring-${originalIndex}`}
+              points={pointsToPath(ring)}
+              fill={originalIndex % 2 === 0 ? chartStyle.gridFillOdd : chartStyle.gridFillEven}
+              stroke={originalIndex === RINGS - 1 ? chartStyle.boundaryStroke : chartStyle.gridStroke}
+              strokeWidth={originalIndex === RINGS - 1 ? 1.55 : 1}
+            />
+          )
+        })}
 
         {axisPoints.map((point, index) => (
           <line

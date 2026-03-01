@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { buttonClass } from '../ui/buttonStyles'
+import { useI18n } from '../../i18n/useI18n'
 
 type ProfileMenuProps = {
   open: boolean
@@ -24,6 +25,7 @@ export function ProfileMenu({
   onRequestClose,
 }: ProfileMenuProps) {
   const { theme } = useTheme()
+  const { t, isRTL } = useI18n()
 
   if (!open || !anchorRect || typeof window === 'undefined') {
     return null
@@ -78,17 +80,17 @@ export function ProfileMenu({
 
       <div className="relative max-h-[70vh] overflow-auto p-4">
         <div className="space-y-1.5">
-          <p className="text-xs uppercase tracking-[0.06em] text-pebble-text-muted">Signed in as</p>
-          <p className="break-words text-base font-semibold leading-6 text-pebble-text-primary">
+          <p className={`text-xs uppercase tracking-[0.06em] text-pebble-text-muted ${isRTL ? 'rtlText' : ''}`}>{t('profile.signedInAs')}</p>
+          <p className={`break-words text-base font-semibold leading-6 text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
             {userName}
           </p>
         </div>
 
         <div className="mt-3 rounded-lg border border-pebble-border/24 bg-pebble-overlay/[0.06] px-3 py-2.5">
-          <p className="text-xs font-medium uppercase tracking-[0.05em] text-pebble-text-muted">
-            Persona
+          <p className={`text-xs font-medium uppercase tracking-[0.05em] text-pebble-text-muted ${isRTL ? 'rtlText' : ''}`}>
+            {t('profile.persona')}
           </p>
-          <p className="mt-1 whitespace-normal break-words text-sm leading-6 text-pebble-text-secondary">
+          <p className={`mt-1 whitespace-normal break-words text-sm leading-6 text-pebble-text-secondary ${isRTL ? 'rtlText' : ''}`}>
             {personaSummary}
           </p>
         </div>
@@ -103,7 +105,7 @@ export function ProfileMenu({
           }}
           className={`${buttonClass('secondary', 'sm')} w-full`}
         >
-          Sign out
+          {t('profile.signOut')}
         </button>
       </div>
     </div>,

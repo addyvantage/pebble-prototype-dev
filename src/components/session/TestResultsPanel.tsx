@@ -1,6 +1,7 @@
 import { Card } from '../ui/Card'
 import { useI18n } from '../../i18n/useI18n'
 import type { SqlPreviewTable } from '../../data/problemsBank'
+import type { RunFailureDiagnostic } from '../../lib/runDiagnostics'
 
 export type UnitTestCase = {
   input: string
@@ -12,6 +13,9 @@ export type UnitTestResultItem = {
   expected: string
   actual: string
   stderr: string
+  diagnostic?: RunFailureDiagnostic | null
+  requiredSignature?: string
+  detectedSignature?: string
   passed: boolean
   timedOut: boolean
   durationMs: number
@@ -30,6 +34,52 @@ type TestResultsPanelProps = {
 
 function normalizeOutput(value: string, emptyLabel: string) {
   return value.replace(/\r\n/g, '\n').trim() || emptyLabel
+}
+
+function resolveDiagnosticTitle(t: ReturnType<typeof useI18n>['t'], status: RunFailureDiagnostic['status']) {
+  if (status === 'compile_error') return t('coach.compileErrorTitle')
+  if (status === 'runtime_error') return t('coach.runtimeErrorTitle')
+  if (status === 'validation_error') return t('coach.signatureMismatchTitle')
+  return t('coach.genericFailureTitle')
+}
+
+function resolveDiagnosticMessage(t: ReturnType<typeof useI18n>['t'], diagnostic: RunFailureDiagnostic) {
+  if (diagnostic.status === 'compile_error') {
+    if (diagnostic.locationKind === 'user_code' && diagnostic.editorLine) {
+      return t('coach.compileErrorUserLine', { line: diagnostic.editorLine })
+    }
+    if (diagnostic.locationKind === 'runner_wrapper') {
+      return t('coach.compileErrorWrapper')
+    }
+    return t('coach.compileErrorGeneric')
+  }
+
+  if (diagnostic.status === 'runtime_error') {
+    return t('coach.runtimeErrorBody')
+  }
+  if (diagnostic.status === 'toolchain_unavailable') {
+    return t('coach.toolchainUnavailableBody')
+  }
+  if (diagnostic.status === 'timeout') {
+    return t('coach.timeoutBody')
+  }
+  if (diagnostic.status === 'validation_error') {
+    return t('coach.validationBody')
+  }
+  return t('coach.internalBody')
+}
+
+function resolveDiagnosticLocation(
+  t: ReturnType<typeof useI18n>['t'],
+  diagnostic: RunFailureDiagnostic,
+) {
+  if (diagnostic.locationKind === 'user_code' && diagnostic.editorLine) {
+    return t('coach.locationUserCode', { line: diagnostic.editorLine })
+  }
+  if (diagnostic.locationKind === 'runner_wrapper') {
+    return t('coach.locationRunnerWrapper')
+  }
+  return t('coach.locationUnknown')
 }
 
 export function TestResultsPanel({
@@ -114,7 +164,7 @@ export function TestResultsPanel({
             />
 
             {selectedResult ? (
-              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span
                   className={`rounded-full border px-2 py-0.5 ${
                     selectedResult.passed
@@ -134,13 +184,48 @@ export function TestResultsPanel({
               </div>
             ) : null}
 
-            {selectedResult?.stderr ? (
+            {selectedResult?.diagnostic ? (
+              <section className="space-y-1.5 rounded-xl border border-pebble-warning/35 bg-pebble-warning/10 p-2.5 text-sm text-pebble-warning">
+                <p className={`text-xs uppercase tracking-[0.06em] ${isUrdu ? 'rtlText' : ''}`}>
+                  {resolveDiagnosticTitle(t, selectedResult.diagnostic.status)}
+                </p>
+                <p className={`text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                  <span className="font-semibold text-pebble-text-primary">{t('coach.locationLabel')}:</span>{' '}
+                  {resolveDiagnosticLocation(t, selectedResult.diagnostic)}
+                </p>
+                <p className={`${isUrdu ? 'rtlText' : ''}`}>{resolveDiagnosticMessage(t, selectedResult.diagnostic)}</p>
+
+                {selectedResult.requiredSignature ? (
+                  <p className={`text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                    <span className="font-semibold text-pebble-text-primary">{t('coach.requiredSignature')}:</span>{' '}
+                    <span className="ltrSafe inline-block rounded bg-pebble-canvas/75 px-1.5 py-0.5 font-mono text-[11px] text-pebble-text-primary">
+                      {selectedResult.requiredSignature}
+                    </span>
+                  </p>
+                ) : null}
+                {selectedResult.detectedSignature ? (
+                  <p className={`text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                    <span className="font-semibold text-pebble-text-primary">{t('coach.detectedSignature')}:</span>{' '}
+                    <span className="ltrSafe inline-block rounded bg-pebble-canvas/75 px-1.5 py-0.5 font-mono text-[11px] text-pebble-text-primary">
+                      {selectedResult.detectedSignature}
+                    </span>
+                  </p>
+                ) : null}
+
+                <details className="rounded-lg border border-pebble-warning/35 bg-pebble-canvas/65 px-2 py-1 text-xs">
+                  <summary className="cursor-pointer text-pebble-text-primary">{t('coach.runnerDetails')}</summary>
+                  <pre className="mt-1 whitespace-pre-wrap break-words font-mono leading-relaxed text-pebble-warning">
+                    {selectedResult.diagnostic.details || selectedResult.stderr || t('common.empty')}
+                  </pre>
+                </details>
+              </section>
+            ) : selectedResult?.stderr ? (
               <FieldBlock label={t('tests.stderr')} value={selectedResult.stderr} warning isUrdu={isUrdu} />
             ) : null}
 
             {sqlPreview && selectedResult ? (
               <div className="space-y-1.5">
-                <p className={`text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{t('sql.resultPreview')}</p>
+                <p className={`text-xs uppercase tracking-[0.06em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{t('sql.resultPreview')}</p>
                 <div className="overflow-x-auto rounded-lg border border-pebble-border/30 bg-pebble-canvas/55 p-2" dir="ltr">
                   <table className="min-w-full text-left text-[12px] text-pebble-text-secondary ltrSafe">
                     <thead className="text-pebble-text-primary">
@@ -188,10 +273,10 @@ function FieldBlock({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
-        <p className={`text-[11px] uppercase tracking-[0.06em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{label}</p>
+        <p className={`text-xs uppercase tracking-[0.06em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{label}</p>
         {status && (
           <span
-            className={`rounded-full border px-2 py-0.5 text-[10px] ${
+            className={`rounded-full border px-2 py-0.5 text-xs ${
               status === 'pass'
                 ? 'border-pebble-success/35 bg-pebble-success/15 text-pebble-success'
                 : status === 'fail'

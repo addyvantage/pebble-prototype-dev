@@ -183,9 +183,13 @@ async function runViaRunnerUrl(body: {
   }
 }
 
-function buildErrorResponse(stderr: string) {
+function buildErrorResponse(
+  stderr: string,
+  status: 'internal_error' | 'validation_error' = 'internal_error',
+) {
   return {
     ok: false,
+    status,
     exitCode: null,
     stdout: '',
     stderr,
@@ -240,7 +244,7 @@ export default async function handler(
 
     const normalized = normalizeRunRequest(body)
     if (!normalized.ok) {
-      sendJson(res, normalized.status, buildErrorResponse(normalized.error))
+      sendJson(res, normalized.status, buildErrorResponse(normalized.error, 'validation_error'))
       return
     }
 

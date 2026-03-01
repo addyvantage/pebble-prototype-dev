@@ -5,7 +5,7 @@ const ANALYTICS_STORAGE_KEY = 'pebble.analytics.v1'
 const ANALYTICS_EVENT_NAME = 'pebble:analytics-updated'
 const ANALYTICS_MAX_EVENTS = 320
 const ANALYTICS_PERSISTED_EVENTS = 180
-const ANALYTICS_MAX_DAILY = 60
+const ANALYTICS_MAX_DAILY = 400
 
 export type AnalyticsErrorType =
   | 'syntax_error'

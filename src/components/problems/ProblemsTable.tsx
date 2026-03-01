@@ -1,6 +1,9 @@
-import { CheckCircle2, ChevronRight, Circle, Lock, Sparkles } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Circle } from 'lucide-react'
 import type { ProblemDefinition } from '../../data/problemsBank'
 import { DifficultyPill } from '../ui/DifficultyPill'
+
+const SHARED_GRID =
+  'grid grid-cols-[64px_minmax(0,1fr)_130px_140px_100px] gap-4 items-center px-4'
 
 type ProblemsTableProps = {
   rows: ProblemDefinition[]
@@ -39,12 +42,14 @@ export function ProblemsTable({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-pebble-border/28 bg-pebble-overlay/[0.04]">
-      <div className="grid grid-cols-[64px_minmax(0,1fr)_130px_140px_100px] items-center border-b border-pebble-border/25 bg-pebble-overlay/[0.08] px-4 py-2 text-[11px] uppercase tracking-[0.08em] text-pebble-text-muted">
-        <span className="ltrSafe">{headings.index}</span>
+      <div
+        className={`${SHARED_GRID} border-b border-pebble-border/25 bg-pebble-overlay/[0.08] py-3 text-sm font-medium text-pebble-text-secondary`}
+      >
+        <span className="ltrSafe text-center">{headings.index}</span>
         <span className={isUrdu ? 'rtlText' : ''}>{headings.title}</span>
         <span>{headings.difficulty}</span>
         <span className="ltrSafe">{headings.acceptance}</span>
-        <span className={isUrdu ? 'rtlText' : ''}>{headings.action}</span>
+        <span className={isUrdu ? 'rtlText text-center' : 'text-center'}>{headings.action}</span>
       </div>
 
       <div className="max-h-[460px] overflow-y-auto">
@@ -55,9 +60,9 @@ export function ProblemsTable({
               key={problem.id}
               type="button"
               onClick={() => onOpenProblem(problem)}
-              className="grid w-full grid-cols-[64px_minmax(0,1fr)_130px_140px_100px] items-center gap-4 border-b border-pebble-border/20 px-4 py-2.5 text-left transition hover:bg-pebble-overlay/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+              className={`${SHARED_GRID} w-full border-b border-pebble-border/20 py-2.5 text-left transition hover:bg-pebble-overlay/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45`}
             >
-              <span className="inline-flex items-center justify-center">
+              <span className="inline-flex w-full items-center justify-center">
                 {solved ? (
                   <CheckCircle2 className="h-4 w-4 text-pebble-success" aria-hidden="true" />
                 ) : (
@@ -73,17 +78,11 @@ export function ProblemsTable({
                   {problem.topics.slice(0, 3).map((topic) => (
                     <span
                       key={`${problem.id}-${topic}`}
-                      className="rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.07] px-2 py-0.5 text-[10px] text-pebble-text-secondary"
+                      className={`rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.07] px-2 py-0.5 text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}
                     >
                       {topic}
                     </span>
                   ))}
-                  {problem.premium ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-pebble-warning/32 bg-pebble-warning/12 px-2 py-0.5 text-[10px] text-pebble-warning">
-                      <Sparkles className="h-3 w-3" aria-hidden="true" />
-                      <Lock className="h-3 w-3" aria-hidden="true" />
-                    </span>
-                  ) : null}
                 </span>
               </span>
 
@@ -95,7 +94,7 @@ export function ProblemsTable({
 
               <span className="ltrSafe text-sm text-pebble-text-secondary">{problem.acceptanceRate}%</span>
 
-              <span className="inline-flex items-center justify-center gap-1 text-sm text-pebble-text-secondary">
+              <span className="inline-flex w-full items-center justify-center gap-1 text-sm text-pebble-text-secondary">
                 {openLabel}
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </span>

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import type { NormalizedRunRequest, RunnerResponse } from './runnerShared.js'
+import type { NormalizedRunRequest, RunnerResponse, RunnerStatus, RunLanguage } from './runnerShared.js'
 
 const TMP_ROOT = path.resolve(process.cwd(), '.pebble_tmp')
 const MAX_STDOUT_CHARS = 16_000
@@ -41,6 +41,28 @@ type ProcessResult = {
   stderr: string
   timedOut: boolean
 }
+
+type ToolchainProbe = {
+  command: string
+  args: string[]
+}
+
+type ToolchainResult = {
+  ok: boolean
+  message: string
+}
+
+const TOOLCHAIN_BY_LANGUAGE: Record<RunLanguage, ToolchainProbe[]> = {
+  python: [{ command: 'python3', args: ['--version'] }],
+  javascript: [{ command: 'node', args: ['-v'] }],
+  cpp: [{ command: 'g++', args: ['--version'] }],
+  java: [
+    { command: 'javac', args: ['-version'] },
+    { command: 'java', args: ['-version'] },
+  ],
+}
+
+const toolchainProbeCache = new Map<string, ToolchainResult>()
 
 async function runProcess(input: {
   command: string
@@ -127,32 +149,53 @@ async function runProcess(input: {
   })
 }
 
-function timedOutResult(startedAt: number, timeoutMs: number, stdout = '', stderr = ''): RunnerResponse {
-  const timeoutMessage = stderr.trim() ? stderr : `Execution timed out after ${timeoutMs}ms.`
+function createRunnerResponse(
+  status: RunnerStatus,
+  startedAt: number,
+  input: {
+    exitCode: number | null
+    stdout: string
+    stderr: string
+    timedOut: boolean
+  },
+): RunnerResponse {
   return {
-    ok: false,
-    exitCode: null,
-    stdout: trimOutput(stdout, MAX_STDOUT_CHARS),
-    stderr: trimOutput(timeoutMessage, MAX_STDERR_CHARS),
-    timedOut: true,
+    ok: status === 'ok',
+    status,
+    exitCode: input.exitCode,
+    stdout: trimOutput(input.stdout, MAX_STDOUT_CHARS),
+    stderr: trimOutput(input.stderr, MAX_STDERR_CHARS),
+    timedOut: input.timedOut,
     durationMs: Date.now() - startedAt,
   }
 }
 
-function buildResult(startedAt: number, processResult: ProcessResult): RunnerResponse {
+function timedOutResult(startedAt: number, timeoutMs: number, stdout = '', stderr = ''): RunnerResponse {
+  const timeoutMessage = stderr.trim() ? stderr : `Execution timed out after ${timeoutMs}ms.`
+  return createRunnerResponse('timeout', startedAt, {
+    exitCode: null,
+    stdout,
+    stderr: timeoutMessage,
+    timedOut: true,
+  })
+}
+
+function buildResult(
+  startedAt: number,
+  processResult: ProcessResult,
+  failureStatus: Exclude<RunnerStatus, 'ok' | 'timeout'> = 'runtime_error',
+): RunnerResponse {
   const ok = !processResult.timedOut && processResult.exitCode === 0
   const stderr = processResult.timedOut && !processResult.stderr.trim()
     ? 'Execution timed out.'
     : processResult.stderr
-
-  return {
-    ok,
+  const status: RunnerStatus = processResult.timedOut ? 'timeout' : ok ? 'ok' : failureStatus
+  return createRunnerResponse(status, startedAt, {
     exitCode: processResult.exitCode,
-    stdout: trimOutput(processResult.stdout, MAX_STDOUT_CHARS),
-    stderr: trimOutput(stderr, MAX_STDERR_CHARS),
+    stdout: processResult.stdout,
+    stderr,
     timedOut: processResult.timedOut,
-    durationMs: Date.now() - startedAt,
-  }
+  })
 }
 
 function remainingTimeMs(startedAt: number, timeoutMs: number) {
@@ -166,6 +209,71 @@ function withStepOutput(base: ProcessResult, step: ProcessResult): ProcessResult
     stdout: trimOutput(`${base.stdout}${step.stdout}`, MAX_STDOUT_CHARS),
     stderr: trimOutput(`${base.stderr}${step.stderr}`, MAX_STDERR_CHARS),
   }
+}
+
+async function probeExecutable(command: string, args: string[]): Promise<ToolchainResult> {
+  const cacheKey = `${command} ${args.join(' ')}`
+  const cached = toolchainProbeCache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+
+  const probeResult = await runProcess({
+    command,
+    args,
+    cwd: process.cwd(),
+    stdin: '',
+    timeoutMs: 1_800,
+  })
+
+  if (probeResult.timedOut) {
+    const message = `Language runtime probe timed out while checking '${command}'.`
+    const output = { ok: false, message }
+    toolchainProbeCache.set(cacheKey, output)
+    return output
+  }
+
+  if (probeResult.exitCode === 0) {
+    const output = { ok: true, message: '' }
+    toolchainProbeCache.set(cacheKey, output)
+    return output
+  }
+
+  let message = probeResult.stderr.trim()
+  if (!message) {
+    message = executableInstallHint(command)
+  }
+  const output = { ok: false, message }
+  toolchainProbeCache.set(cacheKey, output)
+  return output
+}
+
+async function ensureLanguageToolchain(language: RunLanguage): Promise<ToolchainResult> {
+  const probes = TOOLCHAIN_BY_LANGUAGE[language] ?? []
+  for (const probe of probes) {
+    const probeResult = await probeExecutable(probe.command, probe.args)
+    if (!probeResult.ok) {
+      const detail = probeResult.message || executableInstallHint(probe.command)
+      const message = `Language runtime not available on this environment. ${detail}`
+      return { ok: false, message }
+    }
+  }
+  return { ok: true, message: '' }
+}
+
+function inferInterpretedFailureStatus(language: 'python' | 'javascript', stderr: string): RunnerStatus {
+  const normalized = stderr.toLowerCase()
+  if (language === 'python') {
+    if (normalized.includes('syntaxerror') || normalized.includes('indentationerror')) {
+      return 'compile_error'
+    }
+  }
+  if (language === 'javascript') {
+    if (normalized.includes('syntaxerror') || normalized.includes('unexpected token')) {
+      return 'compile_error'
+    }
+  }
+  return 'runtime_error'
 }
 
 async function runPython(runDir: string, code: string, stdin: string, timeoutMs: number, startedAt: number) {
@@ -189,7 +297,7 @@ async function runPython(runDir: string, code: string, stdin: string, timeoutMs:
     processResult.stderr = `Execution timed out after ${timeoutMs}ms.`
   }
 
-  return buildResult(startedAt, processResult)
+  return buildResult(startedAt, processResult, inferInterpretedFailureStatus('python', processResult.stderr))
 }
 
 async function runJavaScript(runDir: string, code: string, stdin: string, timeoutMs: number, startedAt: number) {
@@ -213,7 +321,7 @@ async function runJavaScript(runDir: string, code: string, stdin: string, timeou
     processResult.stderr = `Execution timed out after ${timeoutMs}ms.`
   }
 
-  return buildResult(startedAt, processResult)
+  return buildResult(startedAt, processResult, inferInterpretedFailureStatus('javascript', processResult.stderr))
 }
 
 async function runCpp(runDir: string, code: string, stdin: string, timeoutMs: number, startedAt: number) {
@@ -239,7 +347,7 @@ async function runCpp(runDir: string, code: string, stdin: string, timeoutMs: nu
   }
 
   if (compileResult.exitCode !== 0) {
-    return buildResult(startedAt, compileResult)
+    return buildResult(startedAt, compileResult, 'compile_error')
   }
 
   const runRemaining = remainingTimeMs(startedAt, timeoutMs)
@@ -259,7 +367,7 @@ async function runCpp(runDir: string, code: string, stdin: string, timeoutMs: nu
     runResult.stderr = `Execution timed out after ${timeoutMs}ms.`
   }
 
-  return buildResult(startedAt, withStepOutput(compileResult, runResult))
+  return buildResult(startedAt, withStepOutput(compileResult, runResult), 'runtime_error')
 }
 
 async function runJava(runDir: string, code: string, stdin: string, timeoutMs: number, startedAt: number) {
@@ -284,7 +392,7 @@ async function runJava(runDir: string, code: string, stdin: string, timeoutMs: n
   }
 
   if (compileResult.exitCode !== 0) {
-    return buildResult(startedAt, compileResult)
+    return buildResult(startedAt, compileResult, 'compile_error')
   }
 
   const runRemaining = remainingTimeMs(startedAt, timeoutMs)
@@ -304,7 +412,7 @@ async function runJava(runDir: string, code: string, stdin: string, timeoutMs: n
     runResult.stderr = `Execution timed out after ${timeoutMs}ms.`
   }
 
-  return buildResult(startedAt, withStepOutput(compileResult, runResult))
+  return buildResult(startedAt, withStepOutput(compileResult, runResult), 'runtime_error')
 }
 
 export async function runCodeLocally(input: NormalizedRunRequest): Promise<RunnerResponse> {
@@ -315,6 +423,16 @@ export async function runCodeLocally(input: NormalizedRunRequest): Promise<Runne
   await fs.mkdir(runDir, { recursive: true })
 
   try {
+    const toolchain = await ensureLanguageToolchain(input.language)
+    if (!toolchain.ok) {
+      return createRunnerResponse('toolchain_unavailable', startedAt, {
+        exitCode: null,
+        stdout: '',
+        stderr: toolchain.message,
+        timedOut: false,
+      })
+    }
+
     if (input.language === 'python') {
       return await runPython(runDir, input.code, input.stdin, input.timeoutMs, startedAt)
     }
@@ -327,14 +445,12 @@ export async function runCodeLocally(input: NormalizedRunRequest): Promise<Runne
     return await runJava(runDir, input.code, input.stdin, input.timeoutMs, startedAt)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Local runner crashed.'
-    return {
-      ok: false,
+    return createRunnerResponse('internal_error', startedAt, {
       exitCode: null,
       stdout: '',
-      stderr: trimOutput(`Runner crashed: ${message}`, MAX_STDERR_CHARS),
+      stderr: `Runner crashed: ${message}`,
       timedOut: false,
-      durationMs: Date.now() - startedAt,
-    }
+    })
   } finally {
     await fs.rm(runDir, { recursive: true, force: true }).catch(() => undefined)
   }

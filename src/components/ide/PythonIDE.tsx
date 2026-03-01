@@ -178,13 +178,13 @@ export function PythonIDE({
         <p className="text-xs text-pebble-text-secondary">Run output</p>
         <div className="mt-2 min-h-[112px] space-y-2 rounded-lg border border-pebble-border/20 bg-pebble-canvas/70 p-3 font-mono text-xs text-pebble-text-secondary">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.04em] text-pebble-text-muted">stdout</p>
+            <p className="text-xs uppercase tracking-[0.04em] text-pebble-text-muted">stdout</p>
             <pre className="mt-1 whitespace-pre-wrap break-words text-pebble-text-primary">
               {runResult?.stdout || '(empty)'}
             </pre>
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-[0.04em] text-pebble-text-muted">stderr</p>
+            <p className="text-xs uppercase tracking-[0.04em] text-pebble-text-muted">stderr</p>
             <pre className="mt-1 whitespace-pre-wrap break-words text-pebble-warning">
               {runResult?.stderr || '(empty)'}
             </pre>

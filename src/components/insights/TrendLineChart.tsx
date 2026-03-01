@@ -139,7 +139,7 @@ export function TrendLineChart({ data, flowLabel, loadLabel }: TrendLineChartPro
       </div>
 
       {hasData ? (
-        <div className="flex items-center justify-between text-[11px] text-pebble-text-muted">
+        <div className="flex items-center justify-between text-xs text-pebble-text-muted">
           <span>{data[0].label}</span>
           <span>{data[data.length - 1].label}</span>
         </div>

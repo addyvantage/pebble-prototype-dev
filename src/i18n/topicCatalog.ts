@@ -2,6 +2,7 @@ import { toTopicId } from '../data/problemsBank'
 import type { LanguageCode } from './languages'
 import { applyPhraseDictionary, detectLatinWords, type PhraseEntry } from './noMixText'
 import { getProblemPhraseDict } from './problemPhraseDict'
+import { localizeProblemTitle } from './problemLocalize'
 
 type TopicLabels = {
   en: string
@@ -86,7 +87,7 @@ export function localizeTopicLabel(topicLabelOrId: string, lang: LanguageCode) {
   }
 
   const fallback = applyPhraseDictionary(english, getProblemPhraseDict(lang))
-  return detectLatinWords(fallback) ? english : fallback
+  return detectLatinWords(fallback) ? localizeProblemTitle(english, lang) : fallback
 }
 
 export function localizeTopicLabels(topics: string[], lang: LanguageCode) {

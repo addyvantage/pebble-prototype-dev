@@ -1,4 +1,12 @@
 type RunLanguage = 'python' | 'javascript' | 'cpp' | 'java' | 'c'
+export type RunStatus =
+  | 'ok'
+  | 'compile_error'
+  | 'runtime_error'
+  | 'timeout'
+  | 'internal_error'
+  | 'toolchain_unavailable'
+  | 'validation_error'
 
 export type RunRequestPayload = {
   language: RunLanguage
@@ -9,6 +17,7 @@ export type RunRequestPayload = {
 
 export type RunApiResponse = {
   ok: boolean
+  status: RunStatus
   exitCode: number | null
   stdout: string
   stderr: string
@@ -26,6 +35,7 @@ function normalizeRunResponse(payload: unknown): RunApiResponse {
   if (!isRecord(payload)) {
     return {
       ok: false,
+      status: 'internal_error',
       exitCode: null,
       stdout: '',
       stderr: 'Runner returned an invalid response.',
@@ -34,14 +44,36 @@ function normalizeRunResponse(payload: unknown): RunApiResponse {
     }
   }
 
+  const statusValue = payload.status
+  const status: RunStatus = typeof statusValue === 'string' && isRunStatus(statusValue)
+    ? statusValue
+    : payload.timedOut === true
+      ? 'timeout'
+      : payload.ok === true
+        ? 'ok'
+        : 'runtime_error'
+
   return {
     ok: payload.ok === true,
+    status,
     exitCode: typeof payload.exitCode === 'number' || payload.exitCode === null ? payload.exitCode : null,
     stdout: typeof payload.stdout === 'string' ? payload.stdout : '',
     stderr: typeof payload.stderr === 'string' ? payload.stderr : '',
     timedOut: payload.timedOut === true,
     durationMs: typeof payload.durationMs === 'number' ? payload.durationMs : 0,
   }
+}
+
+function isRunStatus(value: string): value is RunStatus {
+  return (
+    value === 'ok'
+    || value === 'compile_error'
+    || value === 'runtime_error'
+    || value === 'timeout'
+    || value === 'internal_error'
+    || value === 'toolchain_unavailable'
+    || value === 'validation_error'
+  )
 }
 
 type ParsedRunResponse = {
@@ -111,6 +143,7 @@ export async function requestRunApi(
       return {
         ...normalized,
         ok: false,
+        status: normalized.status === 'ok' ? 'internal_error' : normalized.status,
         stderr: message,
       }
     }
@@ -129,6 +162,7 @@ export async function requestRunApi(
     if (error instanceof DOMException && error.name === 'AbortError') {
       return {
         ok: false,
+        status: 'timeout',
         exitCode: null,
         stdout: '',
         stderr: 'Runner request timed out while waiting for /api/run.',
@@ -139,6 +173,7 @@ export async function requestRunApi(
 
     return {
       ok: false,
+      status: 'internal_error',
       exitCode: null,
       stdout: '',
       stderr: 'Failed to reach /api/run. Check network or Vercel function logs.',

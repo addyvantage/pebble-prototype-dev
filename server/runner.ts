@@ -3,11 +3,12 @@ export type {
   RunLanguage,
   RunRequestBody,
   RunnerResponse,
-} from './runnerShared'
+  RunnerStatus,
+} from './runnerShared.ts'
 export {
   SUPPORTED_LANGUAGES,
   decodeLambdaPayload,
   normalizeRunRequest,
   normalizeRunnerResponse,
-} from './runnerShared'
-export { runCodeLocally } from './runnerLocal'
+} from './runnerShared.ts'
+export { runCodeLocally } from './runnerLocal.ts'

@@ -6,7 +6,6 @@ import {
   isMixedScriptLeakage,
   protectTokens,
   restoreTokens,
-  shouldKeepEnglishAsFallback,
   splitIntoSentences,
   type PhraseEntry,
 } from './noMixText'
@@ -48,17 +47,16 @@ function translateSentenceInternal(text: string, lang: LanguageCode, dictionary:
   translated = applyPhraseDictionary(protectedText, dictionary)
   translated = applyPhraseDictionary(translated, dictionary)
 
+  if (detectLatinWords(translated, { skipTokenProtection: true })) {
+    return original
+  }
+
   const restored = restoreTokens(translated, map)
-
-  if (!detectLatinWords(restored)) {
-    return restored
-  }
-
   if (isMixedScriptLeakage(restored)) {
-    return shouldKeepEnglishAsFallback(original, lang) ? original : restored
+    return original
   }
 
-  return original
+  return restored
 }
 
 export function translateSentence(text: string, lang: LanguageCode): string {
@@ -76,7 +74,7 @@ export function translateParagraph(text: string, lang: LanguageCode): string {
 
   const dictionary = mergeDictionaries(lang)
   const segments = splitIntoSentences(text)
-  return segments
+  const joined = segments
     .map((segment) => {
       if (!segment.trim()) {
         return segment
@@ -84,6 +82,12 @@ export function translateParagraph(text: string, lang: LanguageCode): string {
       return translateSentenceInternal(segment, lang, dictionary)
     })
     .join('')
+
+  if (isMixedScriptLeakage(joined)) {
+    return text
+  }
+
+  return joined
 }
 
 export function translateProse(text: string, lang: LanguageCode): string {

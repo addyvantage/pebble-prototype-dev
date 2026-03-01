@@ -17,15 +17,7 @@ const SQL_KEYWORDS = new Set([
 ])
 
 const SAFE_LATIN_TOKENS = new Set([
-  'sql', 'query', 'stdin', 'stdout', 'testcase', 'testcases', 'input', 'output', 'null', 'true', 'false',
-  'person', 'address', 'employee', 'department', 'orders', 'customers', 'personid', 'addressid', 'firstname',
-  'lastname', 'city', 'state', 'salary', 'customerid', 'orderid', 'main', 'solve', 'nums', 'target', 'array',
-  'string', 'function', 'code', 'runtime', 'cpp', 'java', 'python', 'javascript',
-  'integer', 'integers', 'parameter', 'parameters', 'score', 'final', 'row', 'rows', 'table', 'tables',
-  'schema', 'format', 'metric', 'complexity', 'edge', 'cases', 'state', 'required', 'process',
-  'ascending', 'space', 'anagram', 'lowercase', 'record', 'records', 'report', 'reports', 'write', 'every',
-  'identifier', 'identifiers', 'single', 'value', 'values',
-  'one', 'index', 'indices', 'target', 'strings', 'line', 'lines', 'matching',
+  'sql', 'stdin', 'stdout', 'null', 'true', 'false', 'json', 'api',
 ])
 
 function escapeRegExp(value: string) {
@@ -80,8 +72,14 @@ function hasNonLatinScript(text: string) {
   return /[^\u0000-\u024f]/.test(text)
 }
 
-export function detectLatinWords(text: string) {
-  const words = text.match(/\b[A-Za-z][A-Za-z0-9_-]{2,}\b/g) ?? []
+export function detectLatinWords(
+  text: string,
+  options?: {
+    skipTokenProtection?: boolean
+  },
+) {
+  const candidate = options?.skipTokenProtection ? text : protectTokens(text).protectedText
+  const words = candidate.match(/\b[A-Za-z][A-Za-z0-9_-]{2,}\b/g) ?? []
   for (const word of words) {
     if (isTokenPlaceholder(word) || isAllowedLatinWord(word)) {
       continue
@@ -200,5 +198,6 @@ export function splitIntoSentences(text: string) {
 }
 
 export function isMixedScriptLeakage(text: string) {
-  return hasNonLatinScript(text) && detectLatinWords(text)
+  const { protectedText } = protectTokens(text)
+  return hasNonLatinScript(protectedText) && detectLatinWords(protectedText, { skipTokenProtection: true })
 }

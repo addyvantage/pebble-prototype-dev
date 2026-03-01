@@ -12,6 +12,26 @@ import {
 
 export type { FunctionModeTemplate, FunctionHarnessCase, ParsedHarnessCase }
 
+export type RunnerSourceMap = {
+  fileName: string
+  userStartLine: number
+  userEndLine: number
+}
+
+export type RunnableBuildResult = {
+  code: string
+  sourceMap: RunnerSourceMap
+}
+
+export type SignatureValidationResult =
+  | { ok: true }
+  | {
+      ok: false
+      requiredSignature: string
+      detectedSignature: string
+      reason: 'missing_class' | 'missing_method' | 'param_count_mismatch'
+    }
+
 export function getUnitFunctionMode(language: PlacementLanguage, unitId: string) {
   return getFunctionModeTemplate(language, unitId)
 }
@@ -22,7 +42,194 @@ export function buildFunctionModeRunnable(input: {
   methodName: string
   cases: FunctionHarnessCase[]
 }) {
-  return buildHarnessRunnableCode(input)
+  const code = buildHarnessRunnableCode(input)
+  if (!code) {
+    return null
+  }
+  return toRunnableResult(code, input.userCode, 'main.py')
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function normalizeParams(language: PlacementLanguage, rawParams: string) {
+  const parts = rawParams
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  if (language === 'python' && parts[0] === 'self') {
+    return parts.slice(1)
+  }
+  return parts
+}
+
+function countExpectedParams(signatureLabel: string) {
+  const match = signatureLabel.match(/\(([^)]*)\)/)
+  if (!match) {
+    return 0
+  }
+  return match[1]
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean).length
+}
+
+function extractMethodSignature(input: {
+  language: PlacementLanguage
+  userCode: string
+  methodName: string
+}) {
+  const method = escapeRegExp(input.methodName)
+  const code = input.userCode
+
+  if (input.language === 'python') {
+    const exact = new RegExp(`def\\s+${method}\\s*\\(([^)]*)\\)\\s*(?:->[^:\\n]+)?\\s*:`, 'm')
+    const fallback = /def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?:->[^:\n]+)?\s*:/m
+    const match = code.match(exact)
+    if (match) {
+      return {
+        found: true,
+        methodName: input.methodName,
+        params: normalizeParams(input.language, match[1]),
+      }
+    }
+    const fallbackMatch = code.match(fallback)
+    if (fallbackMatch) {
+      return {
+        found: false,
+        methodName: fallbackMatch[1],
+        params: normalizeParams(input.language, fallbackMatch[2]),
+      }
+    }
+    return null
+  }
+
+  if (input.language === 'javascript') {
+    const exact = new RegExp(`\\b${method}\\s*\\(([^)]*)\\)\\s*\\{`, 'm')
+    const fallback = /\b([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/m
+    const match = code.match(exact)
+    if (match) {
+      return {
+        found: true,
+        methodName: input.methodName,
+        params: normalizeParams(input.language, match[1]),
+      }
+    }
+    const fallbackMatch = code.match(fallback)
+    if (fallbackMatch) {
+      return {
+        found: false,
+        methodName: fallbackMatch[1],
+        params: normalizeParams(input.language, fallbackMatch[2]),
+      }
+    }
+    return null
+  }
+
+  if (input.language === 'java') {
+    const exact = new RegExp(
+      `(?:public|private|protected)?\\s*(?:static\\s+)?[\\w<>,\\[\\]\\s]+\\b${method}\\s*\\(([^)]*)\\)\\s*\\{`,
+      'm',
+    )
+    const fallback =
+      /(?:public|private|protected)?\s*(?:static\s+)?[\w<>,\[\]\s]+\b([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/m
+    const match = code.match(exact)
+    if (match) {
+      return {
+        found: true,
+        methodName: input.methodName,
+        params: normalizeParams(input.language, match[1]),
+      }
+    }
+    const fallbackMatch = code.match(fallback)
+    if (fallbackMatch) {
+      return {
+        found: false,
+        methodName: fallbackMatch[1],
+        params: normalizeParams(input.language, fallbackMatch[2]),
+      }
+    }
+    return null
+  }
+
+  const exact = new RegExp(
+    `[\\w:<>,\\[\\]&*\\s]+\\b${method}\\s*\\(([^)]*)\\)\\s*(?:const\\s*)?\\{`,
+    'm',
+  )
+  const fallback = /[\w:<>,\[\]&*\s]+\b([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?:const\s*)?\{/m
+  const match = code.match(exact)
+  if (match) {
+    return {
+      found: true,
+      methodName: input.methodName,
+      params: normalizeParams(input.language, match[1]),
+    }
+  }
+  const fallbackMatch = code.match(fallback)
+  if (fallbackMatch) {
+    return {
+      found: false,
+      methodName: fallbackMatch[1],
+      params: normalizeParams(input.language, fallbackMatch[2]),
+    }
+  }
+  return null
+}
+
+function getClassCheckRegex(language: PlacementLanguage) {
+  if (language === 'python') {
+    return /class\s+Solution\b/m
+  }
+  return /\bclass\s+Solution\b/m
+}
+
+export function validateFunctionSignature(input: {
+  language: PlacementLanguage
+  userCode: string
+  methodName: string
+  signatureLabel: string
+}): SignatureValidationResult {
+  const classRegex = getClassCheckRegex(input.language)
+  if (!classRegex.test(input.userCode)) {
+    return {
+      ok: false,
+      requiredSignature: input.signatureLabel,
+      detectedSignature: 'Solution class not found.',
+      reason: 'missing_class',
+    }
+  }
+
+  const extracted = extractMethodSignature({
+    language: input.language,
+    userCode: input.userCode,
+    methodName: input.methodName,
+  })
+
+  if (!extracted || !extracted.found) {
+    const detected = extracted
+      ? `Found ${extracted.methodName}(${extracted.params.join(', ')})`
+      : 'No method definition found.'
+    return {
+      ok: false,
+      requiredSignature: input.signatureLabel,
+      detectedSignature: detected,
+      reason: 'missing_method',
+    }
+  }
+
+  const expectedParamCount = countExpectedParams(input.signatureLabel)
+  if (extracted.params.length !== expectedParamCount) {
+    return {
+      ok: false,
+      requiredSignature: input.signatureLabel,
+      detectedSignature: `${extracted.methodName}(${extracted.params.join(', ')})`,
+      reason: 'param_count_mismatch',
+    }
+  }
+
+  return { ok: true }
 }
 
 function escapeCppString(value: string) {
@@ -119,12 +326,13 @@ function buildJavascriptSingleCase(input: {
     return null
   }
 
-  return `${input.userCode}
+  const code = `${input.userCode}
 
 const __solver = new Solution()
 const __result = __solver.${input.methodName}(${literalArgs.join(', ')})
 ${formatJsOutput('__result')}
 `
+  return toRunnableResult(code, input.userCode, 'main.js')
 }
 
 function buildCppSingleCase(input: {
@@ -137,7 +345,7 @@ function buildCppSingleCase(input: {
     return null
   }
 
-  return `#include <iostream>
+  const code = `#include <iostream>
 #include <string>
 #include <vector>
 #include <type_traits>
@@ -171,6 +379,7 @@ int main() {
   return 0;
 }
 `
+  return toRunnableResult(code, input.userCode, 'main.cpp')
 }
 
 function buildJavaSingleCase(input: {
@@ -183,7 +392,7 @@ function buildJavaSingleCase(input: {
     return null
   }
 
-  return `import java.util.*;
+  const code = `import java.util.*;
 
 ${input.userCode}
 
@@ -213,6 +422,7 @@ public class Main {
   }
 }
 `
+  return toRunnableResult(code, input.userCode, 'Main.java')
 }
 
 export function buildSingleCaseFunctionModeRunnable(input: {
@@ -234,6 +444,24 @@ export function buildSingleCaseFunctionModeRunnable(input: {
   }
 
   return null
+}
+
+function toRunnableResult(code: string, userCode: string, fileName: string): RunnableBuildResult | null {
+  const userStartIndex = code.indexOf(userCode)
+  if (userStartIndex < 0) {
+    return null
+  }
+  const prefix = code.slice(0, userStartIndex)
+  const userStartLine = prefix.split(/\r?\n/).length
+  const userLineCount = Math.max(1, userCode.split(/\r?\n/).length)
+  return {
+    code,
+    sourceMap: {
+      fileName,
+      userStartLine,
+      userEndLine: userStartLine + userLineCount - 1,
+    },
+  }
 }
 
 export { parseHarnessCasesFromStdout }

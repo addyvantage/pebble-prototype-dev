@@ -106,8 +106,8 @@ export function CodingQuestionCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge variant="neutral" className="text-[11px]">{question.difficulty}</Badge>
-        <Badge variant={runStateVariant(runState)} className="text-[11px]">{runState}</Badge>
+        <Badge variant="neutral" className="text-xs">{question.difficulty}</Badge>
+        <Badge variant={runStateVariant(runState)} className="text-xs">{runState}</Badge>
         <span className="rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.07] px-2.5 py-1 text-[12px] text-pebble-text-secondary">
           Timeout: {question.timeoutMs}ms • Tests: {question.tests.length}
         </span>

@@ -5,6 +5,7 @@ import { SettingsModal } from '../components/modals/SettingsModal'
 import { Card } from '../components/ui/Card'
 import { PageContainer } from '../components/ui/PageContainer'
 import { StreakPill } from '../components/ui/StreakPill'
+import { PatternText } from '../components/ui/pattern-text'
 import {
   clearAppLocalData,
   clearLocalUserData,
@@ -17,7 +18,7 @@ import { dateKeyForTimeZone, selectCurrentStreak, selectDailyCompletions } from 
 import { safeClearPrefix, subscribeStoragePressure } from '../lib/safeStorage'
 
 const iconButtonClass =
-  'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-pebble-border/35 bg-pebble-overlay/8 text-pebble-text-secondary transition hover:bg-pebble-overlay/14 hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
+  'inline-flex h-11 w-11 items-center justify-center rounded-xl border border-pebble-border/35 bg-pebble-overlay/8 text-pebble-text-secondary transition hover:bg-pebble-overlay/14 hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
 
 export function AppLayout() {
   const { t } = useI18n()
@@ -164,44 +165,49 @@ export function AppLayout() {
         </div>
       ) : (
         <div className={`relative flex min-h-screen flex-col ${isLandingRoute ? 'overflow-hidden' : ''}`}>
-          <header className="w-full pt-1.5 sm:pt-2">
+          <header className="w-full pt-1 sm:pt-1">
             <PageContainer>
-              <Card className={`p-2 sm:p-3 ${isLandingRoute ? 'mb-2' : 'mb-2 sm:mb-3'}`} interactive>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
+              <Card className={`p-1.5 sm:p-2 ${isLandingRoute ? 'mb-1.5' : 'mb-2 sm:mb-2'}`} interactive>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-4 sm:gap-5 justify-start">
                     <img
-                      src="/assets/pebble/master/brand/pebble_app_icon_primary_1024.png"
-                      alt="Pebble mark"
-                      className="h-8 w-8 rounded-xl sm:h-9 sm:w-9"
+                      src="/PebbleLogo.png"
+                      alt="Pebble"
+                      draggable={false}
+                      className="h-20 w-20 sm:h-[104px] sm:w-[104px] object-contain select-none"
                     />
-                    <div className="min-w-0">
-                      <p className="text-lg font-semibold tracking-[-0.015em] text-pebble-text-primary sm:text-xl">
-                        Pebble
-                      </p>
-                      <p className="mt-0.5 text-xs text-pebble-text-secondary sm:text-sm">
+                    <div className="min-w-0 translate-y-0.5 sm:translate-y-1">
+                      <div className="relative">
+                        <div className="pointer-events-none absolute -inset-3 rounded-full bg-pebble-accent/10 blur-xl" />
+                        <PatternText
+                          text="Pebble"
+                          className="relative select-none text-2xl font-bold sm:text-3xl"
+                        />
+                      </div>
+                      <p className="mt-0.5 text-xs text-pebble-text-secondary sm:text-[13px]">
                         {t('app.tagline')}
                       </p>
                     </div>
-
-                    <nav className="ml-2 hidden items-center gap-1 overflow-x-auto rounded-xl border border-pebble-border/28 bg-pebble-overlay/7 p-1 lg:flex">
-                      {navItems.map(({ to, label }) => (
-                        <NavLink
-                          key={to}
-                          to={to}
-                          className={({ isActive }) =>
-                            `whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium tracking-[0.01em] transition ${isActive
-                              ? 'border border-pebble-border/45 bg-pebble-overlay/16 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_8px_22px_rgba(2,8,23,0.18)]'
-                              : 'border border-transparent text-pebble-text-secondary hover:bg-pebble-overlay/12 hover:text-pebble-text-primary'
-                            }`
-                          }
-                        >
-                          {label}
-                        </NavLink>
-                      ))}
-                    </nav>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <nav className="hidden items-center justify-center gap-1 overflow-x-auto rounded-xl border border-pebble-border/28 bg-pebble-overlay/7 p-1 lg:flex w-fit mx-auto">
+                    {navItems.map(({ to, label }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        className={({ isActive }) =>
+                          `whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium tracking-[0.01em] transition ${isActive
+                            ? 'border border-pebble-border/45 bg-pebble-overlay/16 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_8px_22px_rgba(2,8,23,0.18)]'
+                            : 'border border-transparent text-pebble-text-secondary hover:bg-pebble-overlay/12 hover:text-pebble-text-primary'
+                          }`
+                        }
+                      >
+                        {label}
+                      </NavLink>
+                    ))}
+                  </nav>
+
+                  <div className="flex items-center gap-2 justify-end">
                     <StreakPill
                       streak={currentStreak.streak}
                       isTodayComplete={currentStreak.isTodayComplete}
@@ -212,7 +218,7 @@ export function AppLayout() {
                       className={iconButtonClass}
                       type="button"
                     >
-                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" className="h-6 w-6" aria-hidden="true">
                         <path d="M10 3.5a4.25 4.25 0 0 0-4.25 4.25v2.4L4.6 12.2a.9.9 0 0 0 .8 1.3h9.2a.9.9 0 0 0 .8-1.3l-1.15-2.05v-2.4A4.25 4.25 0 0 0 10 3.5Z" stroke="currentColor" strokeWidth="1.25" />
                         <path d="M8.1 14.8a2.1 2.1 0 0 0 3.8 0" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
                       </svg>
@@ -223,7 +229,7 @@ export function AppLayout() {
                       className={iconButtonClass}
                       type="button"
                     >
-                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" className="h-6 w-6" aria-hidden="true">
                         <path d="M8.35 3.75h3.3l.35 1.57c.36.12.7.27 1.02.46l1.49-.66 1.65 2.85-1.15 1.12c.03.23.04.46.04.7s-.01.47-.04.7l1.15 1.12-1.65 2.85-1.49-.66c-.32.19-.66.34-1.02.46l-.35 1.57h-3.3l-.35-1.57a4.95 4.95 0 0 1-1.02-.46l-1.49.66-1.65-2.85 1.15-1.12a5.86 5.86 0 0 1 0-1.4L3.85 7.97 5.5 5.12l1.49.66c.32-.19.66-.34 1.02-.46l.35-1.57Z" stroke="currentColor" strokeWidth="1.15" strokeLinejoin="round" />
                         <circle cx="10" cy="10" r="1.95" stroke="currentColor" strokeWidth="1.15" />
                       </svg>
@@ -241,7 +247,7 @@ export function AppLayout() {
                       className={iconButtonClass}
                       type="button"
                     >
-                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" className="h-6 w-6" aria-hidden="true">
                         <circle cx="10" cy="7" r="2.6" stroke="currentColor" strokeWidth="1.25" />
                         <path d="M4.9 15.25c.85-2.05 2.88-3.25 5.1-3.25s4.25 1.2 5.1 3.25" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
                       </svg>
@@ -314,6 +320,9 @@ export function AppLayout() {
           </div>
         </div>
       ) : null}
+
+      {/* Portal mount for modals that need to inherit layout theme context */}
+      <div id="pebble-portal" />
     </div>
   )
 }

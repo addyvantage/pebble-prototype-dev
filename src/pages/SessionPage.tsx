@@ -31,6 +31,8 @@ import {
   buildSingleCaseFunctionModeRunnable,
   getUnitFunctionMode,
   parseHarnessCasesFromStdout,
+  validateFunctionSignature,
+  type RunnerSourceMap,
 } from '../lib/functionMode'
 import { Check, ChevronLeft, ChevronRight, Home, Play, RotateCcw, Settings2 } from 'lucide-react'
 import {
@@ -39,6 +41,7 @@ import {
   saveUnitProgress,
   type UnitProgressMap,
 } from '../lib/progressStore'
+import { setRecentActivity } from '../lib/recentStore'
 import {
   appendSubmission,
   loadSubmissions,
@@ -55,6 +58,8 @@ import {
   getLocalizedProblem,
   getLocalizedStarter,
 } from '../i18n/problemContent'
+import { markProblemSolved } from '../lib/solvedStore'
+import { logSolveEvent } from '../lib/solveEvents'
 import {
   dateKeyForTimeZone,
   selectCurrentStreak,
@@ -80,7 +85,7 @@ import {
   type SqlPreviewTable,
 } from '../data/problemsBank'
 import { markProblemAttempt } from '../lib/solvedProblemsStore'
-import { requestRunApi } from '../lib/runApi'
+import { requestRunApi, type RunApiResponse } from '../lib/runApi'
 import { localizeTopicLabel } from '../i18n/topicCatalog'
 import type { LanguageCode } from '../i18n/languages'
 import {
@@ -91,39 +96,55 @@ import {
   type StruggleEngineState,
   type StruggleLevel,
 } from '../lib/struggleEngine'
-
-type RunResponse = {
-  ok: boolean
-  exitCode: number | null
-  stdout: string
-  stderr: string
-  timedOut: boolean
-  durationMs: number
-}
+import { buildRunFailureDiagnostic } from '../lib/runDiagnostics'
+import {
+  DEFAULT_LANGUAGE,
+  getMonacoLanguage,
+  isPebbleLanguageId,
+  SUPPORTED_LANGUAGES,
+  type PebbleLanguage,
+  type PebbleLanguageId,
+} from '../lib/languages'
+import { ProgramLangDropdown } from '../components/session/ProgramLangDropdown'
+import { StopwatchControl } from '../components/session/StopwatchControl'
+import { ConfirmDialog } from '../components/modals/ConfirmDialog'
+import {
+  getGlobalDefaultLanguage,
+  loadProblemCodeByLang,
+  saveProblemCodeByLang,
+  setGlobalDefaultLanguage,
+  type ProblemCodeByLang,
+  type ProblemCodeByLangEntry,
+} from '../lib/problemCodeByLangStore'
+import { getCurriculumBoilerplate, getProblemBoilerplate } from '../lib/boilerplate'
 
 type StruggleNudgeState = {
   level: StruggleLevel
   visible: boolean
 }
 
-type SessionEditorLanguage = PlacementLanguage | 'sql'
+type SessionEditorLanguage = PebbleLanguageId
 
-const SESSION_MONACO_LANGUAGE: Record<SessionEditorLanguage, string> = {
-  python: 'python',
-  javascript: 'javascript',
-  cpp: 'cpp',
-  java: 'java',
-  c: 'c',
-  sql: 'plaintext',
+function getRuntimeSourceFile(language: PlacementLanguage) {
+  if (language === 'python') {
+    return 'main.py'
+  }
+  if (language === 'javascript') {
+    return 'main.js'
+  }
+  if (language === 'java') {
+    return 'Main.java'
+  }
+  return 'main.cpp'
 }
 
-const SESSION_RUNTIME_LABEL: Record<SessionEditorLanguage, string> = {
-  python: 'Python 3',
-  javascript: 'JavaScript',
-  cpp: 'C++17',
-  java: 'Java 17',
-  c: 'C (GNU)',
-  sql: 'SQL (Simulated)',
+function buildDirectSourceMap(language: PlacementLanguage, code: string): RunnerSourceMap {
+  const lineCount = Math.max(1, code.split(/\r?\n/).length)
+  return {
+    fileName: getRuntimeSourceFile(language),
+    userStartLine: 1,
+    userEndLine: lineCount,
+  }
 }
 
 function normalizeOutput(value: string) {
@@ -168,7 +189,23 @@ function resolveCurriculumDifficulty(level: PlacementLevel, unitId: string): 'Ea
   return 'Hard'
 }
 
-function buildFailingSummary(resultsByIndex: Record<number, UnitTestResultItem>) {
+function buildFailingSummary(
+  resultsByIndex: Record<number, UnitTestResultItem>,
+  options: {
+    compileUserLine: (line: number) => string
+    compileWrapper: string
+    compileGeneric: string
+    runtime: string
+    timeout: string
+    toolchain: string
+    validation: string
+    internal: string
+    expectedLabel: string
+    stderrLabel: string
+    actualLabel: string
+    emptyLabel: string
+  },
+) {
   const failed = Object.entries(resultsByIndex)
     .map(([index, result]) => ({ index: Number(index), result }))
     .filter(({ result }) => !result.passed)
@@ -181,10 +218,31 @@ function buildFailingSummary(resultsByIndex: Record<number, UnitTestResultItem>)
 
   return failed
     .map(({ index, result }) => {
+      if (result.diagnostic) {
+        let summary = options.internal
+        if (result.diagnostic.status === 'compile_error') {
+          if (result.diagnostic.locationKind === 'user_code' && result.diagnostic.editorLine) {
+            summary = options.compileUserLine(result.diagnostic.editorLine)
+          } else if (result.diagnostic.locationKind === 'runner_wrapper') {
+            summary = options.compileWrapper
+          } else {
+            summary = options.compileGeneric
+          }
+        } else if (result.diagnostic.status === 'runtime_error') {
+          summary = options.runtime
+        } else if (result.diagnostic.status === 'timeout') {
+          summary = options.timeout
+        } else if (result.diagnostic.status === 'toolchain_unavailable') {
+          summary = options.toolchain
+        } else if (result.diagnostic.status === 'validation_error') {
+          summary = options.validation
+        }
+        return `#${index + 1} ${summary}`
+      }
       const actual = result.stderr.trim()
-        ? `stderr: ${result.stderr.slice(0, 120)}`
-        : `actual: ${result.actual || '(empty)'}`
-      return `#${index + 1} expected: ${result.expected}; ${actual}`
+        ? `${options.stderrLabel}: ${result.stderr.slice(0, 120)}`
+        : `${options.actualLabel}: ${result.actual || options.emptyLabel}`
+      return `#${index + 1} ${options.expectedLabel}: ${result.expected}; ${actual}`
     })
     .join(' | ')
 }
@@ -193,16 +251,43 @@ function isStartUnit(value: string | null): value is StartUnit {
   return value === '1' || value === 'mid' || value === 'advanced'
 }
 
-function buildProblemUnit(problem: ProblemDefinition, starterCode: string): CurriculumUnit {
+function buildProblemUnit(
+  problem: ProblemDefinition,
+  starterCode: string,
+  practiceLabel: string,
+): CurriculumUnit {
   return {
     id: problem.id,
     title: problem.title,
-    concept: problem.topics[0] ?? 'Practice',
+    concept: problem.topics[0] ?? practiceLabel,
     prompt: problem.statement.summary,
     starterCode,
     tests: problem.tests,
     hints: [],
   }
+}
+
+function toPlacementLanguage(language: SessionEditorLanguage): PlacementLanguage | null {
+  if (
+    language === 'python'
+    || language === 'javascript'
+    || language === 'cpp'
+    || language === 'java'
+    || language === 'c'
+  ) {
+    return language
+  }
+  return null
+}
+
+function resolveEntryLanguage(
+  value: string | null,
+  allowed: SessionEditorLanguage[],
+): SessionEditorLanguage | null {
+  if (!isPebbleLanguageId(value)) {
+    return null
+  }
+  return allowed.includes(value) ? value : null
 }
 
 function formatSqlPreviewTable(table: SqlPreviewTable) {
@@ -253,32 +338,14 @@ export function SessionPage() {
     () => (activeProblemBase ? getLocalizedProblem(activeProblemBase, uiLanguage) : null),
     [activeProblemBase, uiLanguage],
   )
-  const activeProblemLanguage = useMemo<ProblemLanguage>(() => {
-    if (!activeProblemBase) {
-      return 'python'
+  const languageOptions = useMemo<SessionEditorLanguage[]>(() => {
+    if (activeProblemBase) {
+      return activeProblemBase.languageSupport.filter((l) => isPebbleLanguageId(l)) as SessionEditorLanguage[]
     }
-
-    const queryLanguage = searchParams.get('lang')
-    if (isProblemLanguage(queryLanguage) && activeProblemBase.languageSupport.includes(queryLanguage)) {
-      return queryLanguage
-    }
-
-    return getDefaultProblemLanguage(activeProblemBase)
-  }, [activeProblemBase, searchParams, selectedLanguage])
-  const sessionLanguage: SessionEditorLanguage = activeProblem ? activeProblemLanguage : selectedLanguage
-  const isSqlMode = activeProblemBase?.kind === 'sql' && sessionLanguage === 'sql'
-  const activeProblemStarter = useMemo(() => {
-    if (!activeProblemBase) {
-      return ''
-    }
-    const starter =
-      getLocalizedStarter(activeProblemBase, uiLanguage)
-      ?? getProblemStarterCode(activeProblemBase, activeProblemLanguage)
-    if (activeProblemBase.kind !== 'sql') {
-      return starter
-    }
-    return applySqlStarterComment(starter, t('session.sqlStarterComment'))
-  }, [activeProblemBase, activeProblemLanguage, t, uiLanguage])
+    return ['python', 'javascript', 'cpp', 'java', 'c']
+  }, [activeProblemBase])
+  const [editorLanguage, setEditorLanguage] = useState<SessionEditorLanguage>(DEFAULT_LANGUAGE)
+  const [problemCodeByLang, setProblemCodeByLang] = useState<ProblemCodeByLang>(() => loadProblemCodeByLang())
 
   const [units, setUnits] = useState<CurriculumUnit[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -314,12 +381,18 @@ export function SessionPage() {
   const [activeAction, setActiveAction] = useState<'run' | 'submit' | null>(null)
   const [totalDurationMs, setTotalDurationMs] = useState(0)
   const [submitAccepted, setSubmitAccepted] = useState(false)
+  const [, setHighlightEditorLine] = useState<number | null>(null)
+  const [signatureHelper, setSignatureHelper] = useState<{
+    required: string
+    found: string
+  } | null>(null)
   const [recentChatSummary, setRecentChatSummary] = useState(
     storedState.curriculum?.recentChatSummary ?? '',
   )
   const [editorFontSize, setEditorFontSize] = useState(14)
   const [wordWrapEnabled, setWordWrapEnabled] = useState(true)
   const [liveCodeSnapshot, setLiveCodeSnapshot] = useState('')
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
   const [struggleNudge, setStruggleNudge] = useState<StruggleNudgeState>({
     level: 0,
     visible: false,
@@ -333,6 +406,7 @@ export function SessionPage() {
   const previousCodeRef = useRef('')
   const liveCodeRef = useRef('')
   const liveCodeDebounceRef = useRef<number | null>(null)
+  const codeByLangPersistDebounceRef = useRef<number | null>(null)
 
   const completedUnitIds = useMemo(
     () =>
@@ -344,11 +418,33 @@ export function SessionPage() {
 
   const languageMeta = useMemo(() => getLanguageMetadata(selectedLanguage), [selectedLanguage])
   const { theme, setTheme } = useTheme()
+  const activeProblemLanguage = useMemo<ProblemLanguage>(() => {
+    if (!activeProblemBase) {
+      return 'python'
+    }
+    if (isProblemLanguage(editorLanguage) && activeProblemBase.languageSupport.includes(editorLanguage)) {
+      return editorLanguage
+    }
+    return getDefaultProblemLanguage(activeProblemBase)
+  }, [activeProblemBase, editorLanguage])
+  const sessionLanguage: SessionEditorLanguage = activeProblem ? activeProblemLanguage : editorLanguage
   const runtimeLanguage: PlacementLanguage = sessionLanguage === 'c'
     ? 'cpp'
-    : isPlacementLanguage(sessionLanguage)
-      ? sessionLanguage
-      : selectedLanguage
+    : toPlacementLanguage(sessionLanguage) ?? selectedLanguage
+  const isSqlMode = activeProblemBase?.kind === 'sql' && sessionLanguage === 'sql'
+  const activeProblemStarter = useMemo(() => {
+    if (!activeProblemBase) {
+      return ''
+    }
+    const starter =
+      getLocalizedStarter(activeProblemBase, uiLanguage)
+      ?? getProblemBoilerplate(activeProblemBase, activeProblemLanguage)
+      ?? getProblemStarterCode(activeProblemBase, activeProblemLanguage)
+    if (activeProblemBase.kind !== 'sql') {
+      return starter
+    }
+    return applySqlStarterComment(starter, t('session.sqlStarterComment'))
+  }, [activeProblemBase, activeProblemLanguage, t, uiLanguage])
   const trackId = `${selectedLanguage}:${selectedLevel}`
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', [])
   const dailyCompletions = useMemo(
@@ -363,6 +459,36 @@ export function SessionPage() {
     () => selectCurrentStreak(dailyCompletions, todayKey),
     [dailyCompletions, todayKey],
   )
+  const currentSessionKey = activeProblemBase?.id ?? `unit:${units[currentUnitIndex]?.id ?? ''}`
+
+  useEffect(() => {
+    const fromQuery = resolveEntryLanguage(searchParams.get('lang'), languageOptions)
+    const fromSessionEntry = currentSessionKey
+      ? resolveEntryLanguage(problemCodeByLang[currentSessionKey]?.selectedLanguage ?? null, languageOptions)
+      : null
+    const fromGlobal = resolveEntryLanguage(getGlobalDefaultLanguage(), languageOptions)
+    const fromPlacement = resolveEntryLanguage(selectedLanguage, languageOptions)
+    const fromProblemDefault = activeProblemBase
+      ? resolveEntryLanguage(getDefaultProblemLanguage(activeProblemBase), languageOptions)
+      : null
+    const nextLanguage =
+      fromQuery
+      ?? fromSessionEntry
+      ?? fromGlobal
+      ?? fromProblemDefault
+      ?? fromPlacement
+      ?? languageOptions[0]
+      ?? DEFAULT_LANGUAGE
+
+    setEditorLanguage((prev) => (prev === nextLanguage ? prev : nextLanguage))
+  }, [
+    activeProblemBase,
+    currentSessionKey,
+    languageOptions,
+    problemCodeByLang,
+    searchParams,
+    selectedLanguage,
+  ])
 
   useEffect(() => {
     saveUnitProgress(unitProgress)
@@ -397,6 +523,9 @@ export function SessionPage() {
       if (liveCodeDebounceRef.current !== null) {
         window.clearTimeout(liveCodeDebounceRef.current)
       }
+      if (codeByLangPersistDebounceRef.current !== null) {
+        window.clearTimeout(codeByLangPersistDebounceRef.current)
+      }
     }
   }, [])
 
@@ -408,7 +537,7 @@ export function SessionPage() {
       setLoadError('')
       try {
         if (activeProblem) {
-          const problemUnit = buildProblemUnit(activeProblem, activeProblemStarter)
+          const problemUnit = buildProblemUnit(activeProblem, activeProblemStarter, t('tags.practice'))
           if (!mounted) {
             return
           }
@@ -424,6 +553,8 @@ export function SessionPage() {
           setRunMessage(t('run.evaluateAll'))
           setTotalDurationMs(0)
           setSubmitAccepted(false)
+          setHighlightEditorLine(null)
+          setSignatureHelper(null)
           return
         }
 
@@ -476,11 +607,13 @@ export function SessionPage() {
         setRunMessage(t('run.evaluateAll'))
         setTotalDurationMs(0)
         setSubmitAccepted(false)
+        setHighlightEditorLine(null)
+        setSignatureHelper(null)
       } catch (error) {
         if (!mounted) {
           return
         }
-        const message = error instanceof Error ? error.message : 'Failed to load curriculum.'
+        const message = error instanceof Error ? error.message : t('error.loadCurriculumFailed')
         setLoadError(message)
       } finally {
         if (mounted) {
@@ -520,8 +653,9 @@ export function SessionPage() {
     if (!currentUnit || activeProblemBase) {
       return null
     }
-    return getUnitFunctionMode(selectedLanguage, currentUnit.id)
-  }, [activeProblemBase, currentUnit, selectedLanguage])
+    const fnConfigLang = toPlacementLanguage(sessionLanguage) ?? selectedLanguage
+    return getUnitFunctionMode(fnConfigLang, currentUnit.id)
+  }, [activeProblemBase, currentUnit, selectedLanguage, sessionLanguage])
 
   const syncStruggle = useCallback((nextState: StruggleEngineState) => {
     struggleStateRef.current = nextState
@@ -611,6 +745,8 @@ export function SessionPage() {
       return
     }
 
+    setRecentActivity(activeProblem?.id ?? currentUnit.id)
+
     const nextCode = draftByUnitId[currentUnit.id] ?? currentDefaultCode
     previousCodeRef.current = nextCode
     queueLiveCodeSnapshot(nextCode, true)
@@ -637,8 +773,22 @@ export function SessionPage() {
   }, [ingestStruggleEvent])
 
   const failingSummary = useMemo(
-    () => buildFailingSummary(testResultsByIndex),
-    [testResultsByIndex],
+    () =>
+      buildFailingSummary(testResultsByIndex, {
+        compileUserLine: (line) => t('coach.compileErrorUserLine', { line }),
+        compileWrapper: t('coach.compileErrorWrapper'),
+        compileGeneric: t('coach.compileErrorGeneric'),
+        runtime: t('coach.runtimeErrorBody'),
+        timeout: t('coach.timeoutBody'),
+        toolchain: t('coach.toolchainUnavailableBody'),
+        validation: t('coach.validationBody'),
+        internal: t('coach.internalBody'),
+        expectedLabel: t('tests.expected'),
+        stderrLabel: t('tests.stderr'),
+        actualLabel: t('tests.actual'),
+        emptyLabel: t('common.empty'),
+      }),
+    [t, testResultsByIndex],
   )
 
   useEffect(() => {
@@ -682,7 +832,36 @@ export function SessionPage() {
       [currentUnit.id]: value,
     }))
     setSubmitAccepted(false)
-  }, [currentUnit, ingestStruggleEvent, queueLiveCodeSnapshot])
+    setHighlightEditorLine(null)
+    setSignatureHelper(null)
+
+    // Debounced persistence to problemCodeByLang (cross-reload)
+    if (codeByLangPersistDebounceRef.current !== null) {
+      window.clearTimeout(codeByLangPersistDebounceRef.current)
+    }
+    const keySnap = currentSessionKey
+    const langSnap = sessionLanguage
+    codeByLangPersistDebounceRef.current = window.setTimeout(() => {
+      codeByLangPersistDebounceRef.current = null
+      setProblemCodeByLang((prev) => {
+        const entry = prev[keySnap] ?? {
+          selectedLanguage: langSnap,
+          codeByLanguage: {},
+          updatedAt: Date.now(),
+        }
+        const next: ProblemCodeByLang = {
+          ...prev,
+          [keySnap]: {
+            ...entry,
+            codeByLanguage: { ...entry.codeByLanguage, [langSnap]: value },
+            updatedAt: Date.now(),
+          },
+        }
+        saveProblemCodeByLang(next)
+        return next
+      })
+    }, 400)
+  }, [currentSessionKey, currentUnit, ingestStruggleEvent, queueLiveCodeSnapshot, sessionLanguage])
 
   async function executeTest(index: number): Promise<UnitTestResultItem> {
     if (!currentUnit) {
@@ -690,7 +869,7 @@ export function SessionPage() {
         input: '',
         expected: '',
         actual: '',
-        stderr: 'No active unit.',
+        stderr: t('error.noActiveUnit'),
         passed: false,
         timedOut: false,
         durationMs: 0,
@@ -700,11 +879,15 @@ export function SessionPage() {
 
     const test = currentUnit.tests[index]
 
-    const result: RunResponse = await requestRunApi({
+    const result: RunApiResponse = await requestRunApi({
       language: runtimeLanguage,
       code: currentCode,
       stdin: test.input,
       timeoutMs: 4000,
+    })
+    const diagnostic = buildRunFailureDiagnostic({
+      result,
+      sourceMap: buildDirectSourceMap(runtimeLanguage, currentCode),
     })
     const expectedNormalized = normalizeOutput(test.expected)
     const actualNormalized = normalizeOutput(result.stdout)
@@ -715,6 +898,7 @@ export function SessionPage() {
       expected: test.expected,
       actual: result.stdout,
       stderr: result.stderr,
+      diagnostic,
       passed,
       timedOut: result.timedOut,
       durationMs: result.durationMs,
@@ -738,6 +922,8 @@ export function SessionPage() {
     )
     setTestResultsByIndex({})
     setTotalDurationMs(0)
+    setHighlightEditorLine(null)
+    setSignatureHelper(null)
     if (mode === 'run') {
       setSubmitAccepted(false)
     }
@@ -745,6 +931,7 @@ export function SessionPage() {
     try {
       let nextResults: Record<number, UnitTestResultItem> = {}
       let durationTotal = 0
+      const fnLang = toPlacementLanguage(sessionLanguage) ?? selectedLanguage
 
       if (isSqlMode && activeProblem?.kind === 'sql' && activeProblem.sqlMeta) {
         const checkerMessages: Record<string, string> = {
@@ -781,6 +968,79 @@ export function SessionPage() {
         )
         setTestResultsByIndex(nextResults)
       } else if (currentFunctionConfig?.evalMode === 'function') {
+        const signatureCheck = validateFunctionSignature({
+          language: fnLang,
+          userCode: currentCode,
+          methodName: currentFunctionConfig.methodName,
+          signatureLabel: currentFunctionConfig.signatureLabel,
+        })
+
+        if (!signatureCheck.ok) {
+          const signatureMessage = t('coach.signatureMismatchBody')
+          const signatureDetails = `Required: ${signatureCheck.requiredSignature}\nFound: ${signatureCheck.detectedSignature}`
+          nextResults = Object.fromEntries(
+            currentUnit.tests.map((test, index) => [index, {
+              input: test.input,
+              expected: test.expected,
+              actual: '',
+              stderr: `${signatureMessage} ${signatureDetails}`,
+              diagnostic: {
+                status: 'validation_error',
+                details: signatureDetails,
+                locationKind: 'unknown',
+                compilerLine: null,
+                editorLine: null,
+              },
+              requiredSignature: signatureCheck.requiredSignature,
+              detectedSignature: signatureCheck.detectedSignature,
+              passed: false,
+              timedOut: false,
+              durationMs: 0,
+              exitCode: null,
+            }]),
+          )
+          setTestResultsByIndex(nextResults)
+          setRunStatus('error')
+          setRunMessage(`${signatureMessage} ${t('coach.requiredSignature')}: ${signatureCheck.requiredSignature}`)
+          setSignatureHelper({
+            required: signatureCheck.requiredSignature,
+            found: signatureCheck.detectedSignature,
+          })
+          setSubmitAccepted(false)
+          const errorType = classifyErrorType({
+            passed: false,
+            stderr: signatureMessage,
+            exitCode: null,
+          })
+          if (mode === 'run') {
+            logRunEvent({
+              unitId: currentUnit.id,
+              trackId,
+              language: selectedLanguage,
+              passed: false,
+              passCount: 0,
+              total: currentUnit.tests.length,
+              runtimeMs: 0,
+              exitCode: null,
+              errorType,
+            })
+          } else {
+            logSubmitEvent({
+              unitId: currentUnit.id,
+              trackId,
+              language: selectedLanguage,
+              accepted: false,
+              passCount: 0,
+              total: currentUnit.tests.length,
+              runtimeMs: 0,
+              exitCode: null,
+              errorType,
+            })
+          }
+          ingestRunOutcome(mode, false, errorType ?? null)
+          return
+        }
+
         const parsedCases = currentUnit.tests.map((test) => currentFunctionConfig.parseTestCase(test))
         if (parsedCases.some((test) => test === null)) {
           nextResults = Object.fromEntries(
@@ -789,6 +1049,13 @@ export function SessionPage() {
               expected: test.expected,
               actual: '',
               stderr: t('run.parseFunctionCasesFailed'),
+              diagnostic: {
+                status: 'validation_error',
+                details: t('run.parseFunctionCasesFailed'),
+                locationKind: 'unknown',
+                compilerLine: null,
+                editorLine: null,
+              },
               passed: false,
               timedOut: false,
               durationMs: 0,
@@ -837,21 +1104,28 @@ export function SessionPage() {
           (test): test is NonNullable<typeof test> => test !== null,
         )
 
-        if (selectedLanguage === 'python') {
-          const runnableCode = buildFunctionModeRunnable({
-            language: selectedLanguage,
+        if (fnLang === 'python') {
+          const runnable = buildFunctionModeRunnable({
+            language: fnLang,
             userCode: currentCode,
             methodName: currentFunctionConfig.methodName,
             cases: functionCases,
           })
 
-          if (!runnableCode) {
+          if (!runnable) {
             nextResults = Object.fromEntries(
               currentUnit.tests.map((test, index) => [index, {
                 input: test.input,
                 expected: test.expected,
                 actual: '',
-                stderr: `Function mode is not supported for ${selectedLanguage}.`,
+                stderr: t('run.functionModeUnavailable', { language: selectedLanguage }),
+                diagnostic: {
+                  status: 'internal_error',
+                  details: t('run.functionModeUnavailable', { language: selectedLanguage }),
+                  locationKind: 'unknown',
+                  compilerLine: null,
+                  editorLine: null,
+                },
                 passed: false,
                 timedOut: false,
                 durationMs: 0,
@@ -896,11 +1170,15 @@ export function SessionPage() {
             return
           }
 
-          const runResult: RunResponse = await requestRunApi({
+          const runResult: RunApiResponse = await requestRunApi({
             language: runtimeLanguage,
-            code: runnableCode,
+            code: runnable.code,
             stdin: '',
             timeoutMs: 4000,
+          })
+          const runDiagnostic = buildRunFailureDiagnostic({
+            result: runResult,
+            sourceMap: runnable.sourceMap,
           })
           durationTotal = runResult.durationMs
           const parsedHarnessCases = parseHarnessCasesFromStdout(runResult.stdout)
@@ -917,7 +1195,8 @@ export function SessionPage() {
                     input: test.input,
                     expected: test.expected,
                     actual: '',
-                    stderr: 'Missing case result from harness output.',
+                    stderr: t('run.missingHarnessCaseResult'),
+                    diagnostic: runDiagnostic,
                     passed: false,
                     timedOut: false,
                     durationMs: perCaseDuration,
@@ -930,6 +1209,7 @@ export function SessionPage() {
                   expected: harnessCase.expected || test.expected,
                   actual: harnessCase.actual,
                   stderr: harnessCase.stderr,
+                  diagnostic: null,
                   passed: harnessCase.passed,
                   timedOut: runResult.timedOut,
                   durationMs: perCaseDuration,
@@ -943,7 +1223,8 @@ export function SessionPage() {
                 input: test.input,
                 expected: test.expected,
                 actual: runResult.stdout,
-                stderr: runResult.stderr || 'Unable to parse harness output.',
+                stderr: runResult.stderr || t('run.parseHarnessOutputFailed'),
+                diagnostic: runDiagnostic,
                 passed: false,
                 timedOut: runResult.timedOut,
                 durationMs: perCaseDuration,
@@ -956,21 +1237,28 @@ export function SessionPage() {
             const currentCase = functionCases[index]
             const test = currentUnit.tests[index]
 
-            const runnableCode = currentCase
+            const runnable = currentCase
               ? buildSingleCaseFunctionModeRunnable({
-                language: selectedLanguage,
+                language: fnLang,
                 userCode: currentCode,
                 methodName: currentFunctionConfig.methodName,
                 args: currentCase.args,
               })
               : null
 
-            if (!runnableCode) {
+            if (!runnable) {
               const failedResult: UnitTestResultItem = {
                 input: test.input,
                 expected: test.expected,
                 actual: '',
-                stderr: `Function wrapper unavailable for ${selectedLanguage}.`,
+                stderr: t('run.functionWrapperUnavailable', { language: selectedLanguage }),
+                diagnostic: {
+                  status: 'internal_error',
+                  details: t('run.functionWrapperUnavailable', { language: selectedLanguage }),
+                  locationKind: 'unknown',
+                  compilerLine: null,
+                  editorLine: null,
+                },
                 passed: false,
                 timedOut: false,
                 durationMs: 0,
@@ -980,11 +1268,15 @@ export function SessionPage() {
               continue
             }
 
-            const runResult: RunResponse = await requestRunApi({
+            const runResult: RunApiResponse = await requestRunApi({
               language: runtimeLanguage,
-              code: runnableCode,
+              code: runnable.code,
               stdin: '',
               timeoutMs: 4000,
+            })
+            const runDiagnostic = buildRunFailureDiagnostic({
+              result: runResult,
+              sourceMap: runnable.sourceMap,
             })
             const expectedNormalized = normalizeOutput(test.expected)
             const actualNormalized = normalizeOutput(runResult.stdout)
@@ -994,6 +1286,7 @@ export function SessionPage() {
               expected: test.expected,
               actual: runResult.stdout,
               stderr: runResult.stderr,
+              diagnostic: runDiagnostic,
               passed,
               timedOut: runResult.timedOut,
               durationMs: runResult.durationMs,
@@ -1083,14 +1376,19 @@ export function SessionPage() {
         )
         if (!activeProblem) {
           setUnitProgress((prev) => markUnitCompleted(prev, currentUnit.id, durationTotal))
-        }
-        if (activeProblem) {
+        } else {
           markProblemAttempt(activeProblem.id, mode === 'submit')
+          if (mode === 'submit') {
+            markProblemSolved(activeProblem.id)
+            logSolveEvent({ problemId: activeProblem.id, verdict: 'accepted' })
+          }
         }
 
         if (mode === 'submit') {
           setSubmitAccepted(true)
         }
+        setSignatureHelper(null)
+        setHighlightEditorLine(null)
       } else {
         const firstFailedEntry = Object.entries(nextResults)
           .map(([index, result]) => ({ index: Number(index), result }))
@@ -1098,22 +1396,58 @@ export function SessionPage() {
 
         const runnerError = firstFailedEntry?.result.stderr.trim()
         const runnerErrorSnippet = runnerError
-          ? runnerError.replace(/\s+/g, ' ').slice(0, 140)
+          ? runnerError
+            .replace(/\s+/g, ' ')
+            .replace(/\b(?:[A-Za-z0-9_./-]+\.(?:cpp|cc|cxx|c|py|js|java)):\d+(?::\d+)?/g, '[internal-location]')
+            .slice(0, 140)
           : ''
         const failPreview = firstFailedEntry
-          ? runnerErrorSnippet
-            ? t('run.runnerErrorPreview', {
-              index: firstFailedEntry.index + 1,
-              message: runnerErrorSnippet,
-            })
-            : t('run.failedPreview', {
-              index: firstFailedEntry.index + 1,
-              expected: firstFailedEntry.result.expected,
-              actual: normalizeOutput(firstFailedEntry.result.actual) || t('common.empty'),
-            })
+          ? firstFailedEntry.result.diagnostic
+            ? `#${firstFailedEntry.index + 1}: ${firstFailedEntry.result.diagnostic.status === 'compile_error'
+              ? firstFailedEntry.result.diagnostic.locationKind === 'user_code' && firstFailedEntry.result.diagnostic.editorLine
+                ? t('coach.compileErrorUserLine', { line: firstFailedEntry.result.diagnostic.editorLine })
+                : firstFailedEntry.result.diagnostic.locationKind === 'runner_wrapper'
+                  ? t('coach.compileErrorWrapper')
+                  : t('coach.compileErrorGeneric')
+              : firstFailedEntry.result.diagnostic.status === 'runtime_error'
+                ? t('coach.runtimeErrorBody')
+                : firstFailedEntry.result.diagnostic.status === 'timeout'
+                  ? t('coach.timeoutBody')
+                  : firstFailedEntry.result.diagnostic.status === 'toolchain_unavailable'
+                    ? t('coach.toolchainUnavailableBody')
+                    : firstFailedEntry.result.diagnostic.status === 'validation_error'
+                      ? t('coach.validationBody')
+                      : t('coach.internalBody')
+            }`
+            : runnerErrorSnippet
+              ? t('run.runnerErrorPreview', {
+                index: firstFailedEntry.index + 1,
+                message: runnerErrorSnippet,
+              })
+              : t('run.failedPreview', {
+                index: firstFailedEntry.index + 1,
+                expected: firstFailedEntry.result.expected,
+                actual: normalizeOutput(firstFailedEntry.result.actual) || t('common.empty'),
+              })
           : t('run.someTestsFailed')
 
+        const signatureFromFailure = firstFailedEntry?.result.requiredSignature
+          ? {
+            required: firstFailedEntry.result.requiredSignature,
+            found: firstFailedEntry.result.detectedSignature ?? t('coach.unknown'),
+          }
+          : firstFailedEntry?.result.diagnostic?.status === 'compile_error'
+            && firstFailedEntry.result.diagnostic.locationKind === 'runner_wrapper'
+            && currentFunctionConfig
+            ? {
+              required: currentFunctionConfig.signatureLabel,
+              found: t('coach.runnerWrapperSignatureLikely'),
+            }
+            : null
+
         setRunStatus('error')
+        setHighlightEditorLine(firstFailedEntry?.result.diagnostic?.editorLine ?? null)
+        setSignatureHelper(signatureFromFailure)
         setRunMessage(
           t('run.failedSummary', {
             passed: passedCount,
@@ -1159,6 +1493,7 @@ export function SessionPage() {
     isSqlMode,
     runtimeLanguage,
     selectedLanguage,
+    sessionLanguage,
     t,
     trackId,
   ])
@@ -1171,6 +1506,8 @@ export function SessionPage() {
     setTestResultsByIndex({})
     setTotalDurationMs(0)
     setSubmitAccepted(false)
+    setHighlightEditorLine(null)
+    setSignatureHelper(null)
   }
 
   function moveToNextUnit() {
@@ -1186,14 +1523,22 @@ export function SessionPage() {
   }
 
   function handleResetCode() {
-    if (!currentUnit) {
-      return
-    }
+    if (!currentUnit) return
 
-    const confirmed = window.confirm(t('confirm.resetEditor'))
-    if (!confirmed) {
-      return
+    // Check "don't ask again" preference
+    const skipConfirm = (() => {
+      try { return localStorage.getItem('pebble.confirmReset.v1') === 'false' } catch { return false }
+    })()
+
+    if (skipConfirm) {
+      executeReset()
+    } else {
+      setIsResetConfirmOpen(true)
     }
+  }
+
+  function executeReset() {
+    if (!currentUnit) return
 
     const resetCode = activeProblem
       ? activeProblemStarter
@@ -1210,7 +1555,71 @@ export function SessionPage() {
     setTestResultsByIndex({})
     setTotalDurationMs(0)
     setSubmitAccepted(false)
+    setHighlightEditorLine(null)
+    setSignatureHelper(null)
   }
+
+  const switchLanguage = useCallback((newLang: SessionEditorLanguage) => {
+    if (!currentUnit) {
+      return
+    }
+
+    // Save current code for the outgoing language
+    const liveCode = draftByUnitId[currentUnit.id] ?? currentDefaultCode
+    const prevEntry = problemCodeByLang[currentSessionKey] ?? {
+      selectedLanguage: sessionLanguage,
+      codeByLanguage: {},
+      updatedAt: Date.now(),
+    }
+    const updatedEntry: ProblemCodeByLangEntry = {
+      ...prevEntry,
+      selectedLanguage: newLang,
+      codeByLanguage: { ...prevEntry.codeByLanguage, [sessionLanguage]: liveCode },
+      updatedAt: Date.now(),
+    }
+
+    // Determine code for new language: stored → boilerplate fallback
+    const savedCode = updatedEntry.codeByLanguage[newLang]
+    let newCode: string
+    if (savedCode !== undefined) {
+      newCode = savedCode
+    } else if (activeProblemBase) {
+      newCode = getProblemBoilerplate(activeProblemBase, newLang) ?? ''
+    } else {
+      newCode = getCurriculumBoilerplate(currentUnit, newLang) ?? currentUnit.starterCode
+    }
+
+    // Apply
+    setDraftByUnitId((prev) => ({ ...prev, [currentUnit.id]: newCode }))
+    setEditorLanguage(newLang)
+
+    const nextStore: ProblemCodeByLang = { ...problemCodeByLang, [currentSessionKey]: updatedEntry }
+    setProblemCodeByLang(nextStore)
+    saveProblemCodeByLang(nextStore)
+    setGlobalDefaultLanguage(newLang)
+
+    // Reset run state
+    setRunStatus('idle')
+    setRunMessage(t('run.evaluateAll'))
+    setTestResultsByIndex({})
+    setTotalDurationMs(0)
+    setSubmitAccepted(false)
+    setHighlightEditorLine(null)
+    setSignatureHelper(null)
+
+    previousCodeRef.current = newCode
+    queueLiveCodeSnapshot(newCode, true)
+  }, [
+    activeProblemBase,
+    currentDefaultCode,
+    currentSessionKey,
+    currentUnit,
+    draftByUnitId,
+    problemCodeByLang,
+    queueLiveCodeSnapshot,
+    sessionLanguage,
+    t,
+  ])
 
   const handleAssistAction = useCallback((action: StruggleAssistAction) => {
     if (!currentUnit) {
@@ -1313,7 +1722,7 @@ export function SessionPage() {
       `${getProblemTimeEstimateMinutes(activeProblem)} ${minuteSuffix}`,
     ]
     : currentUnit.id === 'hello-world'
-      ? [languageMeta.label, 'stdout basics', t('tags.practice')]
+      ? [languageMeta.label, t('tags.stdoutBasics'), t('tags.practice')]
       : [languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]
 
   return (
@@ -1355,8 +1764,8 @@ export function SessionPage() {
             title={t('topBar.nextUnit')}
             aria-label={t('a11y.nextUnit')}
             className={`inline-flex h-8 w-8 items-center justify-center rounded-full border bg-pebble-overlay/[0.08] text-pebble-text-primary transition hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16] disabled:cursor-not-allowed disabled:opacity-45 ${allTestsPassed && nextEnabled
-                ? 'border-pebble-success/45 shadow-[0_0_0_1px_rgba(74,222,128,0.28),0_0_16px_rgba(74,222,128,0.22)]'
-                : 'border-pebble-border/30'
+              ? 'border-pebble-success/45 shadow-[0_0_0_1px_rgba(74,222,128,0.28),0_0_16px_rgba(74,222,128,0.22)]'
+              : 'border-pebble-border/30'
               }`}
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -1434,14 +1843,15 @@ export function SessionPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary">
-                    {SESSION_RUNTIME_LABEL[sessionLanguage]}
-                  </span>
-                  {currentFunctionConfig?.evalMode === 'function' && (
-                    <span className="rounded-full border border-pebble-accent/35 bg-pebble-accent/12 px-2.5 py-1 text-xs text-pebble-accent">
-                      {t('editor.functionMode')}
-                    </span>
-                  )}
+                  <ProgramLangDropdown
+                    value={sessionLanguage}
+                    options={languageOptions
+                      .map((id) => SUPPORTED_LANGUAGES.find((l) => l.id === id))
+                      .filter((l): l is PebbleLanguage => l !== undefined)}
+                    onChange={switchLanguage}
+                  />
+
+                  <StopwatchControl sessionKey={currentUnit.id} />
                   <Button
                     type="button"
                     variant="secondary"
@@ -1493,7 +1903,7 @@ export function SessionPage() {
               <div dir="ltr" className="ltrSafe min-h-0 flex-1">
                 <Editor
                   height="100%"
-                  language={SESSION_MONACO_LANGUAGE[sessionLanguage]}
+                  language={getMonacoLanguage(sessionLanguage)}
                   theme={theme === 'light' ? 'vs' : 'vs-dark'}
                   value={currentCode}
                   onChange={(nextValue) => onCodeChange(nextValue ?? '')}
@@ -1519,16 +1929,12 @@ export function SessionPage() {
                 />
               </div>
 
-              {currentFunctionConfig?.evalMode === 'function' && (
-                <p className="border-t border-pebble-border/25 px-3 py-1.5 text-xs text-pebble-text-secondary">
-                  {t('editor.functionModeHint')}
-                </p>
-              )}
+
 
               <div className="flex items-center justify-between gap-2 border-t border-pebble-border/25 px-3 py-2 text-xs text-pebble-text-secondary">
                 <p className="truncate">{runMessage}</p>
                 {currentIsCompleted ? (
-                  <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-2 py-0.5 text-[11px] text-pebble-success">
+                  <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-2 py-0.5 text-xs text-pebble-success">
                     {t('editor.completed')}
                   </span>
                 ) : null}
@@ -1557,6 +1963,7 @@ export function SessionPage() {
             runStatus={runStatus}
             runMessage={runMessage}
             failingSummary={failingSummary}
+            signatureHelper={signatureHelper}
             initialSummary={recentChatSummary}
             onSummaryChange={setRecentChatSummary}
             struggleLevel={struggleNudge.level}
@@ -1615,8 +2022,8 @@ export function SessionPage() {
                         aria-pressed={selected}
                         onClick={() => setTheme(mode)}
                         className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/50 ${selected
-                            ? 'border border-pebble-accent/50 bg-pebble-accent/18 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                            : 'border border-transparent text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]'
+                          ? 'border border-pebble-accent/50 bg-pebble-accent/18 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
+                          : 'border border-transparent text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]'
                           }`}
                       >
                         {selected ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
@@ -1635,8 +2042,8 @@ export function SessionPage() {
                     setPagePrefs((prev) => ({ ...prev, reduceMotion: !prev.reduceMotion }))
                   }
                   className={`rounded-lg border px-2.5 py-1 text-xs transition ${pagePrefs.reduceMotion
-                      ? 'border-pebble-accent/45 bg-pebble-accent/18 text-pebble-text-primary'
-                      : 'border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
+                    ? 'border-pebble-accent/45 bg-pebble-accent/18 text-pebble-text-primary'
+                    : 'border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
                     }`}
                 >
                   {pagePrefs.reduceMotion ? t('actions.on') : t('actions.off')}
@@ -1651,8 +2058,8 @@ export function SessionPage() {
                     setPagePrefs((prev) => ({ ...prev, compactDensity: !prev.compactDensity }))
                   }
                   className={`rounded-lg border px-2.5 py-1 text-xs transition ${pagePrefs.compactDensity
-                      ? 'border-pebble-accent/45 bg-pebble-accent/18 text-pebble-text-primary'
-                      : 'border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
+                    ? 'border-pebble-accent/45 bg-pebble-accent/18 text-pebble-text-primary'
+                    : 'border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
                     }`}
                 >
                   {pagePrefs.compactDensity ? t('settings.densityCompact') : t('settings.densityComfortable')}
@@ -1679,7 +2086,7 @@ export function SessionPage() {
 
             <div className="mt-4 space-y-3 text-sm text-pebble-text-secondary">
               <label className="flex items-center justify-between gap-3">
-                <span>{t('settings.fontSize')}</span>
+                <span>{t('settings.editorFontSize')}</span>
                 <input
                   type="range"
                   min={14}
@@ -1705,6 +2112,16 @@ export function SessionPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={isResetConfirmOpen}
+        title="Reset editor?"
+        description="This will replace your current code with the starter template. You can't undo this."
+        confirmText="Reset"
+        cancelText="Cancel"
+        dontAskKey="pebble.confirmReset.v1"
+        onConfirm={() => { setIsResetConfirmOpen(false); executeReset() }}
+        onClose={() => setIsResetConfirmOpen(false)}
+      />
     </section>
   )
 }

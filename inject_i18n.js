@@ -1,0 +1,288 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const targetFile = path.join(__dirname, 'src', 'i18n', 'generatedStrings.ts');
+
+const translations = {
+    hi: {
+        'problems.title': 'समस्याएँ ब्राउज़र',
+        'problems.subtitle': 'स्मार्ट फ़िल्टरिंग, विषय बुद्धिमत्ता और लाइव ट्रैकिंग के साथ चुनौतियां।',
+        'problems.topicsTitle': 'विषय सूची',
+        'problems.topicsSubtitle': 'अभ्यास को संकीर्ण करने के लिए एक या अधिक विषय चुनें।',
+        'problems.searchPlaceholder': 'शीर्षक, विषय या कौशल से खोजें...',
+        'problems.solvedCounter': '{solved}/{total} हल',
+        'problems.random': 'यादृच्छिक',
+        'problems.empty': 'आपके वर्तमान फ़िल्टर से कोई समस्या मेल नहीं खाती।',
+        'problems.openProblem': 'समस्या खोलें',
+        'problems.preview': 'पूर्वावलोकन',
+        'problems.start': 'शुरू करें',
+        'problems.timeLabel': 'संक्षिप्त विवरण',
+        'problems.skillsLabel': 'मुख्य कौशल',
+        'problems.languagePython': 'Python',
+        'problems.languageJavaScript': 'JavaScript',
+        'problems.languageJava': 'Java',
+        'problems.languageCpp': 'C++',
+        'problems.languageSql': 'SQL',
+        'problems.table.index': '#',
+        'problems.table.title': 'शीर्षक',
+        'problems.table.difficulty': 'कठिनाई',
+        'problems.table.acceptance': 'स्वीकृति दर',
+        'problems.table.action': 'कार्रवाई',
+        'problems.sort.label': 'क्रमबद्ध करें',
+        'problems.sort.newest': 'नवीनतम',
+        'problems.sort.difficulty': 'कठिनाई',
+        'problems.sort.acceptance': 'स्वीकृति',
+        'problems.sort.topic': 'विषय',
+        'problems.sort.lastSolved': 'अंतिम हल',
+        'problems.filters.button': 'फ़िल्टर',
+        'problems.filters.status': 'स्थिति',
+        'problems.filters.difficulty': 'कठिनाई',
+        'problems.filters.topics': 'विषय',
+        'problems.filters.language': 'भाषा',
+        'problems.filters.matchMode': 'मिलान मोड',
+        'problems.filters.all': 'सभी',
+        'problems.filters.solved': 'हल',
+        'problems.filters.unsolved': 'अनसुलझे',
+        'problems.filters.anyDifficulty': 'कोई भी',
+        'problems.filters.anyLanguage': 'कोई भी',
+        'problems.filters.apply': 'लागू करें',
+        'problems.filters.reset': 'रीसेट',
+        'problems.filters.matchAny': 'कोई भी',
+        'problems.filters.matchAll': 'सभी',
+    },
+    bn: {
+        'problems.title': 'সমস্যা ব্রাউজার',
+        'problems.subtitle': 'স্মার্ট ফিল্টারিং এবং লাইভ ট্র্যাকিং সহ চ্যালেঞ্জ।',
+        'problems.topicsTitle': 'টপিক ক্যাটালগ',
+        'problems.topicsSubtitle': 'অনুশীলনকে নির্দিষ্ট করতে একটি বা একাধিক বিষয় বাছুন।',
+        'problems.searchPlaceholder': 'শিরোনাম বা টপিক দিয়ে খুঁজুন...',
+        'problems.solvedCounter': '{solved}/{total} সমাধান',
+        'problems.random': 'এলোমেলো',
+        'problems.empty': 'আপনার বর্তমান ফিল্টারের সাথে মিলে এমন কোনো সমস্যা নেই।',
+        'problems.openProblem': 'খুলুন',
+        'problems.preview': 'পূর্বরূপ',
+        'problems.start': 'শুরু করুন',
+        'problems.timeLabel': 'সংক্ষিপ্ত বিবরণ',
+        'problems.skillsLabel': 'মূল দক্ষতা',
+        'problems.languagePython': 'Python',
+        'problems.languageJavaScript': 'JavaScript',
+        'problems.languageJava': 'Java',
+        'problems.languageCpp': 'C++',
+        'problems.languageSql': 'SQL',
+        'problems.table.index': '#',
+        'problems.table.title': 'শিরোনাম',
+        'problems.table.difficulty': 'কঠিনতা',
+        'problems.table.acceptance': 'গ্রহণযোগ্যতা',
+        'problems.table.action': 'পদক্ষেপ',
+        'problems.sort.label': 'সাজান',
+        'problems.sort.newest': 'নতুনতম',
+        'problems.sort.difficulty': 'কठিনতা',
+        'problems.sort.acceptance': 'গ্রহণযোগ্যতা',
+        'problems.sort.topic': 'বিষয়',
+        'problems.sort.lastSolved': 'সর্বশেষ সমাধান',
+        'problems.filters.button': 'ফিল্টার',
+        'problems.filters.status': 'অবস্থা',
+        'problems.filters.difficulty': 'কठিনতা',
+        'problems.filters.topics': 'বিষয়',
+        'problems.filters.language': 'ভাষা',
+        'problems.filters.matchMode': 'ম্যাচ মোড',
+        'problems.filters.all': 'সব',
+        'problems.filters.solved': 'সমাধানযুক্ত',
+        'problems.filters.unsolved': 'অমীমাংসিত',
+        'problems.filters.anyDifficulty': 'যেকোনো',
+        'problems.filters.anyLanguage': 'যেকোনো',
+        'problems.filters.apply': 'প্রয়োগ করুন',
+        'problems.filters.reset': 'রিসেট',
+        'problems.filters.matchAny': 'যেকোনো একটি',
+        'problems.filters.matchAll': 'সবগুলো',
+    },
+    te: {
+        'problems.title': 'సమస్యలు',
+        'problems.subtitle': 'స్మార్ట్ ఫిల్టరింగ్, సబ్జెక్ట్ నాలెడ్జ్ మరియు లైవ్ ట్రాకింగ్.',
+        'problems.topicsTitle': 'విషయాల జాబితా',
+        'problems.topicsSubtitle': 'ప్రాక్టీస్‌ను వేగవంతం చేయడానికి 1 లేదా 2 అంశాలను ఎంచుకోండి.',
+        'problems.searchPlaceholder': 'టైటిల్, విషయం లేదా నైపుణ్యంతో వెతకండి...',
+        'problems.solvedCounter': '{solved}/{total} సాధించబడ్డాయి',
+        'problems.random': 'రాండమ్',
+        'problems.empty': 'మీ ప్రస్తుత ఫిల్టర్‌లతో సమస్యలు ఏమీ లేవు.',
+        'problems.openProblem': 'తెరవండి',
+        'problems.preview': 'ప్రివ్యూ',
+        'problems.start': 'ప్రారంభించు',
+        'problems.timeLabel': 'క్లుప్త వివరణ',
+        'problems.skillsLabel': 'ముఖ్య నైపుణ్యాలు',
+        'problems.languagePython': 'Python',
+        'problems.languageJavaScript': 'JavaScript',
+        'problems.languageJava': 'Java',
+        'problems.languageCpp': 'C++',
+        'problems.languageSql': 'SQL',
+        'problems.table.index': '#',
+        'problems.table.title': 'టైటిల్',
+        'problems.table.difficulty': 'సమస్య స్థాయి',
+        'problems.table.acceptance': 'ఆమోదం',
+        'problems.table.action': 'చర్య',
+        'problems.sort.label': 'వరుసలో పెట్టు',
+        'problems.sort.newest': 'తొలిసారి',
+        'problems.sort.difficulty': 'సమస్య స్థాయి',
+        'problems.sort.acceptance': 'ఆమోద శాతం',
+        'problems.sort.topic': 'విషయం',
+        'problems.sort.lastSolved': 'చివరిగా పరిష్కరించినది',
+        'problems.filters.button': 'ఫిల్టర్లు',
+        'problems.filters.status': 'స్థితి',
+        'problems.filters.difficulty': 'సమస్య స్థాయి',
+        'problems.filters.topics': 'అంశాలు',
+        'problems.filters.language': 'భాష',
+        'problems.filters.matchMode': 'మ్యాచ్ మోడ్',
+        'problems.filters.all': 'అన్నీ',
+        'problems.filters.solved': 'సాధించినవి',
+        'problems.filters.unsolved': 'సాధించనివి',
+        'problems.filters.anyDifficulty': 'ఏదైనా',
+        'problems.filters.anyLanguage': 'ఏదైనా',
+        'problems.filters.apply': 'అప్లై చేయి',
+        'problems.filters.reset': 'రీసెట్ చేయి',
+        'problems.filters.matchAny': 'ఏదైనా మ్యాచ్',
+        'problems.filters.matchAll': 'అన్ని మ్యాచ్‌లు',
+    },
+    mr: {
+        'problems.title': 'समस्या ब्राउझर',
+        'problems.subtitle': 'स्मार्ट फिल्टरिंग आणि लाइव्ह ट्रॅकिंगसह क्युरेट केलेली आव्हाने.',
+        'problems.topicsTitle': 'विषय कॅटलॉग',
+        'problems.topicsSubtitle': 'सराव कमी करण्यासाठी एक किंवा अधिक विषय निवडा.',
+        'problems.searchPlaceholder': 'शीर्षक, विषय किंवा कौशल्य वापरून शोधा...',
+        'problems.solvedCounter': '{solved}/{total} सोडवले',
+        'problems.random': 'यादृच्छिक',
+        'problems.empty': 'सध्याच्या फिल्टर्ससह कोणतीही समस्या जुळत नाही.',
+        'problems.openProblem': 'उघडा',
+        'problems.preview': 'पूर्वावलोकन',
+        'problems.start': 'सुरुवात करा',
+        'problems.timeLabel': 'संक्षिप्त माहिती',
+        'problems.skillsLabel': 'मुख्य कौशल्ये',
+        'problems.languagePython': 'Python',
+        'problems.languageJavaScript': 'JavaScript',
+        'problems.languageJava': 'Java',
+        'problems.languageCpp': 'C++',
+        'problems.languageSql': 'SQL',
+        'problems.table.index': '#',
+        'problems.table.title': 'शीर्षक',
+        'problems.table.difficulty': 'कठीणता',
+        'problems.table.acceptance': 'मान्यता',
+        'problems.table.action': 'कृती',
+        'problems.sort.label': 'सॉर्टिंग',
+        'problems.sort.newest': 'नवीनतम',
+        'problems.sort.difficulty': 'कठीणता',
+        'problems.sort.acceptance': 'मान्यता',
+        'problems.sort.topic': 'विषय',
+        'problems.sort.lastSolved': 'शेवटचा सोडवलेला',
+        'problems.filters.button': 'फिल्टर्स',
+        'problems.filters.status': 'स्थिती',
+        'problems.filters.difficulty': 'कठीणता',
+        'problems.filters.topics': 'विषय',
+        'problems.filters.language': 'भाषा',
+        'problems.filters.matchMode': 'जुळण्याचा मोड',
+        'problems.filters.all': 'सर्व',
+        'problems.filters.solved': 'सोडवलेले',
+        'problems.filters.unsolved': 'न सोडवलेले',
+        'problems.filters.anyDifficulty': 'कोणतेही',
+        'problems.filters.anyLanguage': 'कोणतीही',
+        'problems.filters.apply': 'लागू करा',
+        'problems.filters.reset': 'रीसेट',
+        'problems.filters.matchAny': 'कोणताही',
+        'problems.filters.matchAll': 'सर्व',
+    },
+    ta: {
+        ...fallbackEn()
+    },
+    ur: {
+        ...fallbackEn()
+    },
+    gu: {
+        ...fallbackEn()
+    },
+    kn: {
+        ...fallbackEn()
+    },
+    ml: {
+        ...fallbackEn()
+    },
+    or: {
+        ...fallbackEn()
+    },
+    pa: {
+        ...fallbackEn()
+    },
+    as: {
+        ...fallbackEn()
+    }
+};
+
+function fallbackEn() {
+    return {
+        'problems.title': 'Problems Browser',
+        'problems.subtitle': 'Curated challenges with fast filtering, topic intelligence, and live solved tracking.',
+        'problems.topicsTitle': 'Topic catalog',
+        'problems.topicsSubtitle': 'Pick one or more topics to narrow your practice set instantly.',
+        'problems.searchPlaceholder': 'Search by title, topic, or skill...',
+        'problems.solvedCounter': '{solved}/{total} solved',
+        'problems.random': 'Random',
+        'problems.empty': 'No problems match your current filters.',
+        'problems.openProblem': 'Open',
+        'problems.preview': 'Problem preview',
+        'problems.start': 'Start',
+        'problems.timeLabel': 'Problem brief',
+        'problems.skillsLabel': 'Key skills',
+        'problems.languagePython': 'Python',
+        'problems.languageJavaScript': 'JavaScript',
+        'problems.languageJava': 'Java',
+        'problems.languageCpp': 'C++',
+        'problems.languageSql': 'SQL',
+        'problems.table.index': '#',
+        'problems.table.title': 'Title',
+        'problems.table.difficulty': 'Difficulty',
+        'problems.table.acceptance': 'Acceptance',
+        'problems.table.action': 'Action',
+        'problems.sort.label': 'Sort',
+        'problems.sort.newest': 'Newest',
+        'problems.sort.difficulty': 'Difficulty',
+        'problems.sort.acceptance': 'Acceptance',
+        'problems.sort.topic': 'Topic',
+        'problems.sort.lastSolved': 'Last solved',
+        'problems.filters.button': 'Filters',
+        'problems.filters.status': 'Status',
+        'problems.filters.difficulty': 'Difficulty',
+        'problems.filters.topics': 'Topics',
+        'problems.filters.language': 'Language',
+        'problems.filters.matchMode': 'Topic match mode',
+        'problems.filters.all': 'All',
+        'problems.filters.solved': 'Solved',
+        'problems.filters.unsolved': 'Unsolved',
+        'problems.filters.anyDifficulty': 'Any',
+        'problems.filters.anyLanguage': 'Any',
+        'problems.filters.apply': 'Apply',
+        'problems.filters.reset': 'Reset',
+        'problems.filters.matchAny': 'Match any',
+        'problems.filters.matchAll': 'Match all',
+    }
+}
+
+let content = fs.readFileSync(targetFile, 'utf8');
+
+for (const [lang, strings] of Object.entries(translations)) {
+    const langKey = `${lang}: {`;
+    if (!content.includes(langKey)) continue;
+
+    const entriesToInsert = Object.entries(strings)
+        .map(([key, val]) => `    '${key}': '${val}',`)
+        .join('\n');
+
+    content = content.replace(
+        new RegExp(`(${lang}: \\{(?:\\s*'.*?': '.*?',?\\s*)*)(\\s*)\\}`),
+        (match, p1, p2) => {
+            return `${p1}\n${entriesToInsert}${p2}}`;
+        }
+    );
+}
+
+fs.writeFileSync(targetFile, content);
+console.log('Injected missing strings into generatedStrings.ts');

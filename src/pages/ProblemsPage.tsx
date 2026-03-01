@@ -19,9 +19,10 @@ import {
   PROBLEMS_BANK,
 } from '../data/problemsBank'
 import { useI18n } from '../i18n/useI18n'
-import { getLocalizedProblem } from '../i18n/problemContent'
+import { getLocalizedProblem, resolveProblemTitleBundle } from '../i18n/problemContent'
 import { getEnglishTopicLabel, localizeTopicLabel } from '../i18n/topicCatalog'
 import { loadSolvedProblems, subscribeSolvedProblems, type SolvedProblemsMap } from '../lib/solvedProblemsStore'
+import { assertNoEnglishLeak, localizeProblemText, localizeProblemTitle } from '../i18n/problemLocalize'
 
 type SortMode = 'difficulty' | 'acceptance' | 'newest' | 'topic' | 'lastSolved'
 
@@ -148,8 +149,10 @@ export function ProblemsPage() {
       }
 
       if (sortMode === 'topic') {
-        const leftTopic = topicLabelById.get(getProblemTopicIds(left)[0] ?? '') ?? left.topics[0] ?? ''
-        const rightTopic = topicLabelById.get(getProblemTopicIds(right)[0] ?? '') ?? right.topics[0] ?? ''
+        const leftId = getProblemTopicIds(left)[0] ?? ''
+        const rightId = getProblemTopicIds(right)[0] ?? ''
+        const leftTopic = topicLabelById.get(leftId) ?? localizeTopicLabel(leftId, lang)
+        const rightTopic = topicLabelById.get(rightId) ?? localizeTopicLabel(rightId, lang)
         return leftTopic.localeCompare(rightTopic) || left.title.localeCompare(right.title)
       }
 
@@ -171,6 +174,42 @@ export function ProblemsPage() {
     [filteredProblems, solvedMap],
   )
 
+  const displayProblems = useMemo(
+    () =>
+      filteredProblems.map((problem) => {
+        const englishProblem = englishProblemsById.get(problem.id) ?? problem
+        const bundle = resolveProblemTitleBundle({
+          localizedProblem: problem,
+          englishProblem,
+          lang,
+        })
+        const localizedTopics = getProblemTopicIds(englishProblem)
+          .map((topicId) => topicLabelById.get(topicId) ?? localizeTopicLabel(topicId, lang))
+
+        const nextTitle = localizeProblemTitle(bundle.title, lang)
+
+        if (import.meta.env.DEV) {
+          assertNoEnglishLeak(nextTitle, lang, `ProblemsBrowser Title (${problem.id})`)
+          localizedTopics.forEach(t => assertNoEnglishLeak(t, lang, `ProblemsBrowser Topic (${problem.id})`))
+        }
+
+        return {
+          ...problem,
+          title: nextTitle,
+          topics: localizedTopics,
+          statement: {
+            ...problem.statement,
+            summary: localizeProblemText(bundle.summary, lang),
+            description: localizeProblemText(problem.statement.description, lang),
+            input: localizeProblemText(problem.statement.input, lang),
+            output: localizeProblemText(problem.statement.output, lang),
+            constraints: problem.statement.constraints.map(c => localizeProblemText(c, lang)),
+          },
+        }
+      }),
+    [englishProblemsById, filteredProblems, lang, topicLabelById],
+  )
+
   function openPreview(problem: ProblemDefinition) {
     setPreviewProblem(problem)
     setPreviewLanguage(getDefaultProblemLanguage(problem))
@@ -184,11 +223,11 @@ export function ProblemsPage() {
   }
 
   function pickRandomProblem() {
-    if (filteredProblems.length === 0) {
+    if (displayProblems.length === 0) {
       return
     }
-    const randomIndex = Math.floor(Math.random() * filteredProblems.length)
-    openPreview(filteredProblems[randomIndex])
+    const randomIndex = Math.floor(Math.random() * displayProblems.length)
+    openPreview(displayProblems[randomIndex])
   }
 
   function toggleTopicFromCloud(topicId: string) {
@@ -242,9 +281,8 @@ export function ProblemsPage() {
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder={t('problems.searchPlaceholder')}
-              className={`h-10 w-full rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] pl-9 pr-3 text-sm text-pebble-text-primary placeholder:text-pebble-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
-                isUrdu ? 'rtlText text-right' : ''
-              }`}
+              className={`h-10 w-full rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] pl-9 pr-3 text-sm text-pebble-text-primary placeholder:text-pebble-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${isUrdu ? 'rtlText text-right' : ''
+                }`}
             />
           </label>
 
@@ -338,22 +376,22 @@ export function ProblemsPage() {
           </div>
         </div>
 
-          <ProblemsTable
-            rows={filteredProblems}
-            solvedMap={solvedMap}
-            emptyLabel={t('problems.empty')}
-            openLabel={t('problems.openProblem')}
-            headings={{
-              index: t('problems.table.index'),
-              title: t('problems.table.title'),
-              difficulty: t('problems.table.difficulty'),
-              acceptance: t('problems.table.acceptance'),
-              action: t('problems.table.action'),
-            }}
-            difficultyLabels={difficultyLabels}
-            onOpenProblem={openPreview}
-            isUrdu={isUrdu}
-          />
+        <ProblemsTable
+          rows={displayProblems}
+          solvedMap={solvedMap}
+          emptyLabel={t('problems.empty')}
+          openLabel={t('problems.openProblem')}
+          headings={{
+            index: t('problems.table.index'),
+            title: t('problems.table.title'),
+            difficulty: t('problems.table.difficulty'),
+            acceptance: t('problems.table.acceptance'),
+            action: t('problems.table.action'),
+          }}
+          difficultyLabels={difficultyLabels}
+          onOpenProblem={openPreview}
+          isUrdu={isUrdu}
+        />
       </Card>
 
       <ProblemPreviewPanel

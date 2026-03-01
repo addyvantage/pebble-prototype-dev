@@ -9,18 +9,17 @@ import {
   Sparkles,
   Target,
   Timer,
-  TrendingUp,
   Workflow,
 } from 'lucide-react'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
 import { KpiCard } from '../components/insights/KpiCard'
 import { HexRadar } from '../components/insights/HexRadar'
-import { TrendLineChart } from '../components/insights/TrendLineChart'
 import { IssueBars } from '../components/insights/IssueBars'
 import { GrowthLedger } from '../components/insights/GrowthLedger'
 import { NextTasks } from '../components/insights/NextTasks'
 import { StreakCalendar } from '../components/insights/StreakCalendar'
+import { ProblemContributionsHeatmap } from '../components/insights/ProblemContributionsHeatmap'
 import { getPebbleUserState } from '../utils/pebbleUserState'
 import { useI18n } from '../i18n/useI18n'
 import { loadCurriculumPath, type CurriculumUnit } from '../content/pathLoader'
@@ -211,22 +210,20 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-12">
+      {/* Row 1: Skill shape + Streak calendar */}
+      <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-[1fr_520px] lg:items-end">
         <Card
           padding="sm"
           interactive
-          className="xl:col-span-5 flex h-full flex-col gap-3"
+          className="flex flex-col gap-3"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
-                {t('insights.radar.title')}
-              </p>
-              <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.radar.subtitle')}</p>
-            </div>
-            <Badge variant="neutral">{t('insights.radar.liveShape')}</Badge>
+          <div className="mr-auto w-full max-w-[460px] text-center">
+            <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
+              {t('insights.radar.title')}
+            </p>
+            <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.radar.subtitle')}</p>
           </div>
-          <div className="relative mx-auto flex aspect-square w-full max-w-[420px] items-center justify-center rounded-xl border border-pebble-border/25 bg-pebble-canvas/55 p-3">
+          <div className="relative mr-auto flex aspect-square w-full max-w-[460px] items-center justify-center rounded-xl border border-pebble-border/25 bg-pebble-canvas/55 p-3 pb-10">
             <HexRadar
               current={derived.radarCurrent}
               previous={derived.radarPrevious}
@@ -234,86 +231,75 @@ export function DashboardPage() {
               axisLabels={axisLabels}
               className="h-full w-full"
             />
-          </div>
-          <div className="flex items-center justify-center gap-4 text-xs text-pebble-text-secondary">
-            <span className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-pebble-text-primary/65" />
-              {t('insights.radar.current')}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-pebble-accent/40" />
-              {t('insights.radar.previous')}
-            </span>
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-4 text-xs text-pebble-text-secondary whitespace-nowrap">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-pebble-text-primary/65" />
+                {t('insights.radar.current')}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-pebble-accent/40" />
+                {t('insights.radar.previous')}
+              </span>
+            </div>
           </div>
         </Card>
 
-        <div className="xl:col-span-7 grid content-start gap-3">
-          <div className="grid gap-3 md:grid-cols-7">
-            <Card padding="sm" interactive className="md:col-span-4">
-              <StreakCalendar
-                dailyMap={dailyCompletions}
-                streak={streakStats.streak}
-                longest={longestStreak.longest}
-                isTodayComplete={streakStats.isTodayComplete}
-                timeZone={timeZone}
-              />
-            </Card>
-            <Card padding="sm" interactive className="md:col-span-3 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
-                    {t('insights.issue.title')}
-                  </p>
-                  <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.issue.subtitle')}</p>
-                </div>
-                <Brain className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
-              </div>
-              <IssueBars rows={derived.issueProfile} labels={issueLabels} />
-            </Card>
-          </div>
+        <Card padding="sm" interactive className="flex flex-col">
+          <StreakCalendar
+            dailyMap={dailyCompletions}
+            streak={streakStats.streak}
+            longest={longestStreak.longest}
+            isTodayComplete={streakStats.isTodayComplete}
+            timeZone={timeZone}
+          />
+        </Card>
+      </div>
 
-          <Card padding="sm" interactive className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
-                  {t('insights.next.title')}
-                </p>
-                <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.next.subtitle')}</p>
-              </div>
-              <Target className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
+      {/* Row 2: Issue profile + Next actions */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Card padding="sm" interactive className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
+                {t('insights.issue.title')}
+              </p>
+              <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.issue.subtitle')}</p>
             </div>
-            <NextTasks
-              items={derived.nextActions}
-              titleByUnitId={localizedUnitTitles}
-              labels={{
-                empty: t('insights.next.empty'),
-                continueAction: t('insights.next.continueUnit'),
-                syntaxAction: t('insights.next.focusSyntax'),
-                debugAction: t('insights.next.focusDebugging'),
-                complexityAction: t('insights.next.raiseComplexity'),
-                streakAction: t('insights.next.maintainStreak'),
-                continueCta: t('insights.next.continueCta'),
-              }}
-            />
-          </Card>
-        </div>
+            <Brain className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
+          </div>
+          <IssueBars rows={derived.issueProfile} labels={issueLabels} />
+        </Card>
+
+        <Card padding="sm" interactive className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>
+                {t('insights.next.title')}
+              </p>
+              <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.next.subtitle')}</p>
+            </div>
+            <Target className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
+          </div>
+          <NextTasks
+            items={derived.nextActions}
+            titleByUnitId={localizedUnitTitles}
+            labels={{
+              empty: t('insights.next.empty'),
+              continueAction: t('insights.next.continueUnit'),
+              syntaxAction: t('insights.next.focusSyntax'),
+              debugAction: t('insights.next.focusDebugging'),
+              complexityAction: t('insights.next.raiseComplexity'),
+              streakAction: t('insights.next.maintainStreak'),
+              continueCta: t('insights.next.continueCta'),
+            }}
+          />
+        </Card>
       </div>
 
       <div className="grid gap-3 xl:grid-cols-12">
-        <Card padding="sm" interactive className="space-y-3 xl:col-span-12">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className={`text-base font-semibold text-pebble-text-primary ${proseClass}`}>{t('insights.trend.title')}</p>
-              <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.trend.subtitle')}</p>
-            </div>
-            <TrendingUp className="h-4 w-4 text-pebble-text-secondary" aria-hidden="true" />
-          </div>
-          <TrendLineChart
-            data={derived.trend30d}
-            flowLabel={t('insights.trend.flow')}
-            loadLabel={t('insights.trend.load')}
-          />
-        </Card>
+        <div className="xl:col-span-12">
+          <ProblemContributionsHeatmap />
+        </div>
       </div>
 
       <Card padding="sm" interactive className="space-y-3">

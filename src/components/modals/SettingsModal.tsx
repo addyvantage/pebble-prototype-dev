@@ -44,11 +44,10 @@ function unlockBodyScroll() {
 
 function segmentButtonClass(isActive: boolean) {
   const activeClass = 'bg-pebble-panel text-pebble-text-primary shadow-[0_1px_8px_rgba(2,8,23,0.16)] ring-1 ring-pebble-border/35'
-  return `rounded-lg px-4 py-1.5 text-sm font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
-    isActive
-      ? `${activeClass} scale-[1.01]`
-      : 'bg-transparent text-pebble-text-secondary hover:text-pebble-text-primary'
-  }`
+  return `rounded-lg px-4 py-1.5 text-sm font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${isActive
+    ? `${activeClass} scale-[1.01]`
+    : 'bg-transparent text-pebble-text-secondary hover:text-pebble-text-primary'
+    }`
 }
 
 export function SettingsModal({
@@ -148,7 +147,7 @@ export function SettingsModal({
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           <LanguageSelect
             label={t('settings.language')}
             value={lang}

@@ -5,7 +5,7 @@ import {
 } from '../data/problemsBank'
 import type { LanguageCode } from './languages'
 import { translateParagraph, translateSentence, translateStatementBlock } from './problemAutoTranslate'
-import { detectLatinWords } from './noMixText'
+import { detectLatinWords, isMixedScriptLeakage } from './noMixText'
 import { localizeTopicLabels } from './topicCatalog'
 import enRaw from './problemCopy/en.json'
 import hiRaw from './problemCopy/hi.json'
@@ -204,6 +204,10 @@ function applyAutoTranslation(problem: ProblemDefinition, lang: LanguageCode): P
   return localizedProblem
 }
 
+function hasNonLatinGlyphs(text: string) {
+  return /[^\u0000-\u024f]/.test(text)
+}
+
 export function getLocalizedProblem(problem: ProblemDefinition, lang: LanguageCode): ProblemDefinition {
   const localized = PROBLEM_COPY_BY_LANG[lang]?.[problem.id]
   const englishOverride = enCopy[problem.id]
@@ -237,7 +241,86 @@ export function getLocalizedProblem(problem: ProblemDefinition, lang: LanguageCo
       schemaText: localizedStatement?.schemaText ?? englishStatement?.schemaText ?? problem.statement.schemaText,
     },
   }
-  return applyAutoTranslation(merged, lang)
+  const translated = applyAutoTranslation(merged, lang)
+
+  if (lang === 'en') {
+    return translated
+  }
+
+  const baseStatement = englishStatement ?? problem.statement
+  const tStatement = translated.statement
+
+  const safeStr = (loc: string | undefined, fallback: string | undefined): string | undefined => {
+    if (!loc) return loc
+    return isMixedScriptLeakage(loc) ? fallback : loc
+  }
+  const safeList = (locs: string[] | undefined, fallbacks: string[] | undefined): string[] => {
+    if (!locs) return []
+    return locs.map((loc, i) => safeStr(loc, fallbacks?.[i] ?? loc)!)
+  }
+
+  const safeExamples = tStatement.examples?.map((ex, i) => {
+    const fallbackEx = baseStatement.examples?.[i]
+    if (!fallbackEx) return ex
+    return {
+      ...ex,
+      explanation: safeStr(ex.explanation, fallbackEx.explanation)
+    }
+  }) ?? []
+
+  const localizedTitle = safeStr(translated.title, englishOverride?.title ?? problem.title)!
+  const useEnglishTitleBundle =
+    !hasNonLatinGlyphs(localizedTitle)
+    || isMixedScriptLeakage(localizedTitle)
+
+  return {
+    ...translated,
+    title: useEnglishTitleBundle
+      ? (englishOverride?.title ?? problem.title)
+      : localizedTitle,
+    statement: {
+      ...tStatement,
+      summary: useEnglishTitleBundle
+        ? (englishStatement?.summary ?? problem.statement.summary)
+        : safeStr(tStatement.summary, baseStatement.summary)!,
+      description: safeStr(tStatement.description, baseStatement.description)!,
+      input: safeStr(tStatement.input, baseStatement.input)!,
+      output: safeStr(tStatement.output, baseStatement.output)!,
+      constraints: safeList(tStatement.constraints, baseStatement.constraints),
+      schemaText: safeStr(tStatement.schemaText, baseStatement.schemaText),
+      examples: safeExamples,
+    }
+  }
+}
+
+export function resolveProblemTitleBundle(input: {
+  localizedProblem: ProblemDefinition
+  englishProblem: ProblemDefinition
+  lang: LanguageCode
+}) {
+  if (input.lang === 'en') {
+    return {
+      title: input.englishProblem.title,
+      summary: input.englishProblem.statement.summary,
+      usedLang: 'en' as const,
+    }
+  }
+
+  const title = input.localizedProblem.title
+  const useEnglishBundle = !hasNonLatinGlyphs(title) || isMixedScriptLeakage(title)
+  if (useEnglishBundle) {
+    return {
+      title: input.englishProblem.title,
+      summary: input.englishProblem.statement.summary,
+      usedLang: 'en' as const,
+    }
+  }
+
+  return {
+    title,
+    summary: input.localizedProblem.statement.summary,
+    usedLang: input.lang,
+  }
 }
 
 export function getLocalizedStarter(problem: ProblemDefinition, lang: LanguageCode): string | null {
