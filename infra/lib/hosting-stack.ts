@@ -147,7 +147,7 @@ export class HostingStack extends cdk.Stack {
 
       // CloudFront is a global service; distributions always live in us-east-1
       // internally, but edge caching is worldwide — no region config needed here.
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100, // US, Canada, Europe (cheapest)
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_200, // US, Canada, Europe, Asia, Middle East, Africa
     });
 
     // -------------------------------------------------------------------------
