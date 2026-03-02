@@ -170,9 +170,9 @@ export function AppLayout() {
             <PageContainer>
               <Card className={`p-1.5 sm:p-2 ${isLandingRoute ? 'mb-1.5' : 'mb-2 sm:mb-2'}`} interactive>
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                  <div className="flex min-w-0 items-center gap-4 sm:gap-5 justify-start">
-                    <BrandLogo className="h-[72px] w-[72px] shrink-0 select-none object-contain sm:h-24 sm:w-24" />
-                    <div className="min-w-0 translate-y-0.5 sm:translate-y-1">
+                  <div className="flex min-w-0 items-center gap-2.5 sm:gap-3 justify-start">
+                    <BrandLogo />
+                    <div className="min-w-0 translate-y-[0.5px]">
                       <div className="relative">
                         <PatternText
                           text="Pebble"

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Badge } from '../ui/Badge'
+import { BrandLogo } from '../ui/BrandLogo'
 import { Button } from '../ui/Button'
 import { askPebble } from '../../utils/pebbleLLM'
 import { ArrowUp, Check, Globe, Settings2 } from 'lucide-react'
@@ -425,11 +426,7 @@ export function PebbleChatPanel({
               style={{ background: 'rgba(56,189,248,0.85)' }}
               aria-hidden="true"
             />
-            <img
-              src="/PebbleLogo.png"
-              alt="Pebble"
-              draggable={false}
-              className="relative h-16 w-16 select-none object-contain"
+            <BrandLogo className="relative h-16 w-16 select-none object-contain pointer-events-none"
             />
           </div>
           <div>
