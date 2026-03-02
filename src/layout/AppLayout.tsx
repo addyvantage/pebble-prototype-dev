@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card'
 import { PageContainer } from '../components/ui/PageContainer'
 import { StreakPill } from '../components/ui/StreakPill'
 import { PatternText } from '../components/ui/pattern-text'
+import { BrandLogo } from '../components/ui/BrandLogo'
 import {
   clearAppLocalData,
   clearLocalUserData,
@@ -170,12 +171,7 @@ export function AppLayout() {
               <Card className={`p-1.5 sm:p-2 ${isLandingRoute ? 'mb-1.5' : 'mb-2 sm:mb-2'}`} interactive>
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                   <div className="flex min-w-0 items-center gap-4 sm:gap-5 justify-start">
-                    <img
-                      src="/PebbleLogo.png"
-                      alt="Pebble"
-                      draggable={false}
-                      className="h-20 w-20 sm:h-[104px] sm:w-[104px] object-contain select-none"
-                    />
+                    <BrandLogo className="h-8 w-8 shrink-0 select-none object-contain sm:h-9 sm:w-9" />
                     <div className="min-w-0 translate-y-0.5 sm:translate-y-1">
                       <div className="relative">
                         <PatternText

@@ -51,10 +51,10 @@ export function ProfileMenu({
 
   const shellClass =
     theme === 'light'
-      ? 'border border-slate-300/80 shadow-[0_20px_52px_rgba(15,23,42,0.2)]'
+      ? 'border border-pebble-border/25 shadow-[0_12px_40px_rgba(55,72,110,0.15)]'
       : 'border border-pebble-border/42 shadow-[0_22px_54px_rgba(2,8,23,0.34)]'
 
-  const baseLayerClass = theme === 'light' ? 'bg-white' : 'bg-pebble-panel'
+  const baseLayerClass = theme === 'light' ? 'bg-pebble-panel' : 'bg-pebble-panel'
 
   return createPortal(
     <div
@@ -73,7 +73,7 @@ export function ProfileMenu({
         style={{
           backgroundImage:
             theme === 'light'
-              ? 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,250,255,0.93) 100%)'
+              ? 'linear-gradient(180deg, rgba(241,245,252,0.98) 0%, rgba(228,234,246,0.94) 100%)'
               : 'linear-gradient(180deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.03) 100%)',
         }}
       />

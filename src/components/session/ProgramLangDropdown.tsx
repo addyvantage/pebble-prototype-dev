@@ -69,7 +69,7 @@ export function ProgramLangDropdown({
 
   const menuSurfaceClass =
     theme === 'light'
-      ? 'border border-slate-300/75 bg-white/[0.96] shadow-[0_18px_40px_rgba(15,23,42,0.16)]'
+      ? 'border border-pebble-border/25 bg-pebble-panel/95 shadow-[0_8px_32px_rgba(55,72,110,0.14)]'
       : 'border border-pebble-border/40 bg-pebble-panel/95 shadow-[0_16px_48px_rgba(2,8,23,0.6)]'
 
   return (

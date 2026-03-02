@@ -95,7 +95,7 @@ export function SettingsModal({
 
   const modalSurfaceClass =
     theme === 'light'
-      ? 'border border-slate-300/70 bg-white/[0.86] shadow-[0_24px_56px_rgba(15,23,42,0.18)]'
+      ? 'border border-pebble-border/25 bg-pebble-panel/92 shadow-[0_12px_48px_rgba(55,72,110,0.16)]'
       : 'border border-pebble-border/40 bg-pebble-panel/92 shadow-glass'
 
   return (
@@ -117,7 +117,7 @@ export function SettingsModal({
         style={{
           backgroundImage:
             theme === 'light'
-              ? 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(241,247,255,0.9) 100%)'
+              ? 'linear-gradient(180deg, rgba(241,245,252,0.98) 0%, rgba(228,234,246,0.94) 100%)'
               : 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%)',
         }}
       >

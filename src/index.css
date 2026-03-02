@@ -24,21 +24,21 @@
 }
 
 .theme-light {
-  --pebble-deep: 246 247 251;
-  --pebble-secondary: 240 244 251;
-  --pebble-panel: 255 255 255;
-  --pebble-canvas: 247 250 255;
-  --pebble-border: 15 23 42;
-  --pebble-overlay: 18 37 64;
+  --pebble-deep: 213 222 238;       /* #D5DEEE — global canvas / body bg */
+  --pebble-secondary: 200 213 232;  /* #C8D5E8 — body gradient bottom */
+  --pebble-panel: 241 245 252;      /* #F1F5FC — cards / panels (raised) */
+  --pebble-canvas: 228 234 246;     /* #E4EAF6 — editor / content wells */
+  --pebble-border: 55 72 110;       /* #37486E — borders (used with opacity) */
+  --pebble-overlay: 255 255 255;    /* WHITE — brightens raised surface tops */
   --pebble-text-primary: 15 23 42;
   --pebble-text-secondary: 71 85 105;
-  --pebble-text-muted: 100 116 139;
-  --pebble-accent: 37 99 235;
+  --pebble-text-muted: 76 95 120;   /* #4C5F78 — 4.76:1 contrast on #D5DEEE */
+  --pebble-accent: 29 78 216;       /* #1D4ED8 — deep premium blue */
   --pebble-glow-primary: 96 165 250;
   --pebble-glow-secondary: 59 130 246;
-  --pebble-bg-image-opacity: 0.04;
-  --pebble-shadow: 0 12px 40px rgba(2, 6, 23, 0.1);
-  --pebble-shadow-hover: 0 15px 44px rgba(2, 6, 23, 0.12);
+  --pebble-bg-image-opacity: 0.05;
+  --pebble-shadow: 0 1px 4px rgba(55, 72, 110, 0.12), 0 4px 16px rgba(55, 72, 110, 0.08);
+  --pebble-shadow-hover: 0 2px 8px rgba(55, 72, 110, 0.15), 0 8px 24px rgba(55, 72, 110, 0.10);
 }
 
 html {

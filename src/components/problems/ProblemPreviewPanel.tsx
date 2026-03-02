@@ -67,7 +67,7 @@ export function ProblemPreviewPanel({
   }
 
   const surfaceClass = theme === 'light'
-    ? 'border border-black/10 bg-white/80 shadow-[0_32px_80px_rgba(15,23,42,0.18)] backdrop-blur-2xl [background-image:linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.75)_100%)]'
+    ? 'border border-pebble-border/20 bg-pebble-panel/88 shadow-[0_16px_48px_rgba(55,72,110,0.12)] backdrop-blur-2xl [background-image:linear-gradient(180deg,rgba(241,245,252,0.96)_0%,rgba(228,234,246,0.85)_100%)]'
     : 'border border-white/12 bg-slate-950/70 shadow-[0_32px_80px_rgba(2,8,23,0.5)] backdrop-blur-2xl [background-image:linear-gradient(180deg,rgba(255,255,255,0.14)_0%,rgba(255,255,255,0.04)_100%)]'
 
   const panelContent = (
@@ -163,7 +163,7 @@ export function ProblemPreviewPanel({
   return (
     <div className="fixed inset-0 z-[90]">
       <div
-        className={`absolute inset-0 backdrop-blur-md ${theme === 'light' ? 'bg-white/50' : 'bg-black/40'
+        className={`absolute inset-0 backdrop-blur-md ${theme === 'light' ? 'bg-pebble-panel/50' : 'bg-black/40'
           }`}
         onClick={onClose}
         aria-hidden="true"

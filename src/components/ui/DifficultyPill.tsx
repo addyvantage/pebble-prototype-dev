@@ -16,12 +16,12 @@ function classNames(...values: Array<string | undefined>) {
 function toneClass(theme: 'dark' | 'light', difficulty: DifficultyValue) {
   if (theme === 'light') {
     if (difficulty === 'Easy') {
-      return 'bg-emerald-100 text-emerald-800 border-emerald-300'
+      return 'bg-emerald-100/70 text-emerald-900 border-emerald-300/60'
     }
     if (difficulty === 'Medium') {
-      return 'bg-amber-100 text-amber-800 border-amber-300'
+      return 'bg-amber-100/70 text-amber-900 border-amber-300/60'
     }
-    return 'bg-rose-100 text-rose-800 border-rose-300'
+    return 'bg-rose-100/70 text-rose-900 border-rose-300/60'
   }
 
   if (difficulty === 'Easy') {
