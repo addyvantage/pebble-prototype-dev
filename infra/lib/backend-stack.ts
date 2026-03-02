@@ -51,13 +51,13 @@ export class BackendStack extends cdk.Stack {
 
     // Grant least-privilege Bedrock access.
     //
-    // Newer Claude models (Haiku 4.5, Sonnet 4.5+) require cross-region
-    // inference profiles (e.g. us.anthropic.claude-haiku-4-5-20251001-v1:0).
-    // Direct on-demand model IDs are no longer accepted for these models.
+    // Default model: anthropic.claude-3-haiku-20240307-v1:0 (direct invocation,
+    // no Bedrock model-access subscription required).
     //
-    // Two ARN types are needed:
-    //   1. foundation-model/*  — underlying model permission (required by AWS)
-    //   2. inference-profile/* — the cross-region profile being invoked
+    // To use cross-region inference profiles (apac.*, global.*) you must first
+    // enable model access in the AWS Console:
+    //   Amazon Bedrock → Model access → Manage model access → enable Claude models
+    // Then override bedrockModelId in cdk.json (e.g. apac.anthropic.claude-3-5-sonnet-20241022-v2:0).
     llmFn.addToRolePolicy(
       new iam.PolicyStatement({
         sid: 'BedrockInvokeModel',
