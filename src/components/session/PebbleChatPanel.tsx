@@ -439,7 +439,7 @@ export function PebbleChatPanel({
             onMouseEnter={() => setAvatarHovered(true)}
             onMouseLeave={() => setAvatarHovered(false)}
           >
-            <BrandLogo className="h-12 w-12 select-none object-contain pointer-events-none" />
+            <BrandLogo className="h-14 w-14 select-none object-contain pointer-events-none" />
           </div>
           <div>
             <p className={`text-base font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{t('chat.title')}</p>

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:backend": "ts-node --project tsconfig.server.json --esm server/dev-server.ts",
+    "dev:backend": "node --loader ts-node/esm --no-warnings --experimental-specifier-resolution=node server/dev-server.ts",
     "dev:frontend": "vite",
     "dev:full": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "tsc -b && vite build",
