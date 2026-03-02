@@ -2,9 +2,11 @@ import { Bot, Compass, Gauge, Sparkles, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
+import { EtherealShadow } from '../components/ui/EtherealShadow'
 import { buttonClass } from '../components/ui/buttonStyles'
 import { TextShimmer } from '../components/ui/text-shimmer'
 import { useI18n } from '../i18n/useI18n'
+import { useTheme } from '../hooks/useTheme'
 import { getRecentActivity } from '../lib/recentStore'
 import { getProblemById } from '../data/problemsBank'
 import { getLocalizedProblem } from '../i18n/problemContent'
@@ -17,7 +19,13 @@ function classNames(...values: Array<string | undefined>) {
 
 export function LandingPage() {
   const { t, lang } = useI18n()
+  const { theme } = useTheme()
   const isUrdu = lang === 'ur'
+
+  // Ethereal shadow colour: locked to blue palette — no rainbow possible
+  const etherealColor = theme === 'dark'
+    ? 'rgba(110, 170, 255, 0.38)'   // milky ice-blue for dark canvas
+    : 'rgba(7, 22, 88, 0.32)'       // inky navy for light canvas
 
   const recent = getRecentActivity()
   const recentProblem = recent ? getProblemById(recent.problemId) : null
@@ -55,6 +63,12 @@ export function LandingPage() {
     <section className="page-enter h-full min-h-0 overflow-y-auto lg:overflow-hidden">
       <div className="flex h-full min-h-0 flex-col gap-1.5 lg:grid lg:grid-rows-[minmax(0,1fr)_auto_auto] lg:gap-1.5">
         <Card className="relative min-h-0 overflow-hidden p-3 xl:p-3.5" interactive>
+          {/* Ethereal ambient depth — lowest layer, behind corner glows */}
+          <EtherealShadow
+            color={etherealColor}
+            animation={{ scale: 38, speed: 18 }}
+            sizing="fill"
+          />
           <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-pebble-accent/18 blur-3xl" />
           <div className="pointer-events-none absolute -right-12 -top-16 h-56 w-56 rounded-full bg-sky-400/12 blur-3xl" />
 

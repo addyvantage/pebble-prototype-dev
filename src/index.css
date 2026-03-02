@@ -453,6 +453,7 @@ html {
     background-image: linear-gradient(var(--base-color, #a8bef5), var(--base-color, #a8bef5));
     background-size: auto;
   }
+
 }
 
 * {
