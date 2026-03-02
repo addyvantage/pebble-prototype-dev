@@ -122,7 +122,7 @@ export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
                     onClick={() => setIsExpanded(false)}
                 >
                     <div
-                        className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-pebble-border/30 bg-pebble-surface-50 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.06)] dark:bg-[#0B0E14] dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.06)] transform transition-transform animate-in zoom-in-95 duration-200"
+                        className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-pebble-border/30 bg-pebble-surface-50 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.06)] dark:bg-pebble-deep dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.06)] transform transition-transform animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between border-b border-pebble-border/10 px-5 py-4 bg-pebble-overlay/[0.02]">

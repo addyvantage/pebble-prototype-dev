@@ -6,21 +6,21 @@
 
 :root,
 .theme-dark {
-  --pebble-deep: 7 10 16;
-  --pebble-secondary: 10 17 36;
-  --pebble-panel: 13 20 41;
-  --pebble-canvas: 9 14 29;
-  --pebble-border: 148 163 184;
+  --pebble-deep: 46 50 66;
+  --pebble-secondary: 73 78 101;
+  --pebble-panel: 88 94 116;
+  --pebble-canvas: 58 63 84;
+  --pebble-border: 130 138 165;
   --pebble-overlay: 255 255 255;
   --pebble-text-primary: 248 250 252;
-  --pebble-text-secondary: 148 163 184;
-  --pebble-text-muted: 71 85 105;
+  --pebble-text-secondary: 185 192 212;
+  --pebble-text-muted: 112 118 145;
   --pebble-accent: 59 130 246;
   --pebble-glow-primary: 59 130 246;
   --pebble-glow-secondary: 59 130 246;
-  --pebble-bg-image-opacity: 0.22;
-  --pebble-shadow: 0 16px 40px rgba(2, 8, 23, 0.28);
-  --pebble-shadow-hover: 0 18px 42px rgba(2, 8, 23, 0.3);
+  --pebble-bg-image-opacity: 0.15;
+  --pebble-shadow: 0 16px 40px rgba(28, 32, 48, 0.4);
+  --pebble-shadow-hover: 0 18px 42px rgba(28, 32, 48, 0.45);
 }
 
 .theme-light {

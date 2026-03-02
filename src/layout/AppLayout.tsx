@@ -164,7 +164,7 @@ export function AppLayout() {
           <Outlet />
         </div>
       ) : (
-        <div className={`relative flex min-h-screen flex-col ${isLandingRoute ? 'overflow-hidden' : ''}`}>
+        <div className={`relative flex flex-col ${isLandingRoute ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh] overflow-hidden'}`}>
           <header className="w-full pt-1 sm:pt-1">
             <PageContainer>
               <Card className={`p-1.5 sm:p-2 ${isLandingRoute ? 'mb-1.5' : 'mb-2 sm:mb-2'}`} interactive>
