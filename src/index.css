@@ -341,53 +341,35 @@ html {
   }
 }
 
-/* PatternText: brand-locked blue shimmer effect */
+/* PatternText: premium brand wordmark */
 .pebble-pattern-text {
   position: relative;
   display: inline-block;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
-  /* Brand lock: Navy Blue */
-  color: #0f2952;
-}
-
-/* Specific override for dark mode to keep it readable but still brand-blue */
-.theme-dark .pebble-pattern-text {
-  color: #60a5fa;
-  /* A slightly more vibrant blue for dark mode readability while staying brand-consistent */
-}
-
-.pebble-pattern-text::after {
-  content: attr(data-shadow);
-  position: absolute;
-  inset: 0;
-  transform: translate(0.04em, 0.04em);
-  z-index: -1;
-
-  /* hatch overlay */
-  background-size: 0.05em 0.05em;
-  background-clip: text;
+  /* Light mode: deep ink navy — confident, premium on #D5DEEE */
+  background: linear-gradient(180deg, #1C3268 0%, #0F2250 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
+}
 
-  /* light blue shimmer */
-  background-image: linear-gradient(45deg,
-      transparent 45%,
-      #3b82f6 45%,
-      #3b82f6 55%,
-      transparent 55%);
+/* Dark mode: satin metallic blue — readable, calm, not neon on #3A3F54 */
+.theme-dark .pebble-pattern-text {
+  background: linear-gradient(180deg, #82B5FF 0%, #5A8EEF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 
-  animation: shadanim 14s linear infinite;
-  opacity: 0.8;
+/* Remove stripe animation pseudo-element */
+.pebble-pattern-text::after {
+  display: none;
 }
 
 .theme-dark .pebble-pattern-text::after {
-  background-image: linear-gradient(45deg,
-      transparent 45%,
-      #93c5fd 45%,
-      #93c5fd 55%,
-      transparent 55%);
+  display: none;
 }
 
 
