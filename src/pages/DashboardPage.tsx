@@ -223,7 +223,7 @@ export function DashboardPage() {
             </p>
             <p className={`text-sm text-pebble-text-secondary ${proseClass}`}>{t('insights.radar.subtitle')}</p>
           </div>
-          <div className="relative mr-auto flex aspect-square w-full max-w-[460px] items-center justify-center rounded-xl border border-pebble-border/25 bg-pebble-canvas/55 p-3 pb-10">
+          <div className="relative mr-auto flex aspect-square w-full max-w-[460px] items-center justify-center rounded-xl border border-pebble-border/30 bg-pebble-chip-surface/50 p-3 pb-10">
             <HexRadar
               current={derived.radarCurrent}
               previous={derived.radarPrevious}

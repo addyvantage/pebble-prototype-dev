@@ -18,6 +18,12 @@
   --pebble-accent: 59 130 246;
   --pebble-glow-primary: 59 130 246;
   --pebble-glow-secondary: 59 130 246;
+  --pebble-chip-surface: 68 74 96;
+  --pebble-editor-bg: #252A3C;
+  --pebble-editor-gutter: #1E2231;
+  --pebble-shadow-1: 0 1px 3px rgba(18,24,38,0.28), 0 1px 2px rgba(18,24,38,0.20);
+  --pebble-shadow-2: 0 4px 16px rgba(18,24,38,0.36), 0 2px 6px rgba(18,24,38,0.24);
+  --pebble-shadow-3: 0 16px 40px rgba(18,24,38,0.50), 0 4px 12px rgba(18,24,38,0.28);
   --pebble-bg-image-opacity: 0.15;
   --pebble-shadow: 0 16px 40px rgba(28, 32, 48, 0.4);
   --pebble-shadow-hover: 0 18px 42px rgba(28, 32, 48, 0.45);
@@ -36,6 +42,12 @@
   --pebble-accent: 29 78 216;       /* #1D4ED8 — deep premium blue */
   --pebble-glow-primary: 96 165 250;
   --pebble-glow-secondary: 59 130 246;
+  --pebble-chip-surface: 233 238 250;  /* #E9EEFA — lifted chip/input surface */
+  --pebble-editor-bg: #EEF2FA;         /* Monaco light bg — calm blue-white */
+  --pebble-editor-gutter: #E4EAF6;     /* Monaco gutter — matches canvas */
+  --pebble-shadow-1: 0 1px 3px rgba(55,72,110,0.10), 0 1px 2px rgba(55,72,110,0.06);
+  --pebble-shadow-2: 0 4px 16px rgba(55,72,110,0.12), 0 2px 6px rgba(55,72,110,0.08);
+  --pebble-shadow-3: 0 12px 40px rgba(55,72,110,0.16), 0 4px 12px rgba(55,72,110,0.10);
   --pebble-bg-image-opacity: 0.05;
   --pebble-shadow: 0 1px 4px rgba(55, 72, 110, 0.12), 0 4px 16px rgba(55, 72, 110, 0.08);
   --pebble-shadow-hover: 0 2px 8px rgba(55, 72, 110, 0.15), 0 8px 24px rgba(55, 72, 110, 0.10);

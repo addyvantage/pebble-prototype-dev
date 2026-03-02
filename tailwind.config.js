@@ -17,6 +17,7 @@ export default {
           'text-primary': 'rgb(var(--pebble-text-primary) / <alpha-value>)',
           'text-secondary': 'rgb(var(--pebble-text-secondary) / <alpha-value>)',
           'text-muted': 'rgb(var(--pebble-text-muted) / <alpha-value>)',
+          'chip-surface': 'rgb(var(--pebble-chip-surface) / <alpha-value>)',
         },
       },
       boxShadow: {

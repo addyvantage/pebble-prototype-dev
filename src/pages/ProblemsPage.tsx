@@ -281,7 +281,7 @@ export function ProblemsPage() {
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder={t('problems.searchPlaceholder')}
-              className={`h-10 w-full rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] pl-9 pr-3 text-sm text-pebble-text-primary placeholder:text-pebble-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${isUrdu ? 'rtlText text-right' : ''
+              className={`h-10 w-full rounded-xl border border-pebble-border/35 bg-pebble-chip-surface pl-9 pr-3 text-sm text-pebble-text-primary placeholder:text-pebble-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${isUrdu ? 'rtlText text-right' : ''
                 }`}
             />
           </label>
@@ -327,7 +327,7 @@ export function ProblemsPage() {
                   difficulty: event.target.value as ProblemsFilterState['difficulty'],
                 }))
               }
-              className="h-full w-full appearance-none rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+              className="h-full w-full appearance-none rounded-xl border border-pebble-border/35 bg-pebble-chip-surface pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
               aria-label={t('problems.filters.difficulty')}
             >
               <option value="any">{t('problems.filters.anyDifficulty')}</option>
@@ -344,7 +344,7 @@ export function ProblemsPage() {
             <select
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
-              className="h-full w-full appearance-none rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+              className="h-full w-full appearance-none rounded-xl border border-pebble-border/35 bg-pebble-chip-surface pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
               aria-label={t('problems.sort.label')}
             >
               <option value="newest">{t('problems.sort.newest')}</option>

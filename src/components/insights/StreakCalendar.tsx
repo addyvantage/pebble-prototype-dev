@@ -97,7 +97,7 @@ export function StreakCalendar({
 
     // Dull grey for past non-coded
     pastNotCoded:
-      '!bg-pebble-overlay/[0.03] !border-pebble-border/15 ' +
+      '!bg-pebble-chip-surface/40 !border-pebble-border/20 ' +
       '!text-pebble-text-muted !opacity-60',
 
     // Disable visual: no pointer, no hover effect
@@ -107,7 +107,7 @@ export function StreakCalendar({
   return (
     <div
       className={classNames(
-        'space-y-4 rounded-2xl border border-pebble-border/40 bg-pebble-canvas/60 backdrop-blur-md p-4 w-full mx-auto max-w-[380px]',
+        'space-y-4 rounded-2xl border border-pebble-border/35 bg-pebble-chip-surface/50 p-4 w-full mx-auto max-w-[380px]',
         className
       )}
     >
@@ -127,7 +127,7 @@ export function StreakCalendar({
           <Flame className="h-2.5 w-2.5" aria-hidden="true" />
           <span className="ltrSafe font-semibold">{streak}</span>
         </span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2 py-0.5 text-[10px] text-pebble-text-secondary">
+        <span className="inline-flex items-center gap-1 rounded-full border border-pebble-border/35 bg-pebble-canvas px-2 py-0.5 text-[10px] text-pebble-text-secondary">
           <Trophy className="h-2.5 w-2.5" aria-hidden="true" />
           <span className={isRTL ? 'rtlText' : ''}>{t('insights.streak.longest')}</span>
           <span className="ltrSafe font-semibold text-pebble-text-primary">{longest}</span>
@@ -141,7 +141,7 @@ export function StreakCalendar({
       </div>
 
       <div className="pt-2">
-        <div className="relative overflow-hidden rounded-2xl border border-pebble-border/25 bg-pebble-overlay/[0.03] p-1.5 sm:p-2">
+        <div className="relative overflow-hidden rounded-2xl border border-pebble-border/20 bg-pebble-canvas/80 p-1.5 sm:p-2">
           <Calendar
             month={baseMonth.current}
             disableNavigation

@@ -153,12 +153,12 @@ export function CodeEditor({
   }, [indentSelection, onEscape, onRunRequested, outdentSelection, readOnly])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-pebble-border/35 bg-pebble-canvas/92">
+    <div className="overflow-hidden rounded-xl border border-pebble-border/35 bg-[var(--pebble-editor-bg)]">
       <div className="grid grid-cols-[60px_1fr]">
         <ol
           ref={gutterRef}
           aria-hidden="true"
-          className="max-h-[430px] overflow-y-auto border-r border-pebble-border/28 bg-pebble-overlay/[0.08] py-3 text-right text-xs text-pebble-text-muted"
+          className="max-h-[430px] overflow-y-auto border-r border-pebble-border/20 bg-[var(--pebble-editor-gutter)] py-3 text-right text-xs text-pebble-text-muted"
         >
           {lines.map((_, index) => {
             const lineNumber = index + 1

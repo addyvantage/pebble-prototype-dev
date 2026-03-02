@@ -19,7 +19,7 @@ export const TooltipContent = React.forwardRef<
             sideOffset={sideOffset}
             className={cn(
                 // Premium Pebble tooltip
-                "z-[99999] rounded-[10px] border border-pebble-border/30 bg-pebble-surface px-3 py-2 text-[11px] leading-tight text-pebble-text-primary shadow-xl",
+                "z-[99999] rounded-[10px] border border-pebble-border/30 bg-pebble-canvas px-3 py-2 text-[11px] leading-tight text-pebble-text-primary shadow-xl",
                 "backdrop-blur-sm",
                 "data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in data-[state=closed]:animate-out data-[state=closed]:fade-out",
                 className

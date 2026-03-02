@@ -77,7 +77,7 @@ export function PebbleCalendarHeatmap({
         const labelOn = labels.on || "on"
         const labelDate = formatTooltipDate(toLocalMidnight(date))
 
-        let bgClass = "bg-pebble-surface/60 border border-pebble-border/25"
+        let bgClass = "bg-pebble-chip-surface/70 border border-pebble-border/20"
         if (level === 1) bgClass = "bg-pebble-accent/18 border border-pebble-border/25"
         else if (level === 2) bgClass = "bg-pebble-accent/35 border border-pebble-border/25"
         else if (level === 3) bgClass = "bg-pebble-accent/65 border border-pebble-accent/35"
@@ -112,7 +112,7 @@ export function PebbleCalendarHeatmap({
                     <TooltipContent
                         side="top"
                         align="center"
-                        className="whitespace-nowrap z-[99999] bg-pebble-surface text-pebble-text-primary border border-pebble-border/30 shadow-xl rounded-[10px] px-3 py-1.5 text-[11px]"
+                        className="whitespace-nowrap z-[99999] bg-pebble-canvas text-pebble-text-primary border border-pebble-border/30 shadow-xl rounded-[10px] px-3 py-1.5 text-[11px]"
                     >
                         <span className="font-semibold">{labelCount}</span> <span className="text-pebble-text-secondary">{labelSolve} {labelOn} {labelDate}</span>
                     </TooltipContent>
@@ -160,7 +160,7 @@ export function PebbleCalendarHeatmap({
             <div className="mt-3 flex items-center justify-end gap-2 text-[11px] text-pebble-text-secondary">
                 <span>{labels.less || "Less"}</span>
                 <div className="flex items-center gap-[4px]">
-                    <div className="h-4 w-4 rounded-[4px] bg-pebble-surface/60 border border-pebble-border/25" />
+                    <div className="h-4 w-4 rounded-[4px] bg-pebble-chip-surface/70 border border-pebble-border/20" />
                     <div className="h-4 w-4 rounded-[4px] bg-pebble-accent/18 border border-pebble-border/25" />
                     <div className="h-4 w-4 rounded-[4px] bg-pebble-accent/35 border border-pebble-border/25" />
                     <div className="h-4 w-4 rounded-[4px] bg-pebble-accent/65 border border-pebble-accent/35" />

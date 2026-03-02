@@ -43,7 +43,7 @@ export function ProblemsTable({
   return (
     <div className="overflow-hidden rounded-2xl border border-pebble-border/28 bg-pebble-overlay/[0.04]">
       <div
-        className={`${SHARED_GRID} border-b border-pebble-border/25 bg-pebble-overlay/[0.08] py-3 text-sm font-medium text-pebble-text-secondary`}
+        className={`${SHARED_GRID} border-b border-pebble-border/25 bg-pebble-canvas/70 py-3 text-sm font-medium text-pebble-text-secondary`}
       >
         <span className="ltrSafe text-center">{headings.index}</span>
         <span className={isUrdu ? 'rtlText' : ''}>{headings.title}</span>
@@ -78,7 +78,7 @@ export function ProblemsTable({
                   {problem.topics.slice(0, 3).map((topic) => (
                     <span
                       key={`${problem.id}-${topic}`}
-                      className={`rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.07] px-2 py-0.5 text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}
+                      className={`rounded-full border border-pebble-border/30 bg-pebble-chip-surface/60 px-2 py-0.5 text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}
                     >
                       {topic}
                     </span>

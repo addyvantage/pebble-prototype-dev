@@ -82,7 +82,7 @@ export function ProblemContributionsHeatmap() {
         : '-'
 
     return (
-        <Card className="flex flex-col xl:flex-row overflow-hidden bg-pebble-overlay/[0.04]">
+        <Card className="flex flex-col xl:flex-row overflow-hidden bg-pebble-chip-surface/30">
             {/* Left Side: Heatmap */}
             <div className="flex-1 p-5 lg:p-6 pb-4">
                 <div className="mb-6">
@@ -109,7 +109,7 @@ export function ProblemContributionsHeatmap() {
             </div>
 
             {/* Right Side: Highlights Panel */}
-            <div className="w-full xl:w-[280px] shrink-0 border-t xl:border-t-0 xl:border-l border-pebble-border/10 bg-pebble-surface/40 p-6 flex flex-col justify-center gap-7">
+            <div className="w-full xl:w-[280px] shrink-0 border-t xl:border-t-0 xl:border-l border-pebble-border/25 bg-pebble-canvas/60 p-6 flex flex-col justify-center gap-7">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-pebble-text-secondary mb-1">
                         <Activity className="w-4 h-4" />

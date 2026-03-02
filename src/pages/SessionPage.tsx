@@ -297,6 +297,37 @@ function formatSqlPreviewTable(table: SqlPreviewTable) {
   return `${header}\n${separator}\n${body}`.trim()
 }
 
+function defineMonacoThemes(monaco: typeof import('monaco-editor')) {
+  monaco.editor.defineTheme('pebble-light', {
+    base: 'vs',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': '#EEF2FA',
+      'editor.lineHighlightBackground': '#E4EAF650',
+      'editorLineNumber.foreground': '#9BA3B8',
+      'editorLineNumber.activeForeground': '#4C5F78',
+      'editor.selectionBackground': '#1D4ED825',
+      'editorCursor.foreground': '#1D4ED8',
+      'editorGutter.background': '#E4EAF6',
+    },
+  })
+  monaco.editor.defineTheme('pebble-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': '#252A3C',
+      'editor.lineHighlightBackground': '#FFFFFF08',
+      'editorLineNumber.foreground': '#707691',
+      'editorLineNumber.activeForeground': '#B9C0D4',
+      'editor.selectionBackground': '#3B82F628',
+      'editorCursor.foreground': '#60A5FA',
+      'editorGutter.background': '#1E2231',
+    },
+  })
+}
+
 export function SessionPage() {
   const { lang: uiLanguage, t, format } = useI18n()
   const [searchParams] = useSearchParams()
@@ -1904,7 +1935,8 @@ export function SessionPage() {
                 <Editor
                   height="100%"
                   language={getMonacoLanguage(sessionLanguage)}
-                  theme={theme === 'light' ? 'vs' : 'vs-dark'}
+                  beforeMount={defineMonacoThemes}
+                  theme={theme === 'light' ? 'pebble-light' : 'pebble-dark'}
                   value={currentCode}
                   onChange={(nextValue) => onCodeChange(nextValue ?? '')}
                   options={{
