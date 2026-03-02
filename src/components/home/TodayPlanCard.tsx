@@ -37,8 +37,7 @@ export function TodayPlanCard() {
         return () => window.removeEventListener('focus', onFocus)
     }, [])
 
-    const handleToggleCheck = (taskId: string, e: React.MouseEvent) => {
-        e.stopPropagation()
+    const handleToggleCheck = (taskId: string) => {
         const nextState = toggleTaskDone(taskId)
         setState(nextState)
         setStreak(computeStreak())
@@ -199,21 +198,34 @@ export function TodayPlanCard() {
                                 const checked = state.completedTasks.includes(task.id)
                                 return (
                                     <li key={task.id} className="relative overflow-hidden rounded-[10px] border border-pebble-border/20 bg-pebble-canvas/60 transition-all">
+                                        {/* Left hit area — toggles completion (~50% width) */}
                                         <button
                                             type="button"
+                                            aria-pressed={checked}
+                                            aria-label={checked ? `Mark "${task.label}" incomplete` : `Mark "${task.label}" complete`}
+                                            onClick={() => handleToggleCheck(task.id)}
+                                            className="absolute inset-y-0 left-0 z-10 w-1/2 rounded-l-[9px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pebble-accent/45"
+                                        />
+                                        {/* Right hit area — opens detail modal (~50% width) */}
+                                        <button
+                                            type="button"
+                                            aria-label={`View details for "${task.label}"`}
                                             onClick={() => openModal(task.id)}
+                                            className="absolute inset-y-0 right-0 z-10 w-1/2 rounded-r-[9px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pebble-accent/45"
+                                        />
+                                        {/* Visual content — pointer-events-none so overlay buttons capture all events */}
+                                        <div
                                             className={classNames(
-                                                'group flex w-full items-start gap-2.5 px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:bg-pebble-overlay/[0.04]',
-                                                checked ? 'opacity-60 bg-pebble-overlay/[0.02]' : 'hover:bg-pebble-overlay/[0.03]'
+                                                'flex w-full items-start gap-2.5 px-2.5 py-2 pointer-events-none select-none transition',
+                                                checked ? 'opacity-60 bg-pebble-overlay/[0.02]' : ''
                                             )}
                                         >
                                             <div
-                                                onClick={(e) => handleToggleCheck(task.id, e)}
                                                 className={classNames(
-                                                    'mt-0.5 flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-[4px] border transition cursor-pointer',
+                                                    'mt-0.5 flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-[4px] border transition',
                                                     checked
                                                         ? 'border-pebble-success/40 bg-pebble-success/18 text-pebble-success'
-                                                        : 'border-pebble-border/40 bg-pebble-overlay/[0.05] text-transparent group-hover:border-pebble-accent/50 group-hover:bg-pebble-overlay/[0.08]'
+                                                        : 'border-pebble-border/40 bg-pebble-overlay/[0.05] text-transparent'
                                                 )}
                                             >
                                                 <Check className="h-3 w-3" strokeWidth={3} />
@@ -243,10 +255,10 @@ export function TodayPlanCard() {
                                                     {task.detail}
                                                 </span>
                                             </div>
-                                            <div className="mt-1 shrink-0 text-pebble-text-muted transition-colors group-hover:text-pebble-text-secondary">
+                                            <div className="mt-1 shrink-0 text-pebble-text-muted">
                                                 <ChevronRight className="h-4 w-4" />
                                             </div>
-                                        </button>
+                                        </div>
                                     </li>
                                 )
                             })}
