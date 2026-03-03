@@ -409,6 +409,7 @@ function extractUserId(req: Request): { userId: string; email: string } | null {
 // ── Profile routes ──────────────────────────────────────────────────────────
 // In-memory store for dev mode (no real DynamoDB)
 const devProfiles = new Map<string, Record<string, unknown>>()
+const devAvatarBlobs = new Map<string, { contentType: string; body: Buffer }>()
 
 app.get('/api/profile', async (req: Request, res: Response) => {
   const identity = extractUserId(req)
@@ -619,7 +620,8 @@ app.post('/api/avatar/presign', async (req: Request, res: Response) => {
     } else {
       console.log(`[dev-api] AWS not configured — using offline avatar stub for key: ${key}`)
     }
-    res.status(200).json({ uploadUrl: '/api/dev-upload-stub', key })
+    const uploadUrl = `/api/dev-upload-stub?key=${encodeURIComponent(key)}`
+    res.status(200).json({ uploadUrl, key })
     return
   }
 
@@ -664,7 +666,8 @@ app.get('/api/avatar/url', async (req: Request, res: Response) => {
 
   const awsRegion = process.env.AWS_REGION
   if (!awsRegion || !AVATARS_BUCKET) {
-    res.status(500).json({ error: 'Avatar storage not configured for signed GET URLs' })
+    // Offline/dev fallback: serve from in-memory upload stub path.
+    res.status(200).json({ url: `/api/dev-upload-stub?key=${encodeURIComponent(key)}` })
     return
   }
 
@@ -685,11 +688,36 @@ app.get('/api/avatar/url', async (req: Request, res: Response) => {
 })
 
 // ── Dev avatar upload stub (offline / no-S3 mode) ────────────────────────────
-// Accepts the PUT that ProfilePage sends after receiving the fake presigned URL.
-// Must be under /api/ so the Vite proxy forwards it — an absolute localhost:3001
-// URL would be cross-origin from localhost:5173 and get blocked by the browser.
-app.put('/api/dev-upload-stub', (_req: Request, res: Response) => {
+// Accepts PUT uploads and serves the image bytes back on GET.
+// Must stay under /api/ so Vite proxy forwards requests from localhost:5173.
+app.put('/api/dev-upload-stub', express.raw({ type: '*/*', limit: '10mb' }), (req: Request, res: Response) => {
+  const key = String(req.query.key ?? '')
+  if (!key) {
+    res.status(400).json({ error: 'Missing avatar key' })
+    return
+  }
+
+  const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0)
+  const contentType = String(req.headers['content-type'] ?? 'application/octet-stream')
+  devAvatarBlobs.set(key, { contentType, body })
   res.status(200).send()
+})
+
+app.get('/api/dev-upload-stub', (req: Request, res: Response) => {
+  const key = String(req.query.key ?? '')
+  if (!key) {
+    res.status(400).json({ error: 'Missing avatar key' })
+    return
+  }
+  const blob = devAvatarBlobs.get(key)
+  if (!blob) {
+    res.status(404).json({ error: 'Avatar not found' })
+    return
+  }
+
+  res.setHeader('Content-Type', blob.contentType)
+  res.setHeader('Cache-Control', 'no-store')
+  res.status(200).send(blob.body)
 })
 
 // ── Phase 5: Cohort Analytics (Athena + S3 + Glue) ─────────────────────────
