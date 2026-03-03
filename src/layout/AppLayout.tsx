@@ -173,7 +173,7 @@ export function AppLayout() {
         <div className={`relative flex flex-col ${isLandingRoute ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh] overflow-hidden'}`}>
           <header className="w-full">
             <PageContainer>
-              <Card className={`pebble-header p-0 ${isLandingRoute ? 'mb-0' : 'mb-1'}`} interactive>
+              <Card className={`pebble-header rounded-none p-0 ${isLandingRoute ? 'mb-0' : 'mb-1'}`} interactive>
                 <div className="flex items-center justify-between px-1.5 py-0 sm:px-2.5 sm:py-0">
                   <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 justify-start flex-1">
                     <div className="h-10 sm:h-12 overflow-hidden flex items-center flex-shrink-0">
