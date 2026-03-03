@@ -64,7 +64,7 @@ function getRunnerMode() {
 }
 
 async function runViaLambda(body: {
-  language: 'python' | 'javascript' | 'cpp' | 'java'
+  language: 'python' | 'javascript' | 'cpp' | 'java' | 'c'
   code: string
   stdin: string
   timeoutMs: number
@@ -121,7 +121,7 @@ async function runViaLambda(body: {
 }
 
 async function runViaRunnerUrl(body: {
-  language: 'python' | 'javascript' | 'cpp' | 'java'
+  language: 'python' | 'javascript' | 'cpp' | 'java' | 'c'
   code: string
   stdin: string
   timeoutMs: number

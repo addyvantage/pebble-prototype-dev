@@ -9,7 +9,7 @@ import { getUnitFunctionMode } from './functionMode'
 import type { PebbleLanguageId } from './languages'
 
 function isProblemLanguage(language: PebbleLanguageId): language is ProblemLanguage {
-  return language === 'python' || language === 'javascript' || language === 'cpp' || language === 'java' || language === 'sql'
+  return language === 'python' || language === 'javascript' || language === 'cpp' || language === 'java' || language === 'c' || language === 'sql'
 }
 
 function isPlacementLanguage(language: PebbleLanguageId): language is PlacementLanguage {

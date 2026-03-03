@@ -131,10 +131,13 @@ function getRuntimeSourceFile(language: PlacementLanguage) {
     return 'main.py'
   }
   if (language === 'javascript') {
-    return 'main.js'
+    return 'main.cjs'
   }
   if (language === 'java') {
     return 'Main.java'
+  }
+  if (language === 'c') {
+    return 'main.c'
   }
   return 'main.cpp'
 }
@@ -370,12 +373,6 @@ export function SessionPage() {
     () => (activeProblemBase ? getLocalizedProblem(activeProblemBase, uiLanguage) : null),
     [activeProblemBase, uiLanguage],
   )
-  const languageOptions = useMemo<SessionEditorLanguage[]>(() => {
-    if (activeProblemBase) {
-      return activeProblemBase.languageSupport.filter((l) => isPebbleLanguageId(l)) as SessionEditorLanguage[]
-    }
-    return ['python', 'javascript', 'cpp', 'java', 'c']
-  }, [activeProblemBase])
   const [editorLanguage, setEditorLanguage] = useState<SessionEditorLanguage>(DEFAULT_LANGUAGE)
   const [problemCodeByLang, setProblemCodeByLang] = useState<ProblemCodeByLang>(() => loadProblemCodeByLang())
 
@@ -388,6 +385,23 @@ export function SessionPage() {
   const [pagePrefs, setPagePrefs] = useState<PagePrefs>(() => loadPagePrefs())
 
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0)
+  const languageOptions = useMemo<SessionEditorLanguage[]>(() => {
+    if (activeProblemBase) {
+      return activeProblemBase.languageSupport.filter((l) => isPebbleLanguageId(l)) as SessionEditorLanguage[]
+    }
+    const curriculumLanguages: SessionEditorLanguage[] = ['python', 'javascript', 'cpp', 'java', 'c']
+    const currentUnitId = units[currentUnitIndex]?.id
+    if (!currentUnitId) {
+      return curriculumLanguages
+    }
+
+    const functionModeLanguages = curriculumLanguages.filter((languageId) => {
+      const placementLanguage = toPlacementLanguage(languageId)
+      return placementLanguage ? getUnitFunctionMode(placementLanguage, currentUnitId) !== null : false
+    })
+
+    return functionModeLanguages.length > 0 ? functionModeLanguages : curriculumLanguages
+  }, [activeProblemBase, currentUnitIndex, units])
   const [draftByUnitId, setDraftByUnitId] = useState<Record<string, string>>({})
   const [unitProgress, setUnitProgress] = useState<UnitProgressMap>(() => {
     const persisted = loadUnitProgress()
@@ -466,9 +480,7 @@ export function SessionPage() {
     return getDefaultProblemLanguage(activeProblemBase)
   }, [activeProblemBase, editorLanguage])
   const sessionLanguage: SessionEditorLanguage = activeProblem ? activeProblemLanguage : editorLanguage
-  const runtimeLanguage: PlacementLanguage = sessionLanguage === 'c'
-    ? 'cpp'
-    : toPlacementLanguage(sessionLanguage) ?? selectedLanguage
+  const runtimeLanguage: PlacementLanguage = toPlacementLanguage(sessionLanguage) ?? selectedLanguage
   const isSqlMode = activeProblemBase?.kind === 'sql' && sessionLanguage === 'sql'
   const activeProblemStarter = useMemo(() => {
     if (!activeProblemBase) {

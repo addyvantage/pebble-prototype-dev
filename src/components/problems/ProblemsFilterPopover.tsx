@@ -45,6 +45,7 @@ type ProblemsFilterPopoverProps = {
     languageJavaScript: string
     languageJava: string
     languageCpp: string
+    languageC: string
     languageSql: string
   }
 }
@@ -53,7 +54,7 @@ function classNames(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ')
 }
 
-const LANGUAGE_ORDER: ProblemLanguage[] = ['python', 'javascript', 'java', 'sql']
+const LANGUAGE_ORDER: ProblemLanguage[] = ['python', 'javascript', 'java', 'cpp', 'c', 'sql']
 
 export function ProblemsFilterPopover({
   value,
@@ -119,6 +120,7 @@ export function ProblemsFilterPopover({
     javascript: labels.languageJavaScript,
     java: labels.languageJava,
     cpp: labels.languageCpp,
+    c: labels.languageC,
     sql: labels.languageSql,
   }
 

@@ -53,6 +53,126 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function normalizeSourceText(value: string) {
+  return value.replace(/\r\n?/g, '\n')
+}
+
+function stripCommentsAndStrings(source: string) {
+  let output = ''
+  let index = 0
+  let state: 'normal' | 'line_comment' | 'block_comment' | 'single_quote' | 'double_quote' | 'template' = 'normal'
+
+  while (index < source.length) {
+    const current = source[index]
+    const next = source[index + 1] ?? ''
+
+    if (state === 'line_comment') {
+      if (current === '\n') {
+        output += '\n'
+        state = 'normal'
+      } else {
+        output += ' '
+      }
+      index += 1
+      continue
+    }
+
+    if (state === 'block_comment') {
+      if (current === '*' && next === '/') {
+        output += '  '
+        index += 2
+        state = 'normal'
+        continue
+      }
+      output += current === '\n' ? '\n' : ' '
+      index += 1
+      continue
+    }
+
+    if (state === 'single_quote') {
+      if (current === '\\' && next) {
+        output += '  '
+        index += 2
+        continue
+      }
+      output += current === '\n' ? '\n' : ' '
+      if (current === '\'') {
+        state = 'normal'
+      }
+      index += 1
+      continue
+    }
+
+    if (state === 'double_quote') {
+      if (current === '\\' && next) {
+        output += '  '
+        index += 2
+        continue
+      }
+      output += current === '\n' ? '\n' : ' '
+      if (current === '"') {
+        state = 'normal'
+      }
+      index += 1
+      continue
+    }
+
+    if (state === 'template') {
+      if (current === '\\' && next) {
+        output += '  '
+        index += 2
+        continue
+      }
+      output += current === '\n' ? '\n' : ' '
+      if (current === '`') {
+        state = 'normal'
+      }
+      index += 1
+      continue
+    }
+
+    if (current === '/' && next === '/') {
+      output += '  '
+      index += 2
+      state = 'line_comment'
+      continue
+    }
+
+    if (current === '/' && next === '*') {
+      output += '  '
+      index += 2
+      state = 'block_comment'
+      continue
+    }
+
+    if (current === '\'') {
+      output += ' '
+      index += 1
+      state = 'single_quote'
+      continue
+    }
+
+    if (current === '"') {
+      output += ' '
+      index += 1
+      state = 'double_quote'
+      continue
+    }
+
+    if (current === '`') {
+      output += ' '
+      index += 1
+      state = 'template'
+      continue
+    }
+
+    output += current
+    index += 1
+  }
+
+  return output
+}
+
 function normalizeParams(language: PlacementLanguage, rawParams: string) {
   if (language === 'python') {
     const cleaned = rawParams
@@ -93,13 +213,202 @@ function countExpectedParams(signatureLabel: string) {
     .filter(Boolean).length
 }
 
+function findMatching(source: string, openIndex: number, open: string, close: string) {
+  let depth = 0
+  for (let cursor = openIndex; cursor < source.length; cursor += 1) {
+    const char = source[cursor]
+    if (char === open) {
+      depth += 1
+      continue
+    }
+    if (char === close) {
+      depth -= 1
+      if (depth === 0) {
+        return cursor
+      }
+    }
+  }
+  return -1
+}
+
+function findClassBodyRange(sanitizedCode: string, className: string) {
+  const classPattern = new RegExp(`\\bclass\\s+${escapeRegExp(className)}\\b`, 'm')
+  const classMatch = classPattern.exec(sanitizedCode)
+  if (!classMatch || classMatch.index < 0) {
+    return null
+  }
+
+  const braceIndex = sanitizedCode.indexOf('{', classMatch.index + classMatch[0].length)
+  if (braceIndex < 0) {
+    return null
+  }
+
+  const braceEndIndex = findMatching(sanitizedCode, braceIndex, '{', '}')
+  if (braceEndIndex < 0) {
+    return null
+  }
+
+  return {
+    start: braceIndex + 1,
+    end: braceEndIndex,
+  }
+}
+
+function isIdentifierChar(value: string) {
+  return /[A-Za-z0-9_]/.test(value)
+}
+
+function skipWhitespace(source: string, start: number) {
+  let cursor = start
+  while (cursor < source.length && /\s/.test(source[cursor])) {
+    cursor += 1
+  }
+  return cursor
+}
+
+function skipTrailingModifiers(source: string, start: number) {
+  let cursor = skipWhitespace(source, start)
+
+  while (cursor < source.length) {
+    if (source.startsWith('const', cursor) && !isIdentifierChar(source[cursor + 5] ?? '')) {
+      cursor = skipWhitespace(source, cursor + 5)
+      continue
+    }
+    if (source.startsWith('noexcept', cursor) && !isIdentifierChar(source[cursor + 8] ?? '')) {
+      cursor = skipWhitespace(source, cursor + 8)
+      continue
+    }
+    if (source.startsWith('override', cursor) && !isIdentifierChar(source[cursor + 8] ?? '')) {
+      cursor = skipWhitespace(source, cursor + 8)
+      continue
+    }
+    if (source.startsWith('final', cursor) && !isIdentifierChar(source[cursor + 5] ?? '')) {
+      cursor = skipWhitespace(source, cursor + 5)
+      continue
+    }
+    if (source.startsWith('throws', cursor) && !isIdentifierChar(source[cursor + 6] ?? '')) {
+      cursor += 6
+      while (cursor < source.length && source[cursor] !== '{' && source[cursor] !== ';') {
+        cursor += 1
+      }
+      cursor = skipWhitespace(source, cursor)
+      continue
+    }
+    if (source[cursor] === '-' && source[cursor + 1] === '>') {
+      cursor += 2
+      while (cursor < source.length && source[cursor] !== '{' && source[cursor] !== ';') {
+        cursor += 1
+      }
+      cursor = skipWhitespace(source, cursor)
+      continue
+    }
+    break
+  }
+
+  return cursor
+}
+
+const NON_METHOD_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'sizeof', 'typeof'])
+
+function extractClassMethodSignatures(input: {
+  language: PlacementLanguage
+  userCode: string
+  className: string
+  methodName: string
+}) {
+  const normalizedCode = normalizeSourceText(input.userCode)
+  const sanitizedCode = stripCommentsAndStrings(normalizedCode)
+  const classRange = findClassBodyRange(sanitizedCode, input.className)
+  if (!classRange) {
+    return null
+  }
+
+  const classBodySanitized = sanitizedCode.slice(classRange.start, classRange.end)
+  const classBodyRaw = normalizedCode.slice(classRange.start, classRange.end)
+  let fallbackInClass: { methodName: string; params: string[] } | null = null
+
+  let braceDepth = 0
+  for (let index = 0; index < classBodySanitized.length; index += 1) {
+    const char = classBodySanitized[index]
+    if (char === '{') {
+      braceDepth += 1
+      continue
+    }
+    if (char === '}') {
+      braceDepth = Math.max(0, braceDepth - 1)
+      continue
+    }
+    if (braceDepth !== 0 || char !== '(') {
+      continue
+    }
+
+    const paramsEnd = findMatching(classBodySanitized, index, '(', ')')
+    if (paramsEnd < 0) {
+      continue
+    }
+
+    let nameEnd = index - 1
+    while (nameEnd >= 0 && /\s/.test(classBodySanitized[nameEnd])) {
+      nameEnd -= 1
+    }
+    if (nameEnd < 0 || !(isIdentifierChar(classBodySanitized[nameEnd]) || classBodySanitized[nameEnd] === '~')) {
+      continue
+    }
+
+    let nameStart = nameEnd
+    while (
+      nameStart >= 0
+      && (isIdentifierChar(classBodySanitized[nameStart]) || classBodySanitized[nameStart] === '~')
+    ) {
+      nameStart -= 1
+    }
+    const parsedName = classBodySanitized.slice(nameStart + 1, nameEnd + 1).trim()
+    if (!parsedName || NON_METHOD_KEYWORDS.has(parsedName)) {
+      continue
+    }
+
+    const afterModifiers = skipTrailingModifiers(classBodySanitized, paramsEnd + 1)
+    if (classBodySanitized[afterModifiers] !== '{') {
+      continue
+    }
+
+    const rawParams = classBodyRaw.slice(index + 1, paramsEnd)
+    const parsedParams = normalizeParams(input.language, rawParams)
+    if (parsedName === input.methodName) {
+      return {
+        found: true,
+        methodName: input.methodName,
+        params: parsedParams,
+      }
+    }
+
+    if (!fallbackInClass) {
+      fallbackInClass = {
+        methodName: parsedName,
+        params: parsedParams,
+      }
+    }
+
+    index = afterModifiers
+  }
+
+  if (fallbackInClass) {
+    return {
+      found: false,
+      methodName: fallbackInClass.methodName,
+      params: fallbackInClass.params,
+    }
+  }
+
+  return null
+}
+
 function extractMethodSignature(input: {
   language: PlacementLanguage
   userCode: string
   methodName: string
 }) {
-  const method = escapeRegExp(input.methodName)
-  const code = input.userCode
+  const code = normalizeSourceText(input.userCode)
 
   if (input.language === 'python') {
     const lines = code.split(/\r?\n/)
@@ -201,81 +510,17 @@ function extractMethodSignature(input: {
     return null
   }
 
-  if (input.language === 'javascript') {
-    const exact = new RegExp(`\\b${method}\\s*\\(([^)]*)\\)\\s*\\{`, 'm')
-    const fallback = /\b([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/m
-    const match = code.match(exact)
-    if (match) {
-      return {
-        found: true,
-        methodName: input.methodName,
-        params: normalizeParams(input.language, match[1]),
-      }
-    }
-    const fallbackMatch = code.match(fallback)
-    if (fallbackMatch) {
-      return {
-        found: false,
-        methodName: fallbackMatch[1],
-        params: normalizeParams(input.language, fallbackMatch[2]),
-      }
-    }
-    return null
-  }
-
-  if (input.language === 'java') {
-    const exact = new RegExp(
-      `(?:public|private|protected)?\\s*(?:static\\s+)?[\\w<>,\\[\\]\\s]+\\b${method}\\s*\\(([^)]*)\\)\\s*\\{`,
-      'm',
-    )
-    const fallback =
-      /(?:public|private|protected)?\s*(?:static\s+)?[\w<>,\[\]\s]+\b([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{/m
-    const match = code.match(exact)
-    if (match) {
-      return {
-        found: true,
-        methodName: input.methodName,
-        params: normalizeParams(input.language, match[1]),
-      }
-    }
-    const fallbackMatch = code.match(fallback)
-    if (fallbackMatch) {
-      return {
-        found: false,
-        methodName: fallbackMatch[1],
-        params: normalizeParams(input.language, fallbackMatch[2]),
-      }
-    }
-    return null
-  }
-
-  const exact = new RegExp(
-    `[\\w:<>,\\[\\]&*\\s]+\\b${method}\\s*\\(([^)]*)\\)\\s*(?:const\\s*)?\\{`,
-    'm',
-  )
-  const fallback = /[\w:<>,\[\]&*\s]+\b([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?:const\s*)?\{/m
-  const match = code.match(exact)
-  if (match) {
-    return {
-      found: true,
-      methodName: input.methodName,
-      params: normalizeParams(input.language, match[1]),
-    }
-  }
-  const fallbackMatch = code.match(fallback)
-  if (fallbackMatch) {
-    return {
-      found: false,
-      methodName: fallbackMatch[1],
-      params: normalizeParams(input.language, fallbackMatch[2]),
-    }
-  }
-  return null
+  return extractClassMethodSignatures({
+    language: input.language,
+    userCode: code,
+    className: 'Solution',
+    methodName: input.methodName,
+  })
 }
 
 function getClassCheckRegex(language: PlacementLanguage) {
   if (language === 'python') {
-    return /class\s+Solution\b/m
+    return /^\s*class\s+Solution\b/m
   }
   return /\bclass\s+Solution\b/m
 }
@@ -286,8 +531,9 @@ export function validateFunctionSignature(input: {
   methodName: string
   signatureLabel: string
 }): SignatureValidationResult {
+  const normalizedUserCode = normalizeSourceText(input.userCode)
   const classRegex = getClassCheckRegex(input.language)
-  if (!classRegex.test(input.userCode)) {
+  if (!classRegex.test(stripCommentsAndStrings(normalizedUserCode))) {
     return {
       ok: false,
       requiredSignature: input.signatureLabel,
@@ -298,7 +544,7 @@ export function validateFunctionSignature(input: {
 
   const extracted = extractMethodSignature({
     language: input.language,
-    userCode: input.userCode,
+    userCode: normalizedUserCode,
     methodName: input.methodName,
   })
 
@@ -427,7 +673,7 @@ const __solver = new Solution()
 const __result = __solver.${input.methodName}(${literalArgs.join(', ')})
 ${formatJsOutput('__result')}
 `
-  return toRunnableResult(code, input.userCode, 'main.js')
+  return toRunnableResult(code, input.userCode, 'main.cjs')
 }
 
 function buildCppSingleCase(input: {
@@ -443,7 +689,6 @@ function buildCppSingleCase(input: {
   const code = `#include <iostream>
 #include <string>
 #include <vector>
-#include <type_traits>
 
 using namespace std;
 
@@ -458,19 +703,23 @@ static void __pebblePrintVector(const vector<int>& values) {
   }
 }
 
+static void __pebblePrint(const vector<int>& values) {
+  __pebblePrintVector(values);
+}
+
+static void __pebblePrint(bool value) {
+  cout << (value ? "true" : "false");
+}
+
+template <typename T>
+static void __pebblePrint(const T& value) {
+  cout << value;
+}
+
 int main() {
   Solution __solver;
   auto __result = __solver.${input.methodName}(${literalArgs.join(', ')});
-  using __ResultType = decay_t<decltype(__result)>;
-
-  if constexpr (is_same_v<__ResultType, vector<int>>) {
-    __pebblePrintVector(__result);
-  } else if constexpr (is_same_v<__ResultType, bool>) {
-    cout << (__result ? "true" : "false");
-  } else {
-    cout << __result;
-  }
-
+  __pebblePrint(__result);
   return 0;
 }
 `
@@ -530,7 +779,7 @@ export function buildSingleCaseFunctionModeRunnable(input: {
     return buildJavascriptSingleCase(input)
   }
 
-  if (input.language === 'cpp' || input.language === 'c') {
+  if (input.language === 'cpp') {
     return buildCppSingleCase(input)
   }
 

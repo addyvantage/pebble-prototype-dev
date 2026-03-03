@@ -26,7 +26,7 @@ type UnitFunctionDefinition = {
   starterStubByLanguage: Record<PlacementLanguage, string>
 }
 
-const FUNCTION_LANGUAGES: PlacementLanguage[] = ['python', 'javascript', 'cpp', 'java', 'c']
+const FUNCTION_LANGUAGES: PlacementLanguage[] = ['python', 'javascript', 'cpp', 'java']
 
 function tokensToInts(input: string) {
   return input

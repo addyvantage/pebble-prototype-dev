@@ -29,6 +29,9 @@ function executableInstallHint(command: string) {
   if (command === 'g++') {
     return "Missing executable 'g++'. Install g++ (build-essential on Linux or Xcode Command Line Tools on macOS)."
   }
+  if (command === 'gcc') {
+    return "Missing executable 'gcc'. Install gcc (build-essential on Linux or Xcode Command Line Tools on macOS)."
+  }
   if (command === 'javac' || command === 'java') {
     return "Missing executable 'javac/java'. Install a JDK (OpenJDK 17+) and ensure both are on PATH."
   }
@@ -56,6 +59,7 @@ const TOOLCHAIN_BY_LANGUAGE: Record<RunLanguage, ToolchainProbe[]> = {
   python: [{ command: 'python3', args: ['--version'] }],
   javascript: [{ command: 'node', args: ['-v'] }],
   cpp: [{ command: 'g++', args: ['--version'] }],
+  c: [{ command: 'gcc', args: ['--version'] }],
   java: [
     { command: 'javac', args: ['-version'] },
     { command: 'java', args: ['-version'] },
@@ -301,7 +305,7 @@ async function runPython(runDir: string, code: string, stdin: string, timeoutMs:
 }
 
 async function runJavaScript(runDir: string, code: string, stdin: string, timeoutMs: number, startedAt: number) {
-  const sourcePath = path.join(runDir, 'main.js')
+  const sourcePath = path.join(runDir, 'main.cjs')
   await fs.writeFile(sourcePath, code, 'utf8')
 
   const remaining = remainingTimeMs(startedAt, timeoutMs)
@@ -337,6 +341,52 @@ async function runCpp(runDir: string, code: string, stdin: string, timeoutMs: nu
   const compileResult = await runProcess({
     command: 'g++',
     args: ['-std=c++17', '-O2', sourcePath, '-o', outputPath],
+    cwd: runDir,
+    stdin: '',
+    timeoutMs: compileRemaining,
+  })
+
+  if (compileResult.timedOut) {
+    return timedOutResult(startedAt, timeoutMs, compileResult.stdout, compileResult.stderr)
+  }
+
+  if (compileResult.exitCode !== 0) {
+    return buildResult(startedAt, compileResult, 'compile_error')
+  }
+
+  const runRemaining = remainingTimeMs(startedAt, timeoutMs)
+  if (runRemaining <= 0) {
+    return timedOutResult(startedAt, timeoutMs, compileResult.stdout, compileResult.stderr)
+  }
+
+  const runResult = await runProcess({
+    command: outputPath,
+    args: [],
+    cwd: runDir,
+    stdin,
+    timeoutMs: runRemaining,
+  })
+
+  if (runResult.timedOut && !runResult.stderr.trim()) {
+    runResult.stderr = `Execution timed out after ${timeoutMs}ms.`
+  }
+
+  return buildResult(startedAt, withStepOutput(compileResult, runResult), 'runtime_error')
+}
+
+async function runC(runDir: string, code: string, stdin: string, timeoutMs: number, startedAt: number) {
+  const sourcePath = path.join(runDir, 'main.c')
+  const outputPath = path.join(runDir, 'main.out')
+  await fs.writeFile(sourcePath, code, 'utf8')
+
+  const compileRemaining = remainingTimeMs(startedAt, timeoutMs)
+  if (compileRemaining <= 0) {
+    return timedOutResult(startedAt, timeoutMs)
+  }
+
+  const compileResult = await runProcess({
+    command: 'gcc',
+    args: ['-std=gnu17', '-O2', sourcePath, '-o', outputPath, '-lm'],
     cwd: runDir,
     stdin: '',
     timeoutMs: compileRemaining,
@@ -441,6 +491,9 @@ export async function runCodeLocally(input: NormalizedRunRequest): Promise<Runne
     }
     if (input.language === 'cpp') {
       return await runCpp(runDir, input.code, input.stdin, input.timeoutMs, startedAt)
+    }
+    if (input.language === 'c') {
+      return await runC(runDir, input.code, input.stdin, input.timeoutMs, startedAt)
     }
     return await runJava(runDir, input.code, input.stdin, input.timeoutMs, startedAt)
   } catch (error) {

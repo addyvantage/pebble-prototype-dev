@@ -1,4 +1,4 @@
-export const SUPPORTED_LANGUAGES = ['python', 'javascript', 'cpp', 'java'] as const
+export const SUPPORTED_LANGUAGES = ['python', 'javascript', 'cpp', 'java', 'c'] as const
 
 export type RunLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 

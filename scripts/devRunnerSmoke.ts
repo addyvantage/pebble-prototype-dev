@@ -38,6 +38,13 @@ const CASES: CaseDef[] = [
     stdin: '',
     expected: 'Hello, Pebble!',
   },
+  {
+    language: 'c',
+    name: 'hello-c',
+    code: '#include <stdio.h>\nint main(void){ printf("Hello, Pebble!"); return 0; }\n',
+    stdin: '',
+    expected: 'Hello, Pebble!',
+  },
 ]
 
 async function main() {

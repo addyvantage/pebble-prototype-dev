@@ -1,6 +1,6 @@
 import type { PlacementLanguage } from './onboardingData'
 
-export type ProblemLanguage = Extract<PlacementLanguage, 'python' | 'javascript' | 'cpp' | 'java'> | 'sql'
+export type ProblemLanguage = Extract<PlacementLanguage, 'python' | 'javascript' | 'cpp' | 'java' | 'c'> | 'sql'
 export type ProblemDifficulty = 'Easy' | 'Medium' | 'Hard'
 
 export type ProblemTopicCount = {
@@ -68,13 +68,14 @@ export type ProblemDefinition = {
   createdAtRank: number
 }
 
-const CODE_LANGUAGE_SUPPORT: ProblemLanguage[] = ['python', 'javascript', 'java', 'cpp']
+const CODE_LANGUAGE_SUPPORT: ProblemLanguage[] = ['python', 'javascript', 'java', 'cpp', 'c']
 
 const GENERIC_STARTERS: Record<Exclude<ProblemLanguage, 'sql'>, string> = {
   python: `def solve():\n    # TODO: implement\n    pass\n\nif __name__ == "__main__":\n    solve()\n`,
   javascript: `function solve(input) {\n  // TODO: implement\n  return "";\n}\n\nconst fs = require('fs');\nconst input = fs.readFileSync(0, 'utf8');\nprocess.stdout.write(String(solve(input)));\n`,
   java: `import java.io.*;\n\npublic class Main {\n  public static void main(String[] args) throws Exception {\n    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n    // TODO: implement\n  }\n}\n`,
   cpp: `#include <iostream>\n#include <vector>\n#include <string>\n#include <algorithm>\n\nint main() {\n  // TODO: implement\n  return 0;\n}\n`,
+  c: `#include <stdio.h>\n\nint main(void) {\n  // TODO: implement\n  return 0;\n}\n`,
 }
 
 const SQL_STARTER = `-- Write your SQL query below\nSELECT p.firstName, p.lastName, a.city, a.state\nFROM Person p\nLEFT JOIN Address a ON p.personId = a.personId;\n`
@@ -163,6 +164,7 @@ const CURATED_PROBLEMS: ProblemDefinition[] = [
       javascript: `function solve(input) {\n  const data = input.trim().split(/\\s+/).map(Number);\n  const n = data[0];\n  const nums = data.slice(1, 1 + n);\n  const target = data[1 + n];\n  // TODO\n  return '-1 -1';\n}\n\nconst fs = require('fs');\nconst input = fs.readFileSync(0, 'utf8');\nprocess.stdout.write(String(solve(input)));\n`,
       java: `import java.io.*;\nimport java.util.*;\n\npublic class Main {\n  public static void main(String[] args) throws Exception {\n    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n    List<Integer> vals = new ArrayList<>();\n    for (String s : br.readLine().trim().split("\\\\s+")) vals.add(Integer.parseInt(s));\n    // TODO\n    System.out.println("-1 -1");\n  }\n}\n`,
       cpp: `#include <iostream>\n#include <vector>\n\nint main() {\n  // TODO\n  std::cout << "-1 -1";\n  return 0;\n}\n`,
+      c: `#include <stdio.h>\n\nint main(void) {\n  // TODO\n  printf("-1 -1");\n  return 0;\n}\n`,
     },
     tests: [
       { input: '4\n2 7 11 15\n9\n', expected: '0 1' },
@@ -1583,7 +1585,7 @@ const problemsById = new Map(PROBLEMS_BANK.map((problem) => [problem.id, problem
 export const TOPICS_WITH_COUNTS = TOPICS_CATALOG
 
 export function isProblemLanguage(value: string | null): value is ProblemLanguage {
-  return value === 'python' || value === 'javascript' || value === 'cpp' || value === 'java' || value === 'sql'
+  return value === 'python' || value === 'javascript' || value === 'cpp' || value === 'java' || value === 'c' || value === 'sql'
 }
 
 export function getProblemById(problemId: string | null) {
@@ -1606,7 +1608,7 @@ export function getProblemStarterCode(problem: ProblemDefinition, language: Prob
     return SQL_STARTER
   }
 
-  return problem.starterByLanguage.python ?? GENERIC_STARTERS.python
+  return problem.starterByLanguage[language] ?? GENERIC_STARTERS[language]
 }
 
 export function getDefaultProblemLanguage(problem: ProblemDefinition): ProblemLanguage {

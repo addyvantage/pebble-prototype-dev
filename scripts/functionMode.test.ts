@@ -2,6 +2,8 @@ import test, { type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildFunctionModeRunnable,
+  buildSingleCaseFunctionModeRunnable,
+  getUnitFunctionMode,
   parseHarnessCasesFromStdout,
   validateFunctionSignature,
 } from '../src/lib/functionMode'
@@ -157,3 +159,95 @@ test('python function-mode execution: treats None return as empty string', async
   assert.equal(parsed![0]?.passed, true)
 })
 
+test('function-mode contract: C is intentionally unavailable', () => {
+  const config = getUnitFunctionMode('c', 'hello-world')
+  assert.equal(config, null)
+})
+
+test('javascript signature: accepts CRLF + comments + multiline params', () => {
+  const userCode = `class Solution {\r\n  // standard signature\r\n  solve(\r\n  ) {\r\n    return "Hello, Pebble!"\r\n  }\r\n}\r\n`
+  const result = validateFunctionSignature({
+    language: 'javascript',
+    userCode,
+    methodName: 'solve',
+    signatureLabel: 'Solution.solve() => string',
+  })
+
+  assert.deepEqual(result, { ok: true })
+})
+
+test('cpp signature: accepts const/noexcept modifiers', () => {
+  const userCode = `#include <string>\nclass Solution {\npublic:\n  std::string solve() const noexcept {\n    return "Hello, Pebble!";\n  }\n};\n`
+  const result = validateFunctionSignature({
+    language: 'cpp',
+    userCode,
+    methodName: 'solve',
+    signatureLabel: 'Solution::solve() -> string',
+  })
+
+  assert.deepEqual(result, { ok: true })
+})
+
+test('java signature: accepts throws clause', () => {
+  const userCode = `class Solution {\n  public String solve() throws Exception {\n    return "Hello, Pebble!";\n  }\n}\n`
+  const result = validateFunctionSignature({
+    language: 'java',
+    userCode,
+    methodName: 'solve',
+    signatureLabel: 'Solution.solve() -> String',
+  })
+
+  assert.deepEqual(result, { ok: true })
+})
+
+test('javascript function-mode execution: executes Solution.solve()', async (t: TestContext) => {
+  const userCode = `class Solution {\n  solve() {\n    return "Hello, Pebble!"\n  }\n}\n`
+  const runnable = buildSingleCaseFunctionModeRunnable({
+    language: 'javascript',
+    userCode,
+    methodName: 'solve',
+    args: [],
+  })
+  assert.ok(runnable)
+
+  const run = await runCodeLocally({
+    language: 'javascript',
+    code: runnable!.code,
+    stdin: '',
+    timeoutMs: 4000,
+  })
+
+  if (run.status === 'toolchain_unavailable') {
+    t.skip(`node unavailable: ${run.stderr}`)
+    return
+  }
+
+  assert.equal(run.status, 'ok')
+  assert.equal(run.stdout.trim(), 'Hello, Pebble!')
+})
+
+test('cpp function-mode execution: executes Solution::solve()', async (t: TestContext) => {
+  const userCode = `#include <string>\nusing namespace std;\n\nclass Solution {\npublic:\n  string solve() {\n    return "Hello, Pebble!";\n  }\n};\n`
+  const runnable = buildSingleCaseFunctionModeRunnable({
+    language: 'cpp',
+    userCode,
+    methodName: 'solve',
+    args: [],
+  })
+  assert.ok(runnable)
+
+  const run = await runCodeLocally({
+    language: 'cpp',
+    code: runnable!.code,
+    stdin: '',
+    timeoutMs: 4000,
+  })
+
+  if (run.status === 'toolchain_unavailable') {
+    t.skip(`g++ unavailable: ${run.stderr}`)
+    return
+  }
+
+  assert.equal(run.status, 'ok')
+  assert.equal(run.stdout.trim(), 'Hello, Pebble!')
+})

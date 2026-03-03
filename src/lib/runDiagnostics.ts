@@ -12,10 +12,10 @@ export type RunFailureDiagnostic = {
 }
 
 const COMPILER_LINE_PATTERNS: ReadonlyArray<RegExp> = [
-  /([^\s:][^:\n]*\.(?:cpp|cc|cxx|c|java|js|py)):(\d+)(?::(\d+))?/i,
+  /([^\s:][^:\n]*\.(?:cpp|cc|cxx|c|java|js|cjs|py)):(\d+)(?::(\d+))?/i,
   /File\s+"([^"]+)",\s+line\s+(\d+)/i,
   /(Main\.java):(\d+):/i,
-  /(main\.(?:cpp|js|py)):(\d+)(?::(\d+))?/i,
+  /(main\.(?:cpp|js|cjs|py|c)):(\d+)(?::(\d+))?/i,
 ]
 
 function compactDetails(value: string) {

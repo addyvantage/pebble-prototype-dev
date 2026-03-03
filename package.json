@@ -10,6 +10,8 @@
     "dev:full": "concurrently --kill-others-on-fail --names \"backend,frontend\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:kill": "kill $(lsof -ti :3001,:5173,:5174) 2>/dev/null || true",
     "smoke": "node scripts/dev_smoke_all.mjs",
+    "smoke:runner-modes": "npx tsx scripts/runnerModesSmoke.ts",
+    "test:function-mode": "npx tsx --test scripts/functionMode.test.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

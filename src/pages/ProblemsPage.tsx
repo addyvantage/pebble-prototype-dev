@@ -245,6 +245,7 @@ export function ProblemsPage() {
     javascript: t('problems.languageJavaScript'),
     java: t('problems.languageJava'),
     cpp: t('problems.languageCpp'),
+    c: t('problems.languageC'),
     sql: t('problems.languageSql'),
   }
   const difficultyLabels = {
@@ -314,6 +315,7 @@ export function ProblemsPage() {
               languageJavaScript: t('problems.languageJavaScript'),
               languageJava: t('problems.languageJava'),
               languageCpp: t('problems.languageCpp'),
+              languageC: t('problems.languageC'),
               languageSql: t('problems.languageSql'),
             }}
           />

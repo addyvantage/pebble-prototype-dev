@@ -86,7 +86,7 @@ export function PythonIDE({
     setIsRunning(true)
     try {
       const result: PythonRunResponse = await requestRunApi({
-        language: language === 'c' ? 'cpp' : language,
+        language,
         code,
         stdin: '',
         timeoutMs: 4000,

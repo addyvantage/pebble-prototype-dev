@@ -126,10 +126,7 @@ export async function requestRunApi(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ...payload,
-        language: payload.language === 'c' ? 'cpp' : payload.language,
-      }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     })
 
