@@ -1,5 +1,4 @@
-import { useEffect, useId, useRef, type CSSProperties } from 'react'
-import { animate, useMotionValue, type AnimationPlaybackControls } from 'framer-motion'
+import { useEffect, useId, useMemo, useState, useRef, type CSSProperties } from 'react'
 
 type AnimationConfig = {
   preview?: boolean
@@ -48,55 +47,97 @@ export function Component({
   const animationEnabled = !!animation && animation.scale > 0
 
   const turbulenceRef = useRef<SVGFETurbulenceElement>(null)
+  const feColorMatrixRef = useRef<SVGFEColorMatrixElement>(null)
   const displacementRef = useRef<SVGFEDisplacementMapElement>(null)
-  const phaseMotion = useMotionValue(0)
-  const phaseAnimation = useRef<AnimationPlaybackControls | null>(null)
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof document === 'undefined') return true
+    const root = document.documentElement
+    return (
+      root.classList.contains('dark') ||
+      root.classList.contains('theme-dark') ||
+      root.getAttribute('data-theme') === 'dark'
+    )
+  })
 
   const scale = animation?.scale ?? 0
   const speed = animation?.speed ?? 0
   const displacementScale = animationEnabled ? mapRange(scale, 1, 100, 22, 88) : 0
   const bleedInset = animationEnabled ? mapRange(scale, 1, 100, 22, 84) : 0
-  const durationSec = animationEnabled ? mapRange(speed, 1, 100, 30, 5) : 1
+  const noiseOpacity = useMemo(() => {
+    if (!noise) return 0
+    return isDark ? noise.opacity : noise.opacity * 0.25
+  }, [isDark, noise])
+  const noiseBackgroundSize = useMemo(() => {
+    if (!noise) return 0
+    return isDark ? noise.scale * 200 : noise.scale * 140
+  }, [isDark, noise])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    const root = document.documentElement
+    const update = () => {
+      setIsDark(
+        root.classList.contains('dark') ||
+        root.classList.contains('theme-dark') ||
+        root.getAttribute('data-theme') === 'dark',
+      )
+    }
+    update()
+
+    const observer = new MutationObserver(update)
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme'],
+    })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!animationEnabled || !turbulenceRef.current || !displacementRef.current) return
-
-    phaseAnimation.current?.stop()
-    phaseMotion.set(0)
 
     const xBase = 0.0009
     const yBase = 0.0031
     const xAmp = mapRange(scale, 1, 100, 0.00018, 0.00045)
     const yAmp = mapRange(scale, 1, 100, 0.00045, 0.0011)
+    const phaseVelocity = mapRange(speed, 1, 100, 0.22, 1.25)
+    const hueVelocityDeg = mapRange(speed, 1, 100, 8, 32)
 
-    phaseAnimation.current = animate(phaseMotion, Math.PI * 2, {
-      duration: durationSec,
-      repeat: Infinity,
-      repeatType: 'loop',
-      ease: 'linear',
-      onUpdate: (phase) => {
-        const x = xBase + Math.sin(phase) * xAmp
-        const y = yBase + Math.cos(phase * 0.85) * yAmp
+    let rafId = 0
+    let lastTs = performance.now()
+    let phase = 0
+    let hue = 0
 
-        turbulenceRef.current?.setAttribute(
-          'baseFrequency',
-          `${x.toFixed(6)},${y.toFixed(6)}`,
-        )
+    const tick = (ts: number) => {
+      const dt = Math.max(0, (ts - lastTs) / 1000)
+      lastTs = ts
 
-        // Gentle seed drift adds organic variation without chaotic flicker.
-        const seed = 2 + Math.round((Math.sin(phase * 0.35) + 1) * 3)
-        turbulenceRef.current?.setAttribute('seed', String(seed))
+      phase += dt * phaseVelocity
+      hue += dt * hueVelocityDeg
 
-        const displacementPulse = displacementScale * (0.92 + 0.16 * Math.sin(phase * 0.55))
-        displacementRef.current?.setAttribute('scale', displacementPulse.toFixed(2))
-      },
-    })
+      const x = xBase + Math.sin(phase) * xAmp
+      const y = yBase + Math.cos(phase * 0.85) * yAmp
+      turbulenceRef.current?.setAttribute('baseFrequency', `${x.toFixed(6)},${y.toFixed(6)}`)
+
+      // Gentle seed drift adds organic variation without chaotic flicker.
+      const seed = 2 + Math.round((Math.sin(phase * 0.35) + 1) * 3)
+      turbulenceRef.current?.setAttribute('seed', String(seed))
+
+      const displacementPulse = displacementScale * (0.92 + 0.16 * Math.sin(phase * 0.55))
+      displacementRef.current?.setAttribute('scale', displacementPulse.toFixed(2))
+
+      if (feColorMatrixRef.current) {
+        feColorMatrixRef.current.setAttribute('values', String(hue % 360))
+      }
+
+      rafId = requestAnimationFrame(tick)
+    }
+    rafId = requestAnimationFrame(tick)
 
     return () => {
-      phaseAnimation.current?.stop()
-      phaseAnimation.current = null
+      cancelAnimationFrame(rafId)
     }
-  }, [animationEnabled, durationSec, displacementScale, phaseMotion, scale])
+  }, [animationEnabled, displacementScale, scale, speed])
 
   return (
     <div
@@ -124,10 +165,17 @@ export function Component({
                 seed="3"
                 type="turbulence"
               />
+              <feColorMatrix
+                ref={feColorMatrixRef}
+                in="undulation"
+                result="circulation"
+                type="hueRotate"
+                values="0"
+              />
               <feDisplacementMap
                 ref={displacementRef}
                 in="SourceGraphic"
-                in2="undulation"
+                in2="circulation"
                 scale={displacementScale}
                 xChannelSelector="R"
                 yChannelSelector="G"
@@ -178,15 +226,15 @@ export function Component({
         </div>
       ) : null}
 
-      {noise && noise.opacity > 0 ? (
+      {noise && noiseOpacity > 0 ? (
         <div
           style={{
             position: 'absolute',
             inset: 0,
             backgroundImage: `url('https://framerusercontent.com/images/g0QcWrxr87K0ufOxIUFBakwYA8.png')`,
-            backgroundSize: noise.scale * 200,
+            backgroundSize: noiseBackgroundSize,
             backgroundRepeat: 'repeat',
-            opacity: noise.opacity / 2,
+            opacity: noiseOpacity / 2,
           }}
         />
       ) : null}

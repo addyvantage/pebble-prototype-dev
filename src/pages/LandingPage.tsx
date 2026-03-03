@@ -24,7 +24,7 @@ export function LandingPage() {
 
   const etherealColor = theme === 'dark'
     ? 'rgba(120, 170, 255, 0.22)'
-    : 'rgba(58, 130, 255, 0.18)'
+    : 'rgba(59, 130, 246, 0.30)'
 
   const recent = getRecentActivity()
   const recentProblem = recent ? getProblemById(recent.problemId) : null
@@ -61,25 +61,28 @@ export function LandingPage() {
   return (
     <section className="page-enter h-full min-h-0 overflow-y-auto lg:overflow-hidden">
       <div className="flex h-full min-h-0 flex-col gap-1.5 lg:grid lg:grid-rows-[minmax(0,1fr)_auto_auto] lg:gap-1.5">
-        <Card className="relative min-h-0 overflow-hidden p-3 xl:p-3.5" interactive>
+        <Card className="relative w-full min-h-0 overflow-hidden rounded-none p-3 xl:p-3.5" interactive>
           <div className="pointer-events-none absolute inset-0 z-0">
             <EtheralShadow
               className="absolute inset-0"
               color={etherealColor}
               animation={{ scale: 62, speed: 78 }}
-              noise={{ opacity: 0.32, scale: 1.4 }}
+              noise={theme === 'dark'
+                ? { opacity: 0.28, scale: 1.35 }
+                : { opacity: 0.10, scale: 1.15 }}
               sizing="fill"
               showTitle={false}
             />
           </div>
 
-          <div className="relative z-10 grid h-full min-h-0 gap-3 lg:grid-cols-[1.12fr_0.88fr] lg:gap-3 xl:gap-4">
-            <div className="flex min-h-0 flex-col justify-center gap-2 xl:gap-2.5">
+          <div className="relative z-10 mx-auto w-full max-w-[1200px] px-6">
+            <div className="grid h-full min-h-0 gap-3 lg:grid-cols-[1.18fr_0.82fr] lg:gap-3 xl:gap-4">
+              <div className="flex min-h-0 flex-col justify-center gap-3 xl:gap-3.5">
               <Badge className="w-fit">{t('landing.badge')}</Badge>
 
               <div className="headline-shimmer">
                 <h1
-                  className={`max-w-[32ch] text-balance text-3xl font-semibold tracking-tight leading-[1.15] md:text-4xl xl:text-[2.8rem] ${isUrdu ? 'rtlText' : ''}`}
+                  className={`max-w-[38ch] text-balance text-3xl font-semibold tracking-tight leading-[1.1] md:text-4xl lg:text-[3.05rem] xl:text-[3.3rem] ${isUrdu ? 'rtlText' : ''}`}
                 >
                   <TextShimmer
                     duration={6}
@@ -90,11 +93,11 @@ export function LandingPage() {
                   </TextShimmer>
                 </h1>
               </div>
-              <p className={`max-w-[58ch] text-[13.5px] leading-relaxed text-pebble-text-secondary sm:text-[14.5px] ${isUrdu ? 'rtlText' : ''}`}>
+              <p className={`max-w-[66ch] text-[13.5px] leading-relaxed text-pebble-text-secondary sm:text-[14.5px] ${isUrdu ? 'rtlText' : ''}`}>
                 {t('landing.subheadline')}
               </p>
 
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Link to="/onboarding" className={buttonClass('primary')}>
                   {t('landing.tryPebble')}
                 </Link>
@@ -103,7 +106,7 @@ export function LandingPage() {
                 </Link>
               </div>
 
-              <div className="flex flex-wrap gap-2 pt-0.5">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {trustChips.map((chip) => (
                   <span
                     key={chip}
@@ -115,8 +118,8 @@ export function LandingPage() {
               </div>
             </div>
 
-            <div className="flex min-h-0 items-center lg:justify-end">
-              <div className="w-full max-w-[620px] rounded-[14px] border border-pebble-border/34 bg-pebble-overlay/[0.08] p-2.5 shadow-[0_20px_48px_rgba(2,8,23,0.2)] lg:p-3">
+              <div className="flex min-h-0 items-center lg:justify-end">
+                <div className="w-full max-w-[620px] rounded-[14px] border border-pebble-border/34 bg-pebble-overlay/[0.08] p-2.5 shadow-[0_20px_48px_rgba(2,8,23,0.2)] lg:p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className={`text-[13px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>
                     {t('landing.previewLabel')}
@@ -151,6 +154,7 @@ export function LandingPage() {
                       {t('landing.previewCoachHint')}
                     </p>
                   </div>
+                </div>
                 </div>
               </div>
             </div>

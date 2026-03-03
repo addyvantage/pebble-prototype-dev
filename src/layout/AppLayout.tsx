@@ -292,9 +292,15 @@ export function AppLayout() {
           </header>
 
           <main className={isLandingRoute ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1 pb-4'}>
-            <PageContainer className={isLandingRoute ? 'h-full min-h-0' : ''}>
-              <Outlet />
-            </PageContainer>
+            {isLandingRoute ? (
+              <div className="h-full min-h-0">
+                <Outlet />
+              </div>
+            ) : (
+              <PageContainer>
+                <Outlet />
+              </PageContainer>
+            )}
           </main>
         </div>
       )}
