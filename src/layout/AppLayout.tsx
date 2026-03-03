@@ -246,12 +246,12 @@ export function AppLayout() {
                           updateProfileAnchorRect()
                           setIsProfileOpen((current) => !current)
                         }}
-                        className="inline-flex h-8 w-8 sm:h-[34px] sm:w-[34px] items-center justify-center rounded-full border border-pebble-border/35 overflow-hidden transition hover:scale-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40"
+                        className="inline-flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-pebble-border/35 overflow-hidden transition hover:scale-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40"
                         style={{
                           background: theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.90)',
                           boxShadow: theme === 'dark'
-                            ? '0 0 10px 3px rgba(96,165,250,0.25), 0 0 22px 8px rgba(59,130,246,0.14)'
-                            : '0 0 10px 3px rgba(29,78,216,0.14), 0 0 22px 8px rgba(15,34,90,0.07)',
+                            ? '0 0 14px 4px rgba(96,165,250,0.25), 0 0 30px 10px rgba(59,130,246,0.14)'
+                            : '0 0 14px 4px rgba(29,78,216,0.14), 0 0 30px 10px rgba(15,34,90,0.07)',
                         }}
                         type="button"
                       >
