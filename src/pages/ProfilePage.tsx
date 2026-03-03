@@ -164,7 +164,7 @@ export function ProfilePage() {
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
-                            className="group relative h-24 w-24 rounded-full transition-transform hover:scale-[1.03]"
+                            className="group relative h-36 w-36 rounded-full transition-transform hover:scale-[1.03]"
                             style={{ boxShadow: avatarGlow }}
                         >
                             {avatarPreview ? (
@@ -176,14 +176,14 @@ export function ProfilePage() {
                             ) : (
                                 <div className={`flex h-full w-full items-center justify-center rounded-full ${dark ? 'bg-pebble-panel' : 'bg-pebble-canvas'}`}>
                                     {initials ? (
-                                        <span className="text-xl font-bold text-pebble-accent">{initials}</span>
+                                        <span className="text-3xl font-bold text-pebble-accent">{initials}</span>
                                     ) : (
-                                        <Camera className="h-6 w-6 text-pebble-text-muted" />
+                                        <Camera className="h-9 w-9 text-pebble-text-muted" />
                                     )}
                                 </div>
                             )}
                             <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition group-hover:opacity-100">
-                                <Camera className="h-6 w-6 text-white" />
+                                <Camera className="h-9 w-9 text-white" />
                             </div>
                             {uploading && (
                                 <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
