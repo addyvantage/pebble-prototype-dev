@@ -33,6 +33,7 @@
     "amazon-cognito-identity-js": "^6.3.16",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "framer-motion": "^12.34.4",
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^4.0.0",
     "lucide-react": "^0.551.0",

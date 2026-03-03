@@ -2,7 +2,7 @@ import { Bot, Compass, Gauge, Sparkles, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
-import { EtherealShadow } from '../components/ui/EtherealShadow'
+import { Component as EtheralShadow } from '../components/ui/etheral-shadow'
 import { buttonClass } from '../components/ui/buttonStyles'
 import { TextShimmer } from '../components/ui/text-shimmer'
 import { useI18n } from '../i18n/useI18n'
@@ -22,10 +22,9 @@ export function LandingPage() {
   const { theme } = useTheme()
   const isUrdu = lang === 'ur'
 
-  // Ethereal shadow colour: locked to blue palette — no rainbow possible
   const etherealColor = theme === 'dark'
-    ? 'rgba(110, 170, 255, 0.38)'   // milky ice-blue for dark canvas
-    : 'rgba(7, 22, 88, 0.32)'       // inky navy for light canvas
+    ? 'rgba(120, 170, 255, 0.22)'
+    : 'rgba(58, 130, 255, 0.18)'
 
   const recent = getRecentActivity()
   const recentProblem = recent ? getProblemById(recent.problemId) : null
@@ -63,16 +62,18 @@ export function LandingPage() {
     <section className="page-enter h-full min-h-0 overflow-y-auto lg:overflow-hidden">
       <div className="flex h-full min-h-0 flex-col gap-1.5 lg:grid lg:grid-rows-[minmax(0,1fr)_auto_auto] lg:gap-1.5">
         <Card className="relative min-h-0 overflow-hidden p-3 xl:p-3.5" interactive>
-          {/* Ethereal ambient depth — lowest layer, behind corner glows */}
-          <EtherealShadow
-            color={etherealColor}
-            animation={{ scale: 38, speed: 18 }}
-            sizing="fill"
-          />
-          <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-pebble-accent/18 blur-3xl" />
-          <div className="pointer-events-none absolute -right-12 -top-16 h-56 w-56 rounded-full bg-sky-400/12 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 z-0">
+            <EtheralShadow
+              className="absolute inset-0"
+              color={etherealColor}
+              animation={{ scale: 62, speed: 78 }}
+              noise={{ opacity: 0.32, scale: 1.4 }}
+              sizing="fill"
+              showTitle={false}
+            />
+          </div>
 
-          <div className="relative grid h-full min-h-0 gap-3 lg:grid-cols-[1.12fr_0.88fr] lg:gap-3 xl:gap-4">
+          <div className="relative z-10 grid h-full min-h-0 gap-3 lg:grid-cols-[1.12fr_0.88fr] lg:gap-3 xl:gap-4">
             <div className="flex min-h-0 flex-col justify-center gap-2 xl:gap-2.5">
               <Badge className="w-fit">{t('landing.badge')}</Badge>
 
