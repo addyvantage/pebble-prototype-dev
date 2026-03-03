@@ -189,6 +189,18 @@ async function main() {
     pass('function-c-disabled', 'C is disabled for function mode by template source-of-truth.')
   }
 
+  const cWrapper = buildSingleCaseFunctionModeRunnable({
+    language: 'c',
+    userCode: 'void solve(void) {}',
+    methodName: 'solve',
+    args: [],
+  })
+  if (cWrapper !== null) {
+    fail('function-c-wrapper-disabled', 'C function-mode wrapper should not be generated.')
+  } else {
+    pass('function-c-wrapper-disabled', 'C function-mode wrapper generation is disabled as expected.')
+  }
+
   for (const language of ['python', 'javascript', 'cpp', 'java'] as const) {
     await runFunctionModeFor(language)
   }

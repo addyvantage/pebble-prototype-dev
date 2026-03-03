@@ -7,7 +7,7 @@ export const IDE_LANGUAGE_LABELS: Record<IdeRunLanguage, string> = {
   javascript: 'JavaScript',
   cpp: 'C++',
   java: 'Java',
-  c: 'C',
+  c: 'C (GNU)',
 }
 
 export const IDE_MONACO_LANGUAGE: Record<IdeRunLanguage, string> = {

@@ -31,7 +31,7 @@ export const languageMetadata: LanguageMetadata[] = [
   },
   {
     id: 'c',
-    label: 'C',
+    label: 'C (GNU)',
     purpose: 'systems basics + low-level foundations',
   },
 ]

@@ -83,6 +83,7 @@ export const EN_STRINGS = {
   'run.prepareFunctionCasesFailed': 'Failed to prepare function-mode testcases.',
   'run.parseFunctionCasesFailed': 'Failed to parse testcase into function arguments.',
   'run.functionModeUnavailable': 'Function mode unavailable for {language}.',
+  'run.functionModeUnavailableC': 'C is not available for function-mode units yet.',
   'run.missingHarnessCaseResult': 'Missing harness testcase output.',
   'run.parseHarnessOutputFailed': 'Failed to parse runner harness output.',
   'run.functionWrapperUnavailable': 'Function wrapper unavailable for {language}.',

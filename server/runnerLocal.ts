@@ -386,7 +386,7 @@ async function runC(runDir: string, code: string, stdin: string, timeoutMs: numb
 
   const compileResult = await runProcess({
     command: 'gcc',
-    args: ['-std=gnu17', '-O2', sourcePath, '-o', outputPath, '-lm'],
+    args: ['-std=gnu11', '-O2', '-Wall', '-Wextra', sourcePath, '-o', outputPath, '-lm'],
     cwd: runDir,
     stdin: '',
     timeoutMs: compileRemaining,

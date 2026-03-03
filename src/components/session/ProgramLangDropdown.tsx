@@ -1,11 +1,18 @@
 import { Check, ChevronDown } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { PebbleLanguage, PebbleLanguageId } from '../../lib/languages'
+import type { PebbleLanguageId } from '../../lib/languages'
 import { useTheme } from '../../hooks/useTheme'
+
+export type ProgramLangOption = {
+  id: PebbleLanguageId
+  label: string
+  disabled?: boolean
+  disabledReason?: string
+}
 
 type ProgramLangDropdownProps = {
   value: PebbleLanguageId
-  options: PebbleLanguage[]
+  options: ProgramLangOption[]
   onChange: (id: PebbleLanguageId) => void
 }
 
@@ -31,6 +38,22 @@ export function ProgramLangDropdown({
   )
   const [activeIndex, setActiveIndex] = useState(selectedIndex)
   const selected = options[selectedIndex] ?? options[0]
+
+  const findNextEnabledIndex = (start: number, step: 1 | -1) => {
+    if (options.length === 0) {
+      return 0
+    }
+
+    let cursor = start
+    for (let count = 0; count < options.length; count += 1) {
+      cursor = clampIndex(cursor + step, options.length)
+      if (!options[cursor]?.disabled) {
+        return cursor
+      }
+    }
+
+    return start
+  }
 
   useEffect(() => {
     setActiveIndex(selectedIndex)
@@ -62,7 +85,7 @@ export function ProgramLangDropdown({
 
   function selectAt(index: number) {
     const opt = options[index]
-    if (!opt) return
+    if (!opt || opt.disabled) return
     onChange(opt.id)
     setOpen(false)
   }
@@ -84,9 +107,7 @@ export function ProgramLangDropdown({
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault()
             setOpen(true)
-            setActiveIndex((current) =>
-              clampIndex(current + (event.key === 'ArrowDown' ? 1 : -1), options.length),
-            )
+            setActiveIndex((current) => findNextEnabledIndex(current, event.key === 'ArrowDown' ? 1 : -1))
             return
           }
           if (event.key === 'Enter' || event.key === ' ') {
@@ -109,12 +130,12 @@ export function ProgramLangDropdown({
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') {
             event.preventDefault()
-            setActiveIndex((current) => clampIndex(current + 1, options.length))
+            setActiveIndex((current) => findNextEnabledIndex(current, 1))
             return
           }
           if (event.key === 'ArrowUp') {
             event.preventDefault()
-            setActiveIndex((current) => clampIndex(current - 1, options.length))
+            setActiveIndex((current) => findNextEnabledIndex(current, -1))
             return
           }
           if (event.key === 'Enter') {
@@ -131,16 +152,21 @@ export function ProgramLangDropdown({
         {options.map((opt, index) => {
           const isSelected = opt.id === value
           const isActive = index === activeIndex
+          const isDisabled = opt.disabled === true
           return (
             <button
               key={opt.id}
               role="option"
               aria-selected={isSelected}
               type="button"
+              disabled={isDisabled}
+              title={isDisabled ? (opt.disabledReason ?? '') : undefined}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => selectAt(index)}
               className={`flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
-                isSelected
+                isDisabled
+                  ? 'cursor-not-allowed border-transparent bg-transparent text-pebble-text-muted/70 opacity-60'
+                  : isSelected
                   ? 'border-pebble-accent/50 bg-pebble-accent/20 text-pebble-text-primary'
                   : isActive
                     ? 'border-pebble-border/40 bg-pebble-overlay/[0.18] text-pebble-text-primary'

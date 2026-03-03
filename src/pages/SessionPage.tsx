@@ -102,10 +102,9 @@ import {
   getMonacoLanguage,
   isPebbleLanguageId,
   SUPPORTED_LANGUAGES,
-  type PebbleLanguage,
   type PebbleLanguageId,
 } from '../lib/languages'
-import { ProgramLangDropdown } from '../components/session/ProgramLangDropdown'
+import { ProgramLangDropdown, type ProgramLangOption } from '../components/session/ProgramLangDropdown'
 import { StopwatchControl } from '../components/session/StopwatchControl'
 import { ConfirmDialog } from '../components/modals/ConfirmDialog'
 import {
@@ -385,23 +384,53 @@ export function SessionPage() {
   const [pagePrefs, setPagePrefs] = useState<PagePrefs>(() => loadPagePrefs())
 
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0)
-  const languageOptions = useMemo<SessionEditorLanguage[]>(() => {
+  const languageOptionsWithState = useMemo<Array<{ id: SessionEditorLanguage; disabled: boolean; disabledReason?: string }>>(() => {
+    const functionModeUnavailableReason = t('run.functionModeUnavailableC')
+
     if (activeProblemBase) {
-      return activeProblemBase.languageSupport.filter((l) => isPebbleLanguageId(l)) as SessionEditorLanguage[]
+      return activeProblemBase.languageSupport
+        .filter((l) => isPebbleLanguageId(l))
+        .map((id) => ({ id: id as SessionEditorLanguage, disabled: false }))
     }
+
     const curriculumLanguages: SessionEditorLanguage[] = ['python', 'javascript', 'cpp', 'java', 'c']
     const currentUnitId = units[currentUnitIndex]?.id
     if (!currentUnitId) {
-      return curriculumLanguages
+      return curriculumLanguages.map((id) => ({ id, disabled: false }))
     }
 
-    const functionModeLanguages = curriculumLanguages.filter((languageId) => {
+    return curriculumLanguages.map((languageId) => {
       const placementLanguage = toPlacementLanguage(languageId)
-      return placementLanguage ? getUnitFunctionMode(placementLanguage, currentUnitId) !== null : false
+      const available = placementLanguage ? getUnitFunctionMode(placementLanguage, currentUnitId) !== null : false
+      return {
+        id: languageId,
+        disabled: !available,
+        disabledReason: !available && languageId === 'c' ? functionModeUnavailableReason : undefined,
+      }
     })
+  }, [activeProblemBase, currentUnitIndex, t, units])
 
-    return functionModeLanguages.length > 0 ? functionModeLanguages : curriculumLanguages
-  }, [activeProblemBase, currentUnitIndex, units])
+  const languageOptions = useMemo<SessionEditorLanguage[]>(
+    () => languageOptionsWithState.filter((option) => !option.disabled).map((option) => option.id),
+    [languageOptionsWithState],
+  )
+
+  const dropdownLanguageOptions = useMemo<ProgramLangOption[]>(() => {
+    const options: ProgramLangOption[] = []
+    for (const { id, disabled, disabledReason } of languageOptionsWithState) {
+      const languageMeta = SUPPORTED_LANGUAGES.find((language) => language.id === id)
+      if (!languageMeta) {
+        continue
+      }
+      options.push({
+        id,
+        label: languageMeta.label,
+        disabled,
+        disabledReason,
+      })
+    }
+    return options
+  }, [languageOptionsWithState])
   const [draftByUnitId, setDraftByUnitId] = useState<Record<string, string>>({})
   const [unitProgress, setUnitProgress] = useState<UnitProgressMap>(() => {
     const persisted = loadUnitProgress()
@@ -1636,6 +1665,12 @@ export function SessionPage() {
     if (!currentUnit) {
       return
     }
+    const selectedOption = languageOptionsWithState.find((option) => option.id === newLang)
+    if (selectedOption?.disabled) {
+      setRunStatus('error')
+      setRunMessage(selectedOption.disabledReason ?? t('run.functionModeUnavailable', { language: newLang }))
+      return
+    }
 
     // Save current code for the outgoing language
     const liveCode = draftByUnitId[currentUnit.id] ?? currentDefaultCode
@@ -1688,6 +1723,7 @@ export function SessionPage() {
     currentSessionKey,
     currentUnit,
     draftByUnitId,
+    languageOptionsWithState,
     problemCodeByLang,
     queueLiveCodeSnapshot,
     sessionLanguage,
@@ -1797,6 +1833,8 @@ export function SessionPage() {
     : currentUnit.id === 'hello-world'
       ? [languageMeta.label, t('tags.stdoutBasics'), t('tags.practice')]
       : [languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]
+  const showCFunctionModeNote = !activeProblemBase
+    && languageOptionsWithState.some((option) => option.id === 'c' && option.disabled)
 
   return (
     <section className={`session-shell h-[100vh] overflow-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}>
@@ -2019,9 +2057,7 @@ export function SessionPage() {
                 <div className="flex items-center gap-2">
                   <ProgramLangDropdown
                     value={sessionLanguage}
-                    options={languageOptions
-                      .map((id) => SUPPORTED_LANGUAGES.find((l) => l.id === id))
-                      .filter((l): l is PebbleLanguage => l !== undefined)}
+                    options={dropdownLanguageOptions}
                     onChange={switchLanguage}
                   />
 
@@ -2075,6 +2111,11 @@ export function SessionPage() {
               </div>
 
               <div dir="ltr" className="ltrSafe min-h-0 flex-1">
+                {showCFunctionModeNote ? (
+                  <div className="border-b border-pebble-border/20 bg-pebble-overlay/[0.06] px-3 py-1.5 text-[11px] text-pebble-text-muted">
+                    {t('run.functionModeUnavailableC')}
+                  </div>
+                ) : null}
                 <Editor
                   height="100%"
                   language={getMonacoLanguage(sessionLanguage)}
