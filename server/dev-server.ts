@@ -619,7 +619,7 @@ app.post('/api/avatar/presign', async (req: Request, res: Response) => {
     } else {
       console.log(`[dev-api] AWS not configured — using offline avatar stub for key: ${key}`)
     }
-    res.status(200).json({ uploadUrl: 'http://localhost:3001/dev-upload-stub', key })
+    res.status(200).json({ uploadUrl: '/api/dev-upload-stub', key })
     return
   }
 
@@ -647,8 +647,9 @@ app.post('/api/avatar/presign', async (req: Request, res: Response) => {
 
 // ── Dev avatar upload stub (offline / no-S3 mode) ────────────────────────────
 // Accepts the PUT that ProfilePage sends after receiving the fake presigned URL.
-// Without this route Express returns 404 HTML, which surfaces as "Upload failed".
-app.put('/dev-upload-stub', (_req: Request, res: Response) => {
+// Must be under /api/ so the Vite proxy forwards it — an absolute localhost:3001
+// URL would be cross-origin from localhost:5173 and get blocked by the browser.
+app.put('/api/dev-upload-stub', (_req: Request, res: Response) => {
   res.status(200).send()
 })
 
