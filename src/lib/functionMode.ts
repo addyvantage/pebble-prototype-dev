@@ -54,14 +54,31 @@ function escapeRegExp(value: string) {
 }
 
 function normalizeParams(language: PlacementLanguage, rawParams: string) {
+  if (language === 'python') {
+    const cleaned = rawParams
+      .split(/\r?\n/)
+      .map((line) => line.replace(/#.*$/g, ''))
+      .join(' ')
+
+    const parts = cleaned
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => item.replace(/\s*=.*$/g, '').trim())
+      .map((item) => item.replace(/\s*:.*$/g, '').trim())
+      .filter((item) => item !== '/' && item !== '*')
+
+    if (parts.length > 0 && parts[0] === 'self') {
+      return parts.slice(1)
+    }
+    return parts
+  }
+
   const parts = rawParams
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
 
-  if (language === 'python' && parts[0] === 'self') {
-    return parts.slice(1)
-  }
   return parts
 }
 
@@ -85,22 +102,100 @@ function extractMethodSignature(input: {
   const code = input.userCode
 
   if (input.language === 'python') {
-    const exact = new RegExp(`def\\s+${method}\\s*\\(([^)]*)\\)\\s*(?:->[^:\\n]+)?\\s*:`, 'm')
-    const fallback = /def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?:->[^:\n]+)?\s*:/m
-    const match = code.match(exact)
-    if (match) {
-      return {
-        found: true,
-        methodName: input.methodName,
-        params: normalizeParams(input.language, match[1]),
+    const lines = code.split(/\r?\n/)
+    const classStartIndex = lines.findIndex((line) => /^\s*class\s+Solution\b[^\n]*:\s*(?:#.*)?$/.test(line))
+    if (classStartIndex < 0) {
+      return null
+    }
+
+    const classIndentMatch = lines[classStartIndex].match(/^(\s*)/)
+    const classIndent = classIndentMatch ? classIndentMatch[1] : ''
+    let fallbackInClass: { methodName: string; params: string[] } | null = null
+
+    const readPythonMethodSignature = (startIndex: number) => {
+      const chunk: string[] = []
+      let parenDepth = 0
+      let started = false
+
+      for (let cursor = startIndex; cursor < lines.length; cursor += 1) {
+        const line = lines[cursor]
+        const trimmed = line.trim()
+
+        if (!started) {
+          if (!trimmed || trimmed.startsWith('#')) {
+            continue
+          }
+          started = true
+        }
+
+        chunk.push(trimmed)
+        for (const ch of trimmed) {
+          if (ch === '(') parenDepth += 1
+          if (ch === ')') parenDepth -= 1
+        }
+
+        if (parenDepth <= 0 && /:\s*(?:#.*)?$/.test(trimmed)) {
+          return chunk.join(' ')
+        }
+      }
+
+      return chunk.join(' ')
+    }
+
+    for (let index = classStartIndex + 1; index < lines.length; index += 1) {
+      const line = lines[index]
+      const trimmed = line.trim()
+
+      if (!trimmed) {
+        continue
+      }
+
+      const leadingWhitespace = line.match(/^(\s*)/)?.[1] ?? ''
+      const lineIsComment = trimmed.startsWith('#')
+      if (
+        !lineIsComment
+        && leadingWhitespace.length <= classIndent.length
+      ) {
+        break
+      }
+
+      if (lineIsComment) {
+        continue
+      }
+
+      if (!/^\s*def\s+[A-Za-z_]\w*\s*\(/.test(line)) {
+        continue
+      }
+
+      const signatureText = readPythonMethodSignature(index)
+      const parsed = signatureText.match(/^def\s+([A-Za-z_]\w*)\s*\(([\s\S]*?)\)\s*(?:->\s*[\s\S]*?)?\s*:\s*(?:#.*)?$/)
+      if (!parsed) {
+        continue
+      }
+
+      const parsedName = parsed[1]
+      const parsedParams = normalizeParams(input.language, parsed[2])
+      if (parsedName === input.methodName) {
+        return {
+          found: true,
+          methodName: input.methodName,
+          params: parsedParams,
+        }
+      }
+
+      if (!fallbackInClass) {
+        fallbackInClass = {
+          methodName: parsedName,
+          params: parsedParams,
+        }
       }
     }
-    const fallbackMatch = code.match(fallback)
-    if (fallbackMatch) {
+
+    if (fallbackInClass) {
       return {
         found: false,
-        methodName: fallbackMatch[1],
-        params: normalizeParams(input.language, fallbackMatch[2]),
+        methodName: fallbackInClass.methodName,
+        params: fallbackInClass.params,
       }
     }
     return null

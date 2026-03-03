@@ -13,7 +13,9 @@ export function buildPythonHarness({
 }: BuildPythonHarnessInput) {
   const encodedCases = JSON.stringify(cases)
 
-  return `import json
+  return `from __future__ import annotations
+
+import json
 from typing import Any
 
 ${userCode}
@@ -22,6 +24,8 @@ _CASES = json.loads(${JSON.stringify(encodedCases)})
 _METHOD = ${JSON.stringify(methodName)}
 
 def _normalize(value: Any):
+    if value is None:
+        return ""
     if isinstance(value, tuple):
         return [_normalize(x) for x in value]
     if isinstance(value, list):
@@ -31,6 +35,8 @@ def _normalize(value: Any):
     return value
 
 def _stringify(value: Any):
+    if value is None:
+        return ""
     if isinstance(value, str):
         return value
     try:
