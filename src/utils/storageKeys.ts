@@ -52,13 +52,13 @@ export function clearLocalUserData() {
 export function getLocalUserProfile(): LocalUserProfile {
   if (typeof window === 'undefined') {
     return {
-      name: 'Addy',
-      personaSummary: 'Not set',
+      name: '',
+      personaSummary: '',
     }
   }
 
-  const name = safeGetItem(storageKeys.userName) || 'Addy'
-  const personaSummary = safeGetItem(storageKeys.personaSummary) || 'Not set'
+  const name = safeGetItem(storageKeys.userName) || ''
+  const personaSummary = safeGetItem(storageKeys.personaSummary) || ''
 
   return {
     name,

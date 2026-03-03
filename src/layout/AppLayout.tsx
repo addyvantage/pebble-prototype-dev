@@ -10,7 +10,6 @@ import { BrandLogo } from '../components/ui/BrandLogo'
 import {
   clearAppLocalData,
   clearLocalUserData,
-  getLocalUserProfile,
 } from '../utils/storageKeys'
 import { clearTaskProgress } from '../utils/taskProgress'
 import { useI18n } from '../i18n/useI18n'
@@ -30,14 +29,10 @@ export function AppLayout() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [profileAnchorRect, setProfileAnchorRect] = useState<DOMRect | null>(null)
-  const [profile, setProfile] = useState(() => getLocalUserProfile())
   const [showStoragePressureNotice, setShowStoragePressureNotice] = useState(false)
   const [nowTick, setNowTick] = useState(() => Date.now())
   const profileButtonRef = useRef<HTMLButtonElement | null>(null)
 
-  const personaLabel = useMemo(() => {
-    return profile.personaSummary === 'Not set' ? 'Not set' : profile.personaSummary
-  }, [profile.personaSummary])
   const analyticsState = useSyncExternalStore(subscribeAnalytics, getAnalyticsState, getAnalyticsState)
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', [])
   const dailyCompletions = useMemo(
@@ -157,7 +152,6 @@ export function AppLayout() {
   function handleSignOut() {
     auth.signOut()
     clearLocalUserData()
-    setProfile(getLocalUserProfile())
     setIsProfileOpen(false)
     navigate('/')
   }
@@ -252,8 +246,9 @@ export function AppLayout() {
                           updateProfileAnchorRect()
                           setIsProfileOpen((current) => !current)
                         }}
-                        className="inline-flex h-8 w-8 sm:h-[34px] sm:w-[34px] items-center justify-center rounded-full border border-pebble-border/35 transition hover:scale-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40"
+                        className="inline-flex h-8 w-8 sm:h-[34px] sm:w-[34px] items-center justify-center rounded-full border border-pebble-border/35 overflow-hidden transition hover:scale-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40"
                         style={{
+                          background: theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.90)',
                           boxShadow: theme === 'dark'
                             ? '0 0 10px 3px rgba(96,165,250,0.25), 0 0 22px 8px rgba(59,130,246,0.14)'
                             : '0 0 10px 3px rgba(29,78,216,0.14), 0 0 22px 8px rgba(15,34,90,0.07)',
@@ -261,12 +256,8 @@ export function AppLayout() {
                         type="button"
                       >
                         {auth.profile?.avatarUrl ? (
-                          <img src={auth.profile.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
-                        ) : (
-                          <span className="text-sm font-bold text-pebble-accent">
-                            {(auth.profile?.username ?? auth.user?.email ?? '?').slice(0, 2).toUpperCase()}
-                          </span>
-                        )}
+                          <img src={auth.profile.avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : null}
                       </button>
                     ) : (
                       <button
@@ -311,8 +302,12 @@ export function AppLayout() {
       <ProfileMenu
         open={isProfileOpen}
         anchorRect={profileAnchorRect}
-        userName={profile.name}
-        personaSummary={personaLabel}
+        userName={auth.profile?.username ?? ''}
+        userEmail={auth.user?.email ?? auth.profile?.email ?? ''}
+        userBio={auth.profile?.bio ?? ''}
+        avatarUrl={auth.profile?.avatarUrl ?? null}
+        isGuest={auth.user?.userId === 'dev-guest'}
+        isAdmin={auth.isAdmin}
         onSignOut={handleSignOut}
         onRequestClose={() => setIsProfileOpen(false)}
       />

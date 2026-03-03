@@ -44,16 +44,16 @@ export function ProfilePage() {
                     fileExtension: file.name.split('.').pop() ?? 'jpg',
                 }),
             })
-            if (!presignRes.ok) throw new Error('Failed to get upload URL')
+            if (!presignRes.ok) throw new Error(`Failed to get upload URL (HTTP ${presignRes.status})`)
             const { uploadUrl, key } = await presignRes.json()
 
-            // 2. Upload to S3
+            // 2. Upload to S3 (or dev stub)
             const uploadRes = await fetch(uploadUrl, {
                 method: 'PUT',
                 headers: { 'Content-Type': file.type },
                 body: file,
             })
-            if (!uploadRes.ok) throw new Error('Upload failed')
+            if (!uploadRes.ok) throw new Error(`S3 upload failed (HTTP ${uploadRes.status})`)
 
             // 3. Update profile with new avatar key
             await fetch('/api/profile', {
@@ -70,7 +70,9 @@ export function ProfilePage() {
             await refreshProfile()
             setMessage({ type: 'success', text: 'Avatar updated!' })
         } catch (err: any) {
-            setMessage({ type: 'error', text: err.message ?? 'Upload failed' })
+            const detail = err?.message ?? 'Unknown error'
+            console.error('[avatar-upload] failed:', err)
+            setMessage({ type: 'error', text: `Upload failed: ${detail}` })
         } finally {
             setUploading(false)
         }
@@ -131,7 +133,11 @@ export function ProfilePage() {
             : 'border-pebble-border/30 focus:border-pebble-accent/60 focus:ring-pebble-accent/15'
         }`
 
-    const initials = (profile?.username ?? profile?.email ?? '?').slice(0, 2).toUpperCase()
+    const initials = profile?.username
+        ? profile.username.slice(0, 2).toUpperCase()
+        : profile?.email
+            ? profile.email.slice(0, 2).toUpperCase()
+            : ''
 
     return (
         <div className="page-enter mx-auto max-w-lg px-4 pb-8 pt-4">
@@ -158,9 +164,12 @@ export function ProfilePage() {
                                     className="h-full w-full rounded-full object-cover"
                                 />
                             ) : (
-                                <div className={`flex h-full w-full items-center justify-center rounded-full text-xl font-bold ${dark ? 'bg-pebble-panel text-pebble-accent' : 'bg-pebble-canvas text-pebble-accent'
-                                    }`}>
-                                    {initials}
+                                <div className={`flex h-full w-full items-center justify-center rounded-full ${dark ? 'bg-pebble-panel' : 'bg-pebble-canvas'}`}>
+                                    {initials ? (
+                                        <span className="text-xl font-bold text-pebble-accent">{initials}</span>
+                                    ) : (
+                                        <Camera className="h-6 w-6 text-pebble-text-muted" />
+                                    )}
                                 </div>
                             )}
                             <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition group-hover:opacity-100">
@@ -203,7 +212,7 @@ export function ProfilePage() {
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            placeholder="your_username"
+                            placeholder="Choose a username"
                             maxLength={20}
                             className={inputClass}
                         />

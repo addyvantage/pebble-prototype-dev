@@ -590,6 +590,13 @@ app.post('/api/avatar/presign', async (req: Request, res: Response) => {
   }
 })
 
+// ── Dev avatar upload stub (offline / no-S3 mode) ────────────────────────────
+// Accepts the PUT that ProfilePage sends after receiving the fake presigned URL.
+// Without this route Express returns 404 HTML, which surfaces as "Upload failed".
+app.put('/dev-upload-stub', (_req: Request, res: Response) => {
+  res.status(200).send()
+})
+
 // ── Phase 5: Cohort Analytics (Athena + S3 + Glue) ─────────────────────────
 app.get('/api/analytics/cohort', async (req: Request, res: Response) => {
   const mockData = {

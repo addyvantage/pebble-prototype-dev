@@ -455,7 +455,8 @@ export const EN_STRINGS = {
   'guidedFix.exit': 'Exit',
 
   'profile.signedInAs': 'Signed in as',
-  'profile.persona': 'Persona',
+  'profile.bio': 'About',
+  'profile.viewProfile': 'View Profile',
   'profile.signOut': 'Sign out',
 
   'tests.title': 'Testcases',
@@ -1781,7 +1782,8 @@ const COACH_TRANSLATIONS: Partial<Record<LanguageCode, I18nDictionary>> = {
     'guidedFix.back': 'वापस',
     'guidedFix.exit': 'बाहर निकलें',
     'profile.signedInAs': 'साइन इन किया गया',
-    'profile.persona': 'पर्सोना',
+    'profile.bio': 'परिचय',
+    'profile.viewProfile': 'प्रोफ़ाइल देखें',
     'profile.signOut': 'साइन आउट',
   },
   bn: {
@@ -1831,7 +1833,8 @@ const COACH_TRANSLATIONS: Partial<Record<LanguageCode, I18nDictionary>> = {
     'guidedFix.back': 'পিছনে',
     'guidedFix.exit': 'বেরিয়ে যান',
     'profile.signedInAs': 'সাইন ইন করা হয়েছে',
-    'profile.persona': 'পার্সোনা',
+    'profile.bio': 'পরিচয়',
+    'profile.viewProfile': 'প্রোফাইল দেখুন',
     'profile.signOut': 'সাইন আউট',
   },
   te: {
@@ -1881,7 +1884,8 @@ const COACH_TRANSLATIONS: Partial<Record<LanguageCode, I18nDictionary>> = {
     'guidedFix.back': 'వెనక్కి',
     'guidedFix.exit': 'నిష్క్రమించు',
     'profile.signedInAs': 'సైన్ ఇన్ చేసినది',
-    'profile.persona': 'పర్సోనా',
+    'profile.bio': 'పరిచయం',
+    'profile.viewProfile': 'ప్రొఫైల్ చూడండి',
     'profile.signOut': 'సైన్ అవుట్',
   },
   mr: {
@@ -1931,7 +1935,8 @@ const COACH_TRANSLATIONS: Partial<Record<LanguageCode, I18nDictionary>> = {
     'guidedFix.back': 'मागे',
     'guidedFix.exit': 'बाहेर पडा',
     'profile.signedInAs': 'साइन इन केलेले',
-    'profile.persona': 'पर्सोना',
+    'profile.bio': 'परिचय',
+    'profile.viewProfile': 'प्रोफाइल पहा',
     'profile.signOut': 'साइन आउट',
   },
   ta: {
@@ -1981,7 +1986,8 @@ const COACH_TRANSLATIONS: Partial<Record<LanguageCode, I18nDictionary>> = {
     'guidedFix.back': 'பின்',
     'guidedFix.exit': 'வெளியேறு',
     'profile.signedInAs': 'உள்நுழைந்தவர்',
-    'profile.persona': 'பெர்சோனா',
+    'profile.bio': 'அறிமுகம்',
+    'profile.viewProfile': 'சுயவிவரம் காண்க',
     'profile.signOut': 'வெளியேறு',
   },
   ur: {
@@ -2031,7 +2037,8 @@ const COACH_TRANSLATIONS: Partial<Record<LanguageCode, I18nDictionary>> = {
     'guidedFix.back': 'واپس',
     'guidedFix.exit': 'باہر نکلیں',
     'profile.signedInAs': 'سائن اِن بطور',
-    'profile.persona': 'پرسونا',
+    'profile.bio': 'تعارف',
+    'profile.viewProfile': 'پروفائل دیکھیں',
     'profile.signOut': 'سائن آؤٹ',
   },
 }
