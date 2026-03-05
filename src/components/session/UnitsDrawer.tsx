@@ -48,26 +48,23 @@ export function UnitsDrawer({
   const completedCount = units.filter((unit) => completedUnitIds.includes(unit.id)).length
   const progressPercent = units.length > 0 ? Math.round((completedCount / units.length) * 100) : 0
 
+  if (!open) {
+    return null
+  }
+
   return (
     <div
-      className={`fixed inset-0 z-50 transition ${
-        open ? 'pointer-events-auto' : 'pointer-events-none'
-      }`}
-      aria-hidden={!open}
+      className="fixed inset-0 z-50 transition pointer-events-auto"
     >
       <button
         type="button"
         onClick={onClose}
-        className={`absolute inset-0 bg-black/45 backdrop-blur-sm transition-opacity ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
+        className="absolute inset-0 bg-black/45 backdrop-blur-sm transition-opacity opacity-100"
       />
 
       <aside
         dir="ltr"
-        className={`relative h-full w-[360px] max-w-[92vw] border-r border-pebble-border/30 bg-gradient-to-b from-pebble-panel/95 to-pebble-canvas/85 p-4 shadow-[0_24px_80px_rgba(2,8,23,0.38)] transition-transform duration-200 ${
-          open ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className="relative h-full w-[360px] max-w-[92vw] border-r border-pebble-border/30 bg-gradient-to-b from-pebble-panel/95 to-pebble-canvas/85 p-4 shadow-[0_24px_80px_rgba(2,8,23,0.38)] transition-transform duration-200 translate-x-0"
       >
         <div className="flex h-full min-h-0 flex-col gap-4">
           <div className="flex items-center justify-between">

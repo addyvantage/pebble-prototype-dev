@@ -467,7 +467,7 @@ export function SessionPage() {
         })
     }
 
-    const curriculumLanguages: LanguageId[] = [...LANGUAGE_IDS]
+    const curriculumLanguages: LanguageId[] = [fromLegacyCodeLanguageId(selectedLanguage)]
     if (!activeCurriculumUnit) {
       return curriculumLanguages.map((id) => ({ id, disabled: false }))
     }
@@ -527,7 +527,7 @@ export function SessionPage() {
           : undefined,
       }
     })
-  }, [activeCurriculumUnit, activeProblemBase, runtimeProbeByLanguage, t])
+  }, [activeCurriculumUnit, activeProblemBase, runtimeProbeByLanguage, selectedLanguage, t])
 
   const languageOptions = useMemo<SessionEditorLanguage[]>(
     () => languageOptionsWithState.filter((option) => !option.disabled).map((option) => option.id),
@@ -590,7 +590,7 @@ export function SessionPage() {
       cancelled = true
     }
   }, [])
-  const [draftByUnitId, setDraftByUnitId] = useState<Record<string, string>>({})
+  const [draftByUnitId, setDraftByUnitId] = useState<Record<string, Partial<Record<SessionEditorLanguage, string>>>>({})
   const [unitProgress, setUnitProgress] = useState<UnitProgressMap>(() => {
     const persisted = loadUnitProgress()
     const migrated = { ...persisted }
@@ -675,6 +675,9 @@ export function SessionPage() {
   const runtimeLanguage: LanguageId = sessionLanguage === 'sql'
     ? fromLegacyCodeLanguageId(selectedLanguage)
     : sessionLanguage
+  const sessionLanguageLabel = sessionLanguage === 'sql'
+    ? 'SQL'
+    : getLanguageDescriptor(sessionLanguage).label
   const isSqlMode = activeProblemBase?.kind === 'sql' && sessionLanguage === 'sql'
   const activeProblemStarter = useMemo(() => {
     if (!activeProblemBase) {
@@ -949,7 +952,7 @@ export function SessionPage() {
     }
     return resolveSessionTemplate(currentUnit, sessionLanguage)
   }, [currentUnit, resolveSessionTemplate, sessionLanguage])
-  const currentCode = currentUnit ? draftByUnitId[currentUnit.id] ?? currentDefaultCode : ''
+  const currentCode = currentUnit ? draftByUnitId[currentUnit.id]?.[sessionLanguage] ?? currentDefaultCode : ''
   const currentFunctionConfig = useMemo(() => {
     if (!currentUnit || activeProblemBase) {
       return null
@@ -1066,12 +1069,15 @@ export function SessionPage() {
     const storedCode = storedEntry?.codeByLanguage[sessionLanguage]
     const nextCode = storedCode ?? resolveSessionTemplate(currentUnit, sessionLanguage)
     setDraftByUnitId((prev) => {
-      if (prev[currentUnit.id] === nextCode) {
+      if (prev[currentUnit.id]?.[sessionLanguage] === nextCode) {
         return prev
       }
       return {
         ...prev,
-        [currentUnit.id]: nextCode,
+        [currentUnit.id]: {
+          ...(prev[currentUnit.id] ?? {}),
+          [sessionLanguage]: nextCode,
+        },
       }
     })
     previousCodeRef.current = nextCode
@@ -1092,7 +1098,7 @@ export function SessionPage() {
 
     setRecentActivity(activeProblem?.id ?? currentUnit.id)
 
-    const nextCode = draftByUnitId[currentUnit.id] ?? currentDefaultCode
+    const nextCode = draftByUnitId[currentUnit.id]?.[sessionLanguage] ?? currentDefaultCode
     previousCodeRef.current = nextCode
     queueLiveCodeSnapshot(nextCode, true)
     const resetState = struggleEngineRef.current?.reset()
@@ -1174,7 +1180,10 @@ export function SessionPage() {
 
     setDraftByUnitId((prev) => ({
       ...prev,
-      [currentUnit.id]: value,
+      [currentUnit.id]: {
+        ...(prev[currentUnit.id] ?? {}),
+        [sessionLanguage]: value,
+      },
     }))
     setSubmitAccepted(false)
     setHighlightEditorLine(null)
@@ -1909,7 +1918,10 @@ export function SessionPage() {
     queueLiveCodeSnapshot(resetCode, true)
     setDraftByUnitId((prev) => ({
       ...prev,
-      [currentUnit.id]: resetCode,
+      [currentUnit.id]: {
+        ...(prev[currentUnit.id] ?? {}),
+        [sessionLanguage]: resetCode,
+      },
     }))
     setRunStatus('idle')
     setRunMessage(t('run.editorReset'))
@@ -1935,7 +1947,7 @@ export function SessionPage() {
     }
 
     // Save current code for the outgoing language
-    const liveCode = draftByUnitId[currentUnit.id] ?? currentDefaultCode
+    const liveCode = draftByUnitId[currentUnit.id]?.[sessionLanguage] ?? currentDefaultCode
     const prevEntry = problemCodeByLang[currentSessionKey] ?? {
       selectedLanguage: sessionLanguage,
       codeByLanguage: {},
@@ -1958,7 +1970,13 @@ export function SessionPage() {
     }
 
     // Apply
-    setDraftByUnitId((prev) => ({ ...prev, [currentUnit.id]: newCode }))
+    setDraftByUnitId((prev) => ({
+      ...prev,
+      [currentUnit.id]: {
+        ...(prev[currentUnit.id] ?? {}),
+        [newLang]: newCode,
+      },
+    }))
     setEditorLanguage(newLang)
 
     const nextStore: ProblemCodeByLang = { ...problemCodeByLang, [currentSessionKey]: updatedEntry }
@@ -2092,10 +2110,10 @@ export function SessionPage() {
       `${getProblemTimeEstimateMinutes(activeProblem)} ${minuteSuffix}`,
     ]
     : currentUnit.id === 'hello-world'
-      ? [languageMeta.label, t('tags.stdoutBasics'), t('tags.practice')]
-      : [languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]
+      ? [sessionLanguageLabel, t('tags.stdoutBasics'), t('tags.practice')]
+      : [sessionLanguageLabel, t('tags.practice'), t('tags.runtimeVerified')]
   return (
-    <section className={`session-shell flex min-h-[100dvh] flex-col overflow-x-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}>
+    <section className={`session-shell flex h-full min-h-0 flex-col overflow-x-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}>
       <header className="grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2.5 border-b border-pebble-border/25 bg-pebble-overlay/[0.04] px-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <Link
@@ -2108,7 +2126,7 @@ export function SessionPage() {
           </Link>
 
           <span className="hidden rounded-lg border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2 py-1 text-xs text-pebble-text-secondary md:inline-flex">
-            {languageMeta.label} • {levelLabel}
+            {sessionLanguageLabel} • {levelLabel}
           </span>
         </div>
 
@@ -2300,7 +2318,7 @@ export function SessionPage() {
           <div
             className="grid min-h-0 gap-2.5"
             style={{
-              gridTemplateRows: 'minmax(0,1fr) clamp(280px,33vh,360px)',
+              gridTemplateRows: 'minmax(0,1fr) clamp(240px,30vh,340px)',
             }}
           >
             <section className="session-panel flex min-h-0 flex-col overflow-hidden">

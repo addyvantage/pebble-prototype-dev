@@ -1,9 +1,8 @@
-import { motion, useReducedMotion } from 'framer-motion'
-import { type MouseEvent } from 'react'
-import { Bot, ChartLine, Code2, Languages, ListFilter, Sparkles } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
+import { Bot, CheckCircle2, Code2, Languages, ListFilter, Search } from 'lucide-react'
 
-type TileTone = 'blue' | 'indigo' | 'emerald' | 'slate'
-type TileLayout = 'hero' | 'tall' | 'normal'
+type TileTone = 'blue' | 'indigo' | 'slate'
 
 type FeatureTile = {
   id: string
@@ -11,8 +10,7 @@ type FeatureTile = {
   detail: string
   tag: string
   tone: TileTone
-  layout: TileLayout
-  preview: 'runtime' | 'coach' | 'browser' | 'insights' | 'languages' | 'placement'
+  preview: 'runtime' | 'coach' | 'browser' | 'languages'
   icon: typeof Code2
 }
 
@@ -20,93 +18,67 @@ const tiles: FeatureTile[] = [
   {
     id: 'runtime',
     title: 'Run code with real feedback',
-    detail: 'Test quickly, inspect output deltas, and tighten your loop with runtime-aware checkpoints.',
+    detail: 'Execute quickly, compare expected output, and tighten your loop with clear run diagnostics.',
     tag: 'Runtime',
     tone: 'blue',
-    layout: 'hero',
     preview: 'runtime',
     icon: Code2,
   },
   {
     id: 'coach',
     title: 'Pebble Coach',
-    detail: 'Hint, Explain, and Next-step guidance calibrated to your current recovery state.',
+    detail: 'Hint, Explain, and Next-step guidance that stays aligned with your current code context.',
     tag: 'Coach',
     tone: 'indigo',
-    layout: 'tall',
     preview: 'coach',
     icon: Bot,
   },
   {
-    id: 'browser',
-    title: 'LeetCode-style problems browser',
-    detail: 'Filter by topic, difficulty, and acceptance with quick random drills.',
-    tag: 'Browser',
-    tone: 'slate',
-    layout: 'normal',
-    preview: 'browser',
-    icon: ListFilter,
-  },
-  {
-    id: 'insights',
-    title: 'Recovery insights',
-    detail: 'Track streak, autonomy rate, and weekly breakpoints in one clean pulse.',
-    tag: 'Insights',
-    tone: 'blue',
-    layout: 'normal',
-    preview: 'insights',
-    icon: ChartLine,
-  },
-  {
     id: 'languages',
     title: 'Multilingual mentor',
-    detail: 'Stay in the same flow across English and Indian language support.',
+    detail: 'Preview guidance in multiple languages while preserving the same technical context.',
     tag: 'Language',
-    tone: 'emerald',
-    layout: 'normal',
+    tone: 'blue',
     preview: 'languages',
     icon: Languages,
   },
   {
-    id: 'placement',
-    title: 'Placement-ready sessions',
-    detail: 'Weekly rotating prep blocks with guided unit pacing to stay interview-sharp.',
-    tag: 'Placement',
-    tone: 'indigo',
-    layout: 'normal',
-    preview: 'placement',
-    icon: Sparkles,
+    id: 'browser',
+    title: 'LeetCode-style problems browser',
+    detail: 'Filter by topic, difficulty, and acceptance while keeping random practice one click away.',
+    tag: 'Browser',
+    tone: 'slate',
+    preview: 'browser',
+    icon: ListFilter,
   },
 ]
 
-function layoutClass(layout: TileLayout) {
-  if (layout === 'hero') {
-    return 'md:col-span-2 xl:col-span-7 xl:row-span-2'
-  }
-  if (layout === 'tall') {
-    return 'md:col-span-1 xl:col-span-5 xl:row-span-2'
-  }
-  return 'md:col-span-1 xl:col-span-4'
+function tilePlacementClass(id: FeatureTile['id']) {
+  if (id === 'runtime') return 'md:col-span-2 xl:col-span-7 xl:col-start-1 xl:row-start-1'
+  if (id === 'coach') return 'md:col-span-1 xl:col-span-5 xl:col-start-8 xl:row-start-1'
+  if (id === 'languages') return 'md:col-span-1 xl:col-span-5 xl:col-start-1 xl:row-start-2'
+  return 'md:col-span-1 xl:col-span-7 xl:col-start-6 xl:row-start-2'
 }
 
 function toneClass(tone: TileTone) {
-  if (tone === 'blue') return 'text-sky-300 bg-sky-400/18 border-sky-300/30 dark:text-sky-200'
-  if (tone === 'indigo') return 'text-indigo-300 bg-indigo-400/18 border-indigo-300/30 dark:text-indigo-200'
-  if (tone === 'emerald') return 'text-emerald-300 bg-emerald-400/18 border-emerald-300/30 dark:text-emerald-200'
-  return 'text-slate-400 bg-slate-300/20 border-slate-300/30 dark:text-slate-300'
+  if (tone === 'blue') {
+    return 'border-pebble-accent/38 bg-pebble-accent/12 text-pebble-accent dark:border-pebble-accent/30 dark:bg-pebble-accent/14 dark:text-blue-200'
+  }
+  if (tone === 'indigo') {
+    return 'border-pebble-border/40 bg-pebble-overlay/[0.16] text-pebble-text-secondary dark:border-pebble-border/32 dark:bg-pebble-overlay/[0.10] dark:text-pebble-text-secondary'
+  }
+  return 'border-pebble-border/40 bg-pebble-overlay/[0.16] text-pebble-text-secondary dark:border-pebble-border/32 dark:bg-pebble-overlay/[0.10] dark:text-pebble-text-secondary'
 }
 
 function previewSurfaceClass(tone: TileTone) {
+  const base = 'border bg-pebble-canvas/62 dark:bg-pebble-canvas/36 shadow-[inset_0_1px_0_rgba(var(--pebble-overlay),0.12)]'
   if (tone === 'blue') {
-    return 'border-sky-200/35 bg-[linear-gradient(160deg,rgba(186,230,253,0.20),rgba(2,8,23,0.35))] dark:bg-[linear-gradient(160deg,rgba(56,189,248,0.16),rgba(2,8,23,0.62))] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]'
+    return `${base} border-pebble-accent/22 dark:border-pebble-accent/18`
   }
   if (tone === 'indigo') {
-    return 'border-indigo-200/35 bg-[linear-gradient(160deg,rgba(199,210,254,0.20),rgba(8,10,30,0.36))] dark:bg-[linear-gradient(160deg,rgba(99,102,241,0.16),rgba(2,8,23,0.64))] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]'
+    return `${base} border-pebble-border/28 dark:border-pebble-border/22`
   }
-  if (tone === 'emerald') {
-    return 'border-emerald-200/35 bg-[linear-gradient(160deg,rgba(167,243,208,0.18),rgba(5,20,26,0.38))] dark:bg-[linear-gradient(160deg,rgba(16,185,129,0.14),rgba(2,8,23,0.65))] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]'
-  }
-  return 'border-slate-200/30 bg-[linear-gradient(160deg,rgba(226,232,240,0.18),rgba(10,14,28,0.38))] dark:bg-[linear-gradient(160deg,rgba(148,163,184,0.12),rgba(2,8,23,0.66))] shadow-[inset_0_1px_0_rgba(255,255,255,0.16)]'
+  return `${base} border-pebble-border/28 dark:border-pebble-border/22`
 }
 
 function onTileMouseMove(event: MouseEvent<HTMLElement>) {
@@ -122,215 +94,448 @@ function onTileMouseLeave(event: MouseEvent<HTMLElement>) {
   event.currentTarget.style.setProperty('--my', '50%')
 }
 
-function TilePreview({ preview, tone }: Pick<FeatureTile, 'preview' | 'tone'>) {
-  const surfaceClass = previewSurfaceClass(tone)
-
-  if (preview === 'runtime') {
-    return (
-      <div className={`rounded-2xl border p-4 ${surfaceClass}`}>
-        <div className="mb-3 flex items-center justify-between">
-          <span className="rounded-full border border-sky-300/35 bg-sky-400/18 px-2 py-0.5 text-[10px] font-medium text-sky-100">Unit: Two Sum</span>
-          <span className="rounded-full border border-amber-300/40 bg-amber-400/18 px-2 py-0.5 text-[10px] font-medium text-amber-100">Failing: 1</span>
-        </div>
-        <div className="rounded-xl border border-white/22 bg-slate-900/55 p-3 font-mono text-[11px] leading-relaxed text-slate-200">
-          <div>def solve(nums, target):</div>
-          <div className="opacity-85">  seen = {'{}'}</div>
-          <div className="opacity-85">  return -1, -1</div>
-        </div>
-      </div>
-    )
-  }
-
-  if (preview === 'coach') {
-    return (
-      <div className={`rounded-2xl border p-4 ${surfaceClass}`}>
-        <div className="space-y-2">
-          <div className="w-[88%] rounded-xl border border-white/22 bg-white/10 px-3 py-2 text-[11px] text-slate-200">Hint only: check seen before insert.</div>
-          <div className="ml-auto w-[82%] rounded-xl border border-white/22 bg-white/10 px-3 py-2 text-[11px] text-slate-200">Need one concise next step.</div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {['Hint', 'Explain', 'Next step'].map((chip) => (
-            <span key={chip} className="rounded-full border border-indigo-300/35 bg-indigo-400/18 px-2.5 py-1 text-[10px] font-medium text-indigo-100">
-              {chip}
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (preview === 'browser') {
-    return (
-      <div className={`rounded-2xl border p-4 ${surfaceClass}`}>
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {['Array', 'HashMap', 'Medium'].map((chip) => (
-            <span key={chip} className="rounded-full border border-white/22 bg-white/10 px-2 py-0.5 text-[10px] text-slate-100">{chip}</span>
-          ))}
-        </div>
-        <div className="rounded-xl border border-white/22 bg-white/10 p-2">
-          <div className="mb-1.5 h-2 w-2/3 rounded-full bg-white/40" />
-          <div className="mb-1.5 h-2 w-5/6 rounded-full bg-white/30" />
-          <div className="flex items-center justify-between text-[10px] text-slate-200/90">
-            <span>Acceptance 63%</span>
-            <span>2/3 solved</span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (preview === 'insights') {
-    return (
-      <div className={`rounded-2xl border p-4 ${surfaceClass}`}>
-        <div className="mb-2 grid grid-cols-3 gap-2">
-          {['Streak', 'Autonomy', 'Breakpoints'].map((kpi) => (
-            <div key={kpi} className="rounded-xl border border-white/22 bg-white/10 p-2 text-center">
-              <div className="text-[9px] uppercase tracking-[0.08em] text-slate-300">{kpi}</div>
-              <div className="mt-1 text-[12px] font-semibold text-slate-100">{kpi === 'Streak' ? '08' : kpi === 'Autonomy' ? '72%' : '3'}</div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 flex items-end gap-1.5">
-          {[22, 35, 30, 48, 56, 45, 60].map((h, idx) => (
-            <span key={idx} className="block w-full rounded-full bg-gradient-to-t from-sky-500/45 to-sky-200/80" style={{ height: `${h}px` }} />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (preview === 'languages') {
-    return (
-      <div className={`rounded-2xl border p-4 ${surfaceClass}`}>
-        <div className="grid grid-cols-3 gap-2">
-          {['EN', 'HI', 'BN', 'TA', 'TE', 'MR'].map((lang) => (
-            <div
-              key={lang}
-              className={`rounded-xl border px-2 py-1.5 text-center text-[10px] font-medium ${
-                lang === 'EN'
-                  ? 'border-sky-300/50 bg-sky-400/22 text-sky-100'
-                  : 'border-white/22 bg-white/10 text-slate-200'
-              }`}
-            >
-              {lang}
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
+function RuntimePreview({ tone }: { tone: TileTone }) {
   return (
-    <div className={`rounded-2xl border p-4 ${surfaceClass}`}>
-      <div className="mb-2 flex items-center gap-2">
-        <div className="h-2.5 w-2.5 rounded-full bg-emerald-300/85" />
-        <div className="h-2 w-32 rounded-full bg-white/40" />
+    <div className={`rounded-2xl border p-3 ${previewSurfaceClass(tone)}`}>
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <span className="rounded-full border border-pebble-accent/45 bg-pebble-accent/12 px-2.5 py-0.5 text-[10px] font-semibold text-pebble-accent dark:border-pebble-accent/35 dark:bg-pebble-accent/16 dark:text-blue-200">
+          Unit: Two Sum
+        </span>
+        <span className="rounded-full border border-pebble-warning/40 bg-pebble-warning/12 px-2.5 py-0.5 text-[10px] font-semibold text-pebble-warning dark:border-pebble-warning/30 dark:bg-pebble-warning/18 dark:text-amber-200">
+          Fail #2
+        </span>
       </div>
-      <div className="space-y-2">
-        <div className="h-2 w-5/6 rounded-full bg-white/35" />
-        <div className="h-2 w-3/4 rounded-full bg-white/30" />
-        <div className="h-2 w-2/3 rounded-full bg-white/26" />
+      <div className="rounded-xl border border-pebble-border/26 bg-pebble-canvas/75 px-2.5 py-2 font-mono text-[11.5px] leading-relaxed text-pebble-text-secondary dark:border-pebble-border/24 dark:bg-pebble-canvas/38 dark:text-pebble-text-secondary">
+        <div>def solve(nums, target):</div>
+        <div className="opacity-90">  seen = {'{}'}</div>
+        <div className="opacity-90">  return -1, -1</div>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] text-pebble-text-secondary">
+        <div className="rounded-md border border-emerald-300/55 bg-emerald-500/10 px-2 py-1 dark:border-emerald-300/28 dark:bg-emerald-400/16">expected: 12</div>
+        <div className="rounded-md border border-rose-300/55 bg-rose-500/10 px-2 py-1 dark:border-rose-300/28 dark:bg-rose-400/16">got: -1 -1</div>
       </div>
     </div>
   )
+}
+
+function CoachPreview({ tone }: { tone: TileTone }) {
+  return (
+    <div className={`rounded-2xl border p-3 ${previewSurfaceClass(tone)}`}>
+      <div className="flex flex-wrap gap-1.5">
+        {['Hint', 'Explain', 'Next step'].map((chip) => (
+          <span
+            key={chip}
+            className="rounded-full border border-indigo-300/55 bg-indigo-500/12 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-300/35 dark:bg-indigo-400/15 dark:text-indigo-200"
+          >
+            {chip}
+          </span>
+        ))}
+      </div>
+      <div className="mt-2.5 space-y-1.5">
+        <div className="w-[92%] rounded-lg border border-pebble-border/26 bg-pebble-canvas/68 px-2.5 py-2 text-[11.5px] leading-snug text-pebble-text-primary dark:border-pebble-border/24 dark:bg-pebble-canvas/36 dark:text-pebble-text-primary">
+          Check target - current before storing in seen.
+        </div>
+        <div className="ml-auto w-[88%] rounded-lg border border-pebble-border/26 bg-pebble-canvas/68 px-2.5 py-2 text-[11.5px] leading-snug text-pebble-text-primary dark:border-pebble-border/24 dark:bg-pebble-canvas/36 dark:text-pebble-text-primary">
+          Give me one concise next step.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BrowserPreview({ tone }: { tone: TileTone }) {
+  const rows = [
+    { title: 'Two Sum', difficulty: 'Easy', acceptance: '63%', solved: true },
+    { title: 'Valid Parentheses', difficulty: 'Easy', acceptance: '58%', solved: false },
+    { title: 'Merge Intervals', difficulty: 'Hard', acceptance: '41%', solved: false },
+  ]
+
+  return (
+    <div className={`rounded-2xl border p-3 ${previewSurfaceClass(tone)}`}>
+      <div className="mb-2.5 flex items-center gap-2 rounded-lg border border-pebble-border/26 bg-pebble-canvas/68 px-2.5 py-2 text-[11px] text-pebble-text-secondary dark:border-pebble-border/24 dark:bg-pebble-canvas/36 dark:text-pebble-text-secondary">
+        <Search className="h-3.5 w-3.5" />
+        Search problems, topics, tags
+      </div>
+      <div className="space-y-1.5">
+        {rows.map((row) => (
+          <div
+            key={row.title}
+            className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 rounded-lg border border-pebble-border/24 bg-pebble-overlay/75 px-2.5 py-2 dark:border-pebble-border/22 dark:bg-pebble-overlay/[0.06]"
+          >
+            <span className="truncate text-[11.5px] font-medium text-pebble-text-primary dark:text-pebble-text-primary">{row.title}</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${
+                row.difficulty === 'Easy'
+                  ? 'bg-emerald-500/12 text-emerald-700 dark:bg-emerald-400/18 dark:text-emerald-200'
+                  : 'bg-rose-500/12 text-rose-700 dark:bg-rose-400/18 dark:text-rose-200'
+              }`}
+            >
+              {row.difficulty}
+            </span>
+            <span className="text-[10.5px] font-medium text-pebble-text-secondary dark:text-pebble-text-secondary">{row.acceptance}</span>
+            <span className="inline-flex w-4 items-center justify-center">
+              {row.solved ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-pebble-accent dark:text-blue-300" />
+              ) : (
+                <span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-500" />
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+type DemoLanguage = 'EN' | 'HI' | 'BN' | 'TA'
+
+const LANGUAGE_COPY: Record<DemoLanguage, string> = {
+  EN: 'Hint: keep the map updated before checking the next index.',
+  HI: 'संकेत: अगले index से पहले map को अपडेट रखें।',
+  BN: 'ইঙ্গিত: পরের index-এর আগে map আপডেট রাখুন।',
+  TA: 'குறிப்பு: அடுத்த index க்கு முன் map-ஐ update செய்யுங்கள்.',
+}
+
+const LOOP_LANGUAGES: DemoLanguage[] = ['EN', 'HI', 'BN', 'TA']
+const DEMO_SEQUENCE: DemoLanguage[] = ['HI', 'BN', 'TA', 'EN']
+
+// Slow, demo-friendly timings so each state is clearly visible.
+const DEMO_TIMINGS = {
+  idleBeforeOpen: 1050,
+  dropdownOpenHold: 1400,
+  optionHoverHold: 820,
+  afterSelectHold: 1300,
+  languagePreviewHold: 2350,
+  hintUpdateDelay: 180,
+  clickPulse: 210,
+  resumeAfterInteraction: 8000,
+} as const
+
+function LanguagePreviewAnimated({ tone }: { tone: TileTone }) {
+  const reduceMotion = useReducedMotion()
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const selectorRef = useRef<HTMLButtonElement | null>(null)
+  const optionRefs = useRef<Partial<Record<DemoLanguage, HTMLElement | null>>>({})
+  const loopTimeoutRef = useRef<number | null>(null)
+  const resumeTimeoutRef = useRef<number | null>(null)
+  const hintTimeoutRef = useRef<number | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [highlightedOption, setHighlightedOption] = useState<DemoLanguage | null>(null)
+  const [demoStepIndex, setDemoStepIndex] = useState(0)
+  const [isHovered, setIsHovered] = useState(false)
+  const [isUserPaused, setIsUserPaused] = useState(false)
+  const [cursorTarget, setCursorTarget] = useState<'selector' | DemoLanguage>('selector')
+  const [cursorPulse, setCursorPulse] = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState<DemoLanguage>('EN')
+  const [hintLanguage, setHintLanguage] = useState<DemoLanguage>('EN')
+  const [cursorPoint, setCursorPoint] = useState({ x: 0, y: 0 })
+
+  const autoplayEnabled = !reduceMotion && !isHovered && !isUserPaused
+
+  const clearDemoTimer = useCallback(() => {
+    if (loopTimeoutRef.current) {
+      window.clearTimeout(loopTimeoutRef.current)
+      loopTimeoutRef.current = null
+    }
+  }, [])
+
+  const clearResumeTimer = useCallback(() => {
+    if (resumeTimeoutRef.current) {
+      window.clearTimeout(resumeTimeoutRef.current)
+      resumeTimeoutRef.current = null
+    }
+  }, [])
+
+  const clearHintTimer = useCallback(() => {
+    if (hintTimeoutRef.current) {
+      window.clearTimeout(hintTimeoutRef.current)
+      hintTimeoutRef.current = null
+    }
+  }, [])
+
+  const triggerCursorPulse = useCallback(() => {
+    setCursorPulse(true)
+    window.setTimeout(() => setCursorPulse(false), DEMO_TIMINGS.clickPulse)
+  }, [])
+
+  const pauseAutoplayByUser = useCallback(() => {
+    setIsUserPaused(true)
+    clearResumeTimer()
+    resumeTimeoutRef.current = window.setTimeout(() => {
+      setIsUserPaused(false)
+    }, DEMO_TIMINGS.resumeAfterInteraction)
+  }, [clearResumeTimer])
+
+  const syncHintLanguage = useCallback((nextLanguage: DemoLanguage) => {
+    clearHintTimer()
+    hintTimeoutRef.current = window.setTimeout(() => {
+      setHintLanguage(nextLanguage)
+    }, DEMO_TIMINGS.hintUpdateDelay)
+  }, [clearHintTimer])
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setIsOpen(false)
+      setHighlightedOption(null)
+      setSelectedLanguage('EN')
+      setHintLanguage('EN')
+      setCursorTarget('selector')
+    }
+  }, [reduceMotion])
+
+  useEffect(() => {
+    if (!autoplayEnabled) {
+      clearDemoTimer()
+      return
+    }
+
+    const targetLanguage = DEMO_SEQUENCE[demoStepIndex]
+    setIsOpen(false)
+    setHighlightedOption(null)
+    setCursorTarget('selector')
+
+    const queue = (delay: number, fn: () => void) => {
+      loopTimeoutRef.current = window.setTimeout(fn, delay)
+    }
+
+    queue(DEMO_TIMINGS.idleBeforeOpen, () => {
+      setCursorTarget('selector')
+      triggerCursorPulse()
+      queue(DEMO_TIMINGS.clickPulse + 120, () => {
+        setIsOpen(true)
+        queue(DEMO_TIMINGS.dropdownOpenHold, () => {
+          setCursorTarget(targetLanguage)
+          setHighlightedOption(targetLanguage)
+          queue(DEMO_TIMINGS.optionHoverHold, () => {
+            triggerCursorPulse()
+            setSelectedLanguage(targetLanguage)
+            syncHintLanguage(targetLanguage)
+            queue(DEMO_TIMINGS.clickPulse + 90, () => {
+              setIsOpen(false)
+              setHighlightedOption(null)
+              queue(DEMO_TIMINGS.afterSelectHold + DEMO_TIMINGS.languagePreviewHold, () => {
+                setDemoStepIndex((prev) => (prev + 1) % DEMO_SEQUENCE.length)
+              })
+            })
+          })
+        })
+      })
+    })
+
+    return () => {
+      clearDemoTimer()
+    }
+  }, [autoplayEnabled, clearDemoTimer, demoStepIndex, syncHintLanguage, triggerCursorPulse])
+
+  useEffect(() => {
+    return () => {
+      clearDemoTimer()
+      clearHintTimer()
+      clearResumeTimer()
+    }
+  }, [clearDemoTimer, clearHintTimer, clearResumeTimer])
+
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    const selector = selectorRef.current
+    if (!container || !selector) return
+
+    const getCenter = (element: HTMLElement | null, fallback?: { x: number; y: number }) => {
+      if (!element) return fallback ?? { x: 0, y: 0 }
+      const containerRect = container.getBoundingClientRect()
+      const rect = element.getBoundingClientRect()
+      return {
+        x: rect.left - containerRect.left + rect.width / 2,
+        y: rect.top - containerRect.top + rect.height / 2,
+      }
+    }
+
+    const selectorPoint = getCenter(selector)
+    const optionPoint = getCenter(optionRefs.current[cursorTarget === 'selector' ? selectedLanguage : cursorTarget] ?? null, {
+      x: selectorPoint.x,
+      y: selectorPoint.y + 56,
+    })
+    setCursorPoint(cursorTarget === 'selector' || !isOpen ? selectorPoint : optionPoint)
+  }, [cursorTarget, isOpen, selectedLanguage, highlightedOption])
+
+  const handleSelectorToggle = () => {
+    pauseAutoplayByUser()
+    setCursorTarget('selector')
+    setIsOpen((prev) => !prev)
+  }
+
+  const handleLanguageSelect = (language: DemoLanguage) => {
+    pauseAutoplayByUser()
+    clearDemoTimer()
+    clearHintTimer()
+    setSelectedLanguage(language)
+    setHintLanguage(language)
+    setIsOpen(false)
+    setHighlightedOption(null)
+    const nextLanguage = LOOP_LANGUAGES[(LOOP_LANGUAGES.indexOf(language) + 1) % LOOP_LANGUAGES.length]
+    setDemoStepIndex(DEMO_SEQUENCE.indexOf(nextLanguage))
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative rounded-2xl border p-3.5 ${previewSurfaceClass(tone)}`}
+      onMouseEnter={() => {
+        setIsHovered(true)
+        pauseAutoplayByUser()
+      }}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocusCapture={pauseAutoplayByUser}
+    >
+      <div className="relative rounded-xl border border-pebble-border/26 bg-pebble-canvas/68 px-3 py-2.5 text-[12px] text-pebble-text-primary dark:border-pebble-border/24 dark:bg-pebble-canvas/38 dark:text-pebble-text-primary">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[12px] font-medium text-pebble-text-secondary">Language</span>
+          <button
+            type="button"
+            ref={selectorRef}
+            onClick={handleSelectorToggle}
+            className="rounded-lg border border-pebble-accent/40 bg-pebble-accent/12 px-2.5 py-1 text-[11px] font-semibold text-pebble-accent transition-colors hover:bg-pebble-accent/16 dark:border-pebble-accent/36 dark:bg-pebble-accent/18 dark:text-blue-200 dark:hover:bg-pebble-accent/24"
+          >
+            {selectedLanguage}
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {isOpen ? (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute right-3 top-[2.45rem] z-20 w-28 overflow-hidden rounded-xl border border-pebble-border/28 bg-pebble-panel/95 shadow-[0_12px_28px_rgba(15,23,42,0.18)] dark:border-pebble-border/24 dark:bg-pebble-canvas/90 dark:shadow-[0_14px_32px_rgba(0,0,0,0.42)]"
+            >
+              {(['EN', 'HI', 'BN', 'TA'] as const).map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  ref={(node) => {
+                    optionRefs.current[lang] = node
+                  }}
+                  onClick={() => handleLanguageSelect(lang)}
+                  className={`px-2.5 py-1.5 text-[11px] ${
+                    lang === selectedLanguage
+                      ? 'bg-pebble-accent/12 text-pebble-accent dark:bg-pebble-accent/18 dark:text-blue-200'
+                      : highlightedOption === lang
+                        ? 'bg-pebble-overlay/35 text-pebble-text-primary dark:bg-pebble-overlay/10 dark:text-pebble-text-primary'
+                        : 'text-pebble-text-secondary dark:text-pebble-text-secondary'
+                  }`}
+                >
+                  {lang}
+                </button>
+              ))}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
+      <div className="mt-2.5 rounded-xl border border-pebble-border/26 bg-pebble-canvas/75 px-3 py-2.5 text-[12px] leading-relaxed text-pebble-text-primary dark:border-pebble-border/24 dark:bg-pebble-canvas/38 dark:text-pebble-text-primary">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={hintLanguage}
+            initial={{ opacity: 0.55, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0.45, y: -2 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            {LANGUAGE_COPY[hintLanguage]}
+          </motion.p>
+        </AnimatePresence>
+      </div>
+
+      {!reduceMotion && autoplayEnabled ? (
+        <motion.div
+          className="pointer-events-none absolute z-30"
+          animate={{
+            x: cursorPoint.x,
+            y: cursorPoint.y,
+            scale: cursorPulse ? [1, 0.88, 1] : 1,
+          }}
+          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          style={{ left: 0, top: 0 }}
+        >
+          <div className="relative h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-pebble-border/45 bg-pebble-overlay/90 shadow-[0_2px_8px_rgba(15,23,42,0.22)] dark:border-pebble-overlay/55 dark:bg-pebble-overlay/92" />
+        </motion.div>
+      ) : null}
+    </div>
+  )
+}
+
+function TilePreview({ preview, tone }: Pick<FeatureTile, 'preview' | 'tone'>) {
+  if (preview === 'runtime') return <RuntimePreview tone={tone} />
+  if (preview === 'coach') return <CoachPreview tone={tone} />
+  if (preview === 'browser') return <BrowserPreview tone={tone} />
+  return <LanguagePreviewAnimated tone={tone} />
 }
 
 export function FeatureGrid() {
   const reduceMotion = useReducedMotion()
 
   return (
-    <section className="relative mt-2 px-0 pb-2 pt-3 md:pt-4 lg:pt-6">
-      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
-        <div className="space-y-3">
+    <section className="relative mt-1 overflow-hidden rounded-[24px] border border-pebble-border/24 bg-[linear-gradient(180deg,rgba(var(--pebble-panel),0.86),rgba(var(--pebble-panel),0.78))] px-4 py-5 shadow-[0_16px_40px_rgba(55,72,110,0.14)] dark:bg-[linear-gradient(180deg,rgba(var(--pebble-panel),0.50),rgba(var(--pebble-panel),0.40))] dark:shadow-[0_24px_56px_rgba(0,0,0,0.42)] md:px-5 md:py-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pebble-overlay/75 to-transparent dark:via-pebble-overlay/18" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-pebble-overlay/[0.10] to-transparent dark:from-pebble-overlay/[0.06]" />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.12fr_0.88fr] lg:items-end">
+        <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pebble-text-muted">
             Built for fast recovery loops
           </p>
-          <h2 className="text-balance text-[2rem] font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-100 md:text-[2.3rem] lg:text-[2.55rem] xl:text-[2.9rem] leading-[1.04]">
-            A learning surface tuned for{' '}
-            <span className="text-blue-600 dark:text-sky-300">measurable momentum</span>
+          <h2 className="text-balance text-[1.78rem] font-semibold leading-[1.08] tracking-[-0.02em] text-pebble-text-primary md:text-[2.08rem] lg:text-[2.28rem]">
+            A learning surface tuned for <span className="text-pebble-accent">measurable momentum</span>
           </h2>
         </div>
-        <p className="max-w-[62ch] text-[14px] leading-[1.75] text-slate-600 dark:text-slate-300 md:text-[15px] lg:justify-self-end lg:text-right">
+        <p className="max-w-[62ch] text-[14px] leading-[1.7] text-pebble-text-secondary md:text-[14.5px] lg:justify-self-end lg:text-right">
           Pebble blends high-signal execution, contextual coaching, and focused analytics into one calm interface so every session compounds.
         </p>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12 xl:auto-rows-[minmax(214px,auto)] 2xl:auto-rows-[minmax(224px,auto)]">
+      <div className="mt-5 grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-12">
         {tiles.map((tile) => {
           const Icon = tile.icon
           return (
             <motion.article
               key={tile.id}
-              className={`group relative isolate overflow-hidden rounded-[30px]
-  border border-black/10 bg-white/70
-  shadow-[0_18px_60px_rgba(2,8,23,0.10)]
-  backdrop-blur-xl
-  dark:border-white/12 dark:bg-white/[0.035]
-  dark:shadow-[0_24px_80px_rgba(0,0,0,0.55)]
-  md:p-6 p-5 ${layoutClass(tile.layout)}`}
+              className={`group relative isolate overflow-hidden rounded-[24px] border border-pebble-border/24 bg-[rgba(231,237,249,0.86)] p-4 shadow-[0_14px_32px_rgba(55,72,110,0.14)] dark:border-pebble-border/20 dark:bg-pebble-overlay/[0.05] dark:shadow-[0_18px_34px_rgba(0,0,0,0.42)] md:p-5 ${tilePlacementClass(tile.id)}`}
               style={{ ['--mx' as string]: '50%', ['--my' as string]: '50%' }}
               onMouseMove={onTileMouseMove}
               onMouseLeave={onTileMouseLeave}
-              whileHover={reduceMotion ? undefined : { y: -10, scale: 1.01 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
+              whileHover={reduceMotion ? undefined : { y: -6, scale: 1.006 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              {/* Premium gradient border ring */}
-              <div className="pointer-events-none absolute inset-0 rounded-[inherit] p-[1px]">
-                <div className="absolute inset-0 rounded-[inherit] bg-[conic-gradient(from_180deg_at_50%_50%,rgba(56,189,248,0.35),rgba(99,102,241,0.22),rgba(52,211,153,0.20),rgba(56,189,248,0.35))] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                <div className="absolute inset-0 rounded-[inherit] bg-[conic-gradient(from_180deg_at_50%_50%,rgba(255,255,255,0.18),rgba(255,255,255,0.08),rgba(255,255,255,0.14))] opacity-100 dark:opacity-60" />
-                <div className="absolute inset-[1px] rounded-[28px] bg-white/70 dark:bg-[#0b1220]/55" />
-              </div>
-
-              {/* Cursor glow */}
               <div
-                className="pointer-events-none absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                 style={{
                   background:
-                    'radial-gradient(520px circle at var(--mx) var(--my), rgba(56,189,248,0.22), transparent 55%)',
+                    'radial-gradient(280px circle at var(--mx) var(--my), rgba(59,130,246,0.12), rgba(59,130,246,0.02) 34%, transparent 62%)',
                 }}
               />
+              <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-pebble-overlay/72 to-transparent dark:via-pebble-overlay/20" />
 
-              {/* Subtle top highlight line */}
-              <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/85 to-transparent dark:via-white/18" />
-
-              {/* Ultra-subtle noise (makes it feel “expensive”) */}
-              <div
-                className="pointer-events-none absolute inset-0 opacity-[0.035] mix-blend-overlay dark:opacity-[0.06]"
-                style={{
-                  backgroundImage:
-                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E\")",
-                }}
-              />
-
-              <div className="relative z-20 flex items-start justify-between gap-3">
-                <span className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl
-  border border-white/25 bg-white/10 text-slate-700
-  shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]
-  dark:border-white/12 dark:bg-white/[0.06] dark:text-slate-100">
-                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+              <div className="relative z-10 flex items-start justify-between gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-pebble-border/28 bg-pebble-canvas/58 text-pebble-text-secondary dark:border-pebble-border/22 dark:bg-pebble-canvas/34 dark:text-pebble-text-primary">
+                  <Icon className="h-[17px] w-[17px]" aria-hidden="true" />
                 </span>
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.10em]
-  shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] ${toneClass(tile.tone)}`}>
+                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${toneClass(tile.tone)}`}>
                   {tile.tag}
                 </span>
               </div>
 
-              <div className="relative z-20 mt-4 space-y-2.5">
-                <h3 className="text-balance text-[20px] font-semibold leading-[1.15] tracking-tight text-slate-900 dark:text-slate-100">
+              <div className="relative z-10 mt-3 space-y-1.5">
+                <h3 className="text-[17px] font-semibold leading-[1.22] tracking-tight text-pebble-text-primary dark:text-pebble-text-primary">
                   {tile.title}
                 </h3>
-                <p className="text-[13.5px] leading-[1.6] text-slate-600 dark:text-slate-300">
+                <p className="text-[13.25px] leading-[1.56] text-pebble-text-secondary dark:text-pebble-text-secondary">
                   {tile.detail}
                 </p>
               </div>
 
-              <motion.div
-                className="relative z-20 mt-4"
-                whileHover={reduceMotion ? undefined : { scale: 1.015 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-              >
+              <div className="relative z-10 mt-3">
                 <TilePreview preview={tile.preview} tone={tile.tone} />
-              </motion.div>
+              </div>
             </motion.article>
           )
         })}
