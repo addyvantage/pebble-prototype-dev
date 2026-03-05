@@ -1,113 +1,124 @@
 # PebbleCode
 
-**Recovery-first coding practice** with a premium IDE, mentor guidance, and measurable progress signals.
+**A recovery-first coding practice platform** with a premium IDE, mentor guidance, and measurable progress analytics.
 
-PebbleCode helps learners recover from mistakes faster, not just solve once. It combines:
-- a LeetCode-style coding loop,
-- tiered mentor guidance (Hint → Explain → Next step),
-- telemetry-backed progress insights,
-- and exportable recovery reports.
+PebbleCode is built for one thing: helping learners recover faster from mistakes.  
+Instead of only tracking accepted submissions, it tracks the full loop: run → diagnose → fix → rerun.
+
+---
 
 ## Why PebbleCode
-- **Recovery loop, not just correctness**: run, diagnose, adjust, rerun.
-- **Mentor with guardrails**: context-aware guidance with controlled hint depth.
-- **Real execution support**: Python, JavaScript, Java 17, C++17, and C (GNU) in local runner pipelines.
-- **Measurable momentum**: attempts, recovery time, autonomy rate, hint usage, streak/risk views.
-- **Demo-ready local mode + AWS path**: works fully in local mode, scales with optional AWS services.
+
+- **Recovery over rote AC:** measures how quickly and independently a learner bounces back.
+- **Mentor in context:** tiered guidance (Hint / Explain / Next step) based on live session state.
+- **Real language execution:** Python 3, JavaScript, C++17, Java 17, and C (GNU) support in the local runner.
+- **Signals, not guesses:** autonomy, recovery time, hint usage, streak/risk, and recap surfaces.
+- **Demo-safe architecture:** runs locally without AWS; scales to AWS services when configured.
 
 ---
 
 ## Judges Quickstart
 
 ### Requirements
+
 - Node.js 18+
 - npm 9+
-- Local toolchains for runner checks:
+- Local toolchains:
   - `python3`
   - `node`
   - `g++`
   - `gcc`
   - `javac` + `java` (JDK 17+)
 
-### One-command run
+### One-command local run
+
 ```bash
 npm install
 npm run dev:full
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173)
 
-### Fast click path (demo flow)
+### Fast click-path
+
 1. Home → **Try Pebble**
-2. Session IDE → pick a language → **Run tests**
-3. Trigger a fail → use **Pebble Coach**
-4. Fix and **Submit**
-5. Open **Dashboard / Insights**
+2. Session IDE → pick language → **Run tests**
+3. Trigger fail → open **Pebble Coach**
+4. Fix code → **Submit**
+5. Go to **Dashboard / Insights**
 6. Click **Export Report**
 
 ---
 
-## Demo Script (2–4 min)
+## Demo Script (2–4 minutes)
 
-1. **Setup context (20s)**  
-   “PebbleCode measures how quickly you recover from coding mistakes, not only final AC.”
-2. **Run-fail-fix loop (60–90s)**  
-   In Session IDE, run starter code, show failing test, apply fix, rerun.
-3. **Mentor assist (45–60s)**  
-   Open Pebble Coach and use Hint/Explain/Next-step guidance.
-4. **Progress proof (30–45s)**  
-   Show insights cards (autonomy, recovery trends, weekly recap/risk widgets if configured).
-5. **Export evidence (20–30s)**  
+1. **Problem framing (20s)**  
+   “PebbleCode optimizes recovery quality, not just final correctness.”
+
+2. **Live coding loop (60–90s)**  
+   Run a starter, show failing testcase, apply fix, rerun.
+
+3. **Mentor interaction (45–60s)**  
+   Use Hint → Explain to show controlled, contextual support.
+
+4. **Progress evidence (30–45s)**  
+   Show recovery/autonomy signals in dashboard widgets.
+
+5. **Export artifact (20–30s)**  
    Export the one-page Recovery Report PDF.
 
 ---
 
 ## Feature Tour
 
-### IDE + Runtime Feedback
-- Monaco editor in a session shell with run/submit actions.
-- Structured test feedback and diagnostics.
-- Language switching with registry-backed metadata and runtime probing.
-- Local runner in `server/runnerLocal.ts` supports:
+### 1) Session IDE + Runtime Feedback
+
+- Monaco editor with language switching and session memory.
+- Run/submit pipeline with structured pass/fail diagnostics.
+- Function-mode and stdio-mode support paths in the session engine.
+- Local runner in `/server/runnerLocal.ts`:
   - Python 3
   - JavaScript
   - C++17
   - Java 17
   - C (GNU)
 
-### Pebble Coach
-- Mentor panel with tiered guidance flows.
-- Safety/policy layer (`server/safety/*`, `server/pebbleAgent/policy.ts`).
-- Bedrock-backed generation path when configured, local fallback behavior when not.
+### 2) Pebble Coach
 
-### Problems + Session Modes
-- Problems browser with filtering and previews.
-- **Stdio mode** for problem-bank style tasks.
-- **Function mode** wrappers for curriculum units where configured (`src/lib/functionMode.ts`).
-- SQL problem support in stdio-style flow.
+- Contextual mentor panel in session.
+- Tiered assistance flow and guidance actions.
+- Safety/policy logic in `/server/safety` and `/server/pebbleAgent/policy.ts`.
+- Bedrock-backed response path when configured; local-safe fallback path otherwise.
 
-### Insights + Ops
-- Dashboard widgets for trend/risk/weekly recap surfaces.
-- Cohort analytics endpoint with AWS Athena path and local fallback behavior.
-- Admin ops metrics page (`/ops`) gated by token/email checks.
+### 3) Problems Browser + Unit Flow
 
-### Auth + Profiles
-- Cognito-backed auth flows in frontend + dev API:
-  - login
-  - signup
-  - verify email code (dev API route)
-  - resend verification code (dev API route)
-- Profile editing with username rules, cooldown checks, and avatar flow.
+- Problems list with filters and topic-driven browsing.
+- Session launch from selected problem context.
+- Curriculum + unit drawer integration in session.
 
-### Export Recovery Report
-- Server-generated, premium dark one-page PDF (`server/reports/pdfGenerator.ts`).
-- Includes user/problem/session metadata, KPI cards, error breakdown, and summary bullets.
-- Filename includes sanitized user + problem + date.
+### 4) Insights + Ops
 
-### Notification Center
-- Header bell opens filtered notifications (All / Coach / Progress / System).
-- Local persisted notification state by user scope.
-- Hooked into key flows (run/submit/export/profile/sign-in where wired).
+- Dashboard cards/charts for progress and recovery indicators.
+- Cohort analytics API with Athena-backed path + fallback behavior.
+- Admin Ops page (`/ops`) for operational metrics.
+
+### 5) Auth + Profiles
+
+- Cognito-integrated login/signup/verify flows in frontend.
+- Profile system with username checks, cooldown enforcement, avatar handling.
+- Header identity integration (avatar + name).
+
+### 6) Export Recovery Report
+
+- Premium one-page dark PDF generated server-side.
+- Includes user/session/problem metadata, KPI cards, error breakdown, and summary bullets.
+- Download filename includes sanitized user + problem + date.
+
+### 7) Notifications
+
+- Header bell opens filterable notification center (All / Coach / Progress / System).
+- Local persisted, user-scoped notification storage.
+- Wired to key actions (run/submit/export/profile/auth hooks where implemented).
 
 ---
 
@@ -116,26 +127,27 @@ Open [http://localhost:5173](http://localhost:5173).
 ```mermaid
 flowchart LR
   FE["Vite + React + TS Frontend"] --> DEV["Express Dev API (server/dev-server.ts)"]
-  FE --> VERCEL["/api serverless handlers (Vercel)"]
+  FE --> VERCEL["Serverless API routes (/api/*)"]
 
   DEV --> RUNNER["Local Runner (python/node/g++/gcc/javac)"]
   VERCEL --> RUNNER
 
-  DEV --> AGENT["Pebble Agent + Safety Layer"]
+  DEV --> AGENT["Pebble Agent + Safety"]
   AGENT --> BEDROCK["AWS Bedrock (optional)"]
 
   DEV --> DDB["DynamoDB (profiles/journeys/snapshots/risk/recaps)"]
-  DEV --> S3["S3 (avatars/reports/recap audio)"]
-  DEV --> ATHENA["Athena + Glue (cohort analytics)"]
-  DEV --> EB["EventBridge/Lambda ingestion (optional paths)"]
+  DEV --> S3["S3 (avatars/reports/audio)"]
+  DEV --> ATHENA["Athena + Glue analytics path"]
+  DEV --> EVENTS["EventBridge/Lambda telemetry path"]
 
-  CF["CloudFront + S3 hosting"] --> FE
+  CF["CloudFront + S3 Hosting"] --> FE
 ```
 
-### Runtime model
-- **Local-first**: `npm run dev:full` runs frontend + dev API + local runner.
-- **AWS-enhanced**: additional services activate via env vars and IAM permissions.
-- **Hybrid serverless**: `/api/run` supports local mode, remote URL mode, or Lambda invocation.
+### Runtime modes
+
+- **Local-first:** `npm run dev:full` (frontend + dev API + local runner).
+- **AWS-enhanced:** optional services enabled by env + IAM.
+- **Hybrid API:** `/api/run` supports local/remote URL/Lambda runner strategies.
 
 ---
 
@@ -145,12 +157,12 @@ flowchart LR
 |---|---|
 | Frontend | React 19, TypeScript, Vite, Tailwind, Framer Motion, Monaco |
 | Local API | Express 5 + TypeScript |
-| Serverless API | Vercel handlers in `api/` |
-| Runner | Python, Node, g++, gcc, javac/java |
-| AI | AWS Bedrock Runtime (optional) |
+| Serverless API | Vercel handlers in `/api` |
+| Runner | python3, node, g++, gcc, javac/java |
+| AI | AWS Bedrock Runtime |
 | Data | DynamoDB, EventBridge, Athena, Glue |
-| Files | S3 + signed URL patterns |
-| Infra | AWS CDK v2 (multi-stack) |
+| Files | S3 + signed URL workflows |
+| Infra | AWS CDK v2 multi-stack setup |
 
 ---
 
@@ -158,26 +170,31 @@ flowchart LR
 
 ## Local Setup
 
-1. Install dependencies:
+1. Install deps:
+
 ```bash
 npm install
 ```
 
-2. Configure env:
+2. Create local env:
+
 ```bash
 cp .env.example .env.local
 ```
 
-3. Start full local stack:
+3. Start frontend + backend:
+
 ```bash
 npm run dev:full
 ```
 
-4. Health checks:
+4. Verify:
+
 - Frontend: [http://localhost:5173](http://localhost:5173)
-- API: [http://localhost:3001/api/health](http://localhost:3001/api/health)
+- Health API: [http://localhost:3001/api/health](http://localhost:3001/api/health)
 
 ### Validation commands
+
 ```bash
 npm run lint
 npm run typecheck
@@ -190,56 +207,73 @@ npm run test:function-mode
 
 ## Environment Variables
 
-Use `.env.local` (see `.env.example` for canonical list).
+Use `.env.local` (see `.env.example` for canonical values/comments).
 
 | Variable | Required | Purpose |
 |---|---|---|
 | `AWS_REGION` | Recommended | Region for AWS SDK clients |
-| `FRONTEND_ORIGIN` | Recommended | URL used for generated links |
-| `VITE_COGNITO_USER_POOL_ID` | For Cognito UI auth | Cognito pool id (frontend) |
-| `VITE_COGNITO_CLIENT_ID` | For Cognito UI auth | Cognito client id (frontend) |
-| `COGNITO_USER_POOL_ID` / `COGNITO_CLIENT_ID` | Optional fallback | Non-`VITE_` fallback env keys (supported in Vite config) |
-| `PROFILES_TABLE_NAME` | Auth/profile persistence | DynamoDB profiles table |
-| `AVATARS_BUCKET_NAME` | S3 avatar mode | Avatar upload bucket |
-| `REPORTS_BUCKET_NAME` | S3 report mode (if used) | Report storage target |
-| `BEDROCK_MODEL_ID` | Bedrock coach mode | Foundation model id |
-| `BEDROCK_GUARDRAIL_ID` + `BEDROCK_GUARDRAIL_VERSION` | Optional | Guardrail integration |
-| `SAFETY_MODE` | Optional | `auto` / `strict` / `off` |
+| `FRONTEND_ORIGIN` | Recommended | Link origins for share/report URLs |
+| `VITE_COGNITO_USER_POOL_ID` | Auth UI | Cognito user pool id |
+| `VITE_COGNITO_CLIENT_ID` | Auth UI | Cognito app client id |
+| `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` | Optional fallback | Non-`VITE_` fallback env keys |
+| `PROFILES_TABLE_NAME` | Profile persistence | DynamoDB profile table |
+| `AVATARS_BUCKET_NAME` | Avatar uploads | S3 bucket for avatars |
+| `REPORTS_BUCKET_NAME` | Report storage path | S3 bucket for reports |
+| `BEDROCK_MODEL_ID` | AI mode | Bedrock model id |
+| `BEDROCK_GUARDRAIL_ID`, `BEDROCK_GUARDRAIL_VERSION` | Optional | Guardrail integration |
 | `RUNNER_URL` | Remote runner mode | External runner endpoint |
-| `RUNNER_LAMBDA_NAME` | Lambda runner mode | Lambda function name for `/api/run` |
-| `INGEST_EVENTS_LAMBDA_NAME` / analytics vars | Optional | Event ingestion and analytics pipelines |
-| `SAGEMAKER_*`, `RISK_*`, `WEEKLY_RECAPS_*`, `POLLY_*` | Optional | Phase 9 premium demo services |
+| `RUNNER_LAMBDA_NAME` | Lambda runner mode | Lambda function for run API |
+| `SAFETY_MODE` | Optional | `auto` / `strict` / `off` |
+| `SAGEMAKER_*`, `RISK_*`, `WEEKLY_RECAPS_*`, `POLLY_*` | Optional | Premium phase services |
+| `INGEST_EVENTS_LAMBDA_NAME`, analytics vars | Optional | Event + analytics integrations |
 
 ## AWS Setup (CDK)
 
 From repo root:
 
-1. Install infra deps:
+1. Install infra dependencies:
+
 ```bash
 cd infra
 npm ci
 ```
 
-2. Bootstrap once per account/region:
+2. Bootstrap account/region (one-time):
+
 ```bash
 npx cdk bootstrap aws://<ACCOUNT_ID>/<REGION>
 ```
 
 3. Deploy stacks:
+
 ```bash
 npx cdk deploy --all
 ```
 
 4. Deploy frontend to S3 + CloudFront:
+
 ```bash
 cd ..
 bash infra/scripts/deploy-frontend.sh
 ```
 
 Optional overrides:
+
 ```bash
 AWS_REGION=ap-south-1 AWS_PROFILE=<profile> STACK_NAME=PebbleHostingStack bash infra/scripts/deploy-frontend.sh
 ```
+
+---
+
+## Deploy to AWS (CloudFront + S3)
+
+This repo already includes deploy tooling in `infra/scripts/deploy-frontend.sh`.
+
+What it does:
+1. Builds frontend (`npm ci && npm run build`)
+2. Resolves stack outputs (`S3BucketName`, `CloudFrontDistributionId`)
+3. Syncs `dist/` to S3 with cache headers
+4. Creates CloudFront invalidation (`/*`)
 
 ---
 
@@ -249,99 +283,95 @@ AWS_REGION=ap-south-1 AWS_PROFILE=<profile> STACK_NAME=PebbleHostingStack bash i
 .
 ├── src/
 │   ├── pages/                 # Landing, Session, Problems, Dashboard, Profile, Auth, Legal
-│   ├── components/            # home/session/layout/ui/insights/auth components
+│   ├── components/            # home/session/layout/ui/insights/auth
 │   ├── providers/             # Auth, Theme, I18n providers
-│   ├── data/                  # problem bank + onboarding datasets
-│   ├── lib/                   # auth/run/mode/language/notifications/storage helpers
-│   └── i18n/                  # language definitions + localized copy
+│   ├── data/                  # problem bank + onboarding/curriculum data
+│   ├── lib/                   # auth, runner client, storage, language/mode helpers
+│   └── i18n/                  # language packs + localized copy
 ├── server/
-│   ├── dev-server.ts          # Local API hub (run, auth, profile, reports, analytics, coach)
-│   ├── runnerLocal.ts         # Multi-language compile/run engine
-│   ├── reports/               # Recovery report model + PDF renderer
-│   ├── pebbleAgent/           # Mentor orchestration + policies
-│   └── safety/                # Redaction + policy guardrails
-├── api/                       # Serverless handlers (health, run, pebble)
-├── shared/                    # shared registries (language ids + mappings)
-├── scripts/                   # smoke/self-check/test scripts
-├── infra/                     # CDK stacks + lambda handlers + deploy scripts
-└── docs/                      # operational notes (e.g. vercel-run-debug)
+│   ├── dev-server.ts          # Local API surface for app features
+│   ├── runnerLocal.ts         # Local compile/run execution engine
+│   ├── reports/               # report model + PDF renderer
+│   ├── pebbleAgent/           # mentor orchestration
+│   └── safety/                # redaction + policy checks
+├── api/                       # serverless API handlers
+├── shared/                    # shared language registry and types
+├── scripts/                   # smoke checks + pipeline self-checks
+├── infra/                     # CDK stacks + lambda + deploy scripts
+└── docs/                      # operational notes
 ```
 
 ---
 
 ## Safety, Privacy, and Guardrails
 
-- Sensitive-pattern redaction and policy checks are applied before coach output is surfaced.
-- Tiered mentor interaction limits full-solution leakage in lower guidance tiers.
-- Auth-gated profile/report actions use bearer-token identity checks in API flows.
-- Notification and draft persistence uses local storage namespaces (user-scoped where available).
-- Exported reports are metadata-driven and do not dump raw secrets by design.
+- Safety filters and policy checks are applied before coach responses are returned.
+- Guidance tiers are designed to reduce direct solution leakage in lower tiers.
+- Auth-gated profile/report flows use bearer-token identity checks.
+- Local persisted data uses scoped keys (`pebble.*`) with user namespacing where available.
+- Reports are metadata-oriented and avoid raw secret dumping by design.
 
 ---
 
 ## Troubleshooting
 
-### 1) “Cognito not configured”
-- Set `VITE_COGNITO_USER_POOL_ID` and `VITE_COGNITO_CLIENT_ID`.
-- Redeploy/restart after env updates.
-- Fallback keys `COGNITO_USER_POOL_ID` and `COGNITO_CLIENT_ID` are supported, but `VITE_` is preferred.
+### Cognito not configured
+- Set:
+  - `VITE_COGNITO_USER_POOL_ID`
+  - `VITE_COGNITO_CLIENT_ID`
+- Restart/redeploy after env updates.
 
-### 2) `/api/run` misconfiguration
-- Local mode: run `npm run dev:full`.
-- Remote mode: provide `RUNNER_URL`.
-- Lambda mode: provide `AWS_REGION` + `RUNNER_LAMBDA_NAME`.
+### `/api/run` failing
+- Local mode: ensure `npm run dev:full` is running.
+- Remote mode: set `RUNNER_URL`.
+- Lambda mode: set `AWS_REGION` + `RUNNER_LAMBDA_NAME`.
 
-### 3) Toolchain unavailable
-Install missing executables and ensure PATH:
+### Missing language toolchain
+Install and expose in PATH:
 - `python3`, `node`, `g++`, `gcc`, `javac`, `java`.
 
-### 4) Bedrock mentor falls back
-- Ensure AWS credentials are present and authorized for Bedrock runtime.
-- Set `AWS_REGION` and `BEDROCK_MODEL_ID`.
-- Without these, fallback behavior is expected.
+### Bedrock path not responding
+- Verify AWS creds, region, and `BEDROCK_MODEL_ID`.
+- Without valid Bedrock config, fallback path is expected.
 
-### 5) Avatar upload issues in local/dev
-- Ensure `AVATARS_BUCKET_NAME` is set for S3 mode.
-- Confirm bucket CORS allows your frontend origin.
+### Avatar uploads failing
+- Set `AVATARS_BUCKET_NAME`.
+- Ensure S3 bucket CORS allows frontend origin.
 
-### 6) Auth verify code routes in deployed API
+### Verify/resend signup behavior in deployed environments
 - Local dev server includes `/api/auth/confirm-signup` and `/api/auth/resend-signup-code`.
-- If your deployed API path returns HTML/404 for these endpoints, verify API Gateway route wiring in `infra/lib/backend-stack.ts` and redeploy.
+- If deployed API returns HTML or route misses, verify API Gateway route wiring and redeploy backend stack.
 
-### 7) Polyfill/runtime issues with Cognito in browser
-- `src/main.tsx` includes global/Buffer bootstrapping used by `amazon-cognito-identity-js`.
-- If auth breaks with Buffer/global errors, confirm this bootstrap remains intact.
-
-### 8) Vercel runner issues
-- See `/docs/vercel-run-debug.md` for structured diagnosis and env checks.
+### Vercel run route diagnostics
+- See `/docs/vercel-run-debug.md`.
 
 ---
 
 ## Screenshots / GIFs
 
-No curated screenshots folder is committed yet.  
-Create `docs/screenshots/` and add:
+If you’re preparing a submission deck, add images under:
 
-1. `home-hero.png` (light + dark)
-2. `session-ide-run-fail-fix.png`
+`/docs/screenshots`
+
+Recommended captures:
+1. `home-hero-dark.png`
+2. `session-run-fail-fix.png`
 3. `coach-tiered-guidance.png`
-4. `problems-browser.png`
+4. `problems-browser-filters.png`
 5. `insights-dashboard.png`
-6. `export-report-pdf.png`
-
-Then reference them in this README with relative paths.
+6. `recovery-report-pdf.png`
 
 ---
 
 ## Roadmap / What’s Next
 
-Based on current code and scripts:
-- Strengthen language parity checks across all unit/problem modes.
-- Expand problem packs and editorials with deeper hidden test coverage.
-- Tighten deployment ergonomics (single command env bootstrap + output sync).
-- Continue phase 9 premium features (risk + weekly recap) for production hardening.
+Near-term (based on current code + scripts):
+- Expand language parity checks across all unit/problem modes.
+- Grow curated problem packs and editorials with richer hidden tests.
+- Improve deployment ergonomics and environment bootstrap flow.
+- Harden premium phase services (risk + weekly recap) for production consistency.
 
-Historical roadmap notes are in `/ROADMAP.md`; treat that file as directional history, while this README describes current implementation.
+Historical roadmap context remains in `/ROADMAP.md`.
 
 ---
 
