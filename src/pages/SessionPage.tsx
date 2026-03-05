@@ -2013,7 +2013,7 @@ export function SessionPage() {
 
   if (isLoading) {
     return (
-      <section className="h-[100vh] overflow-hidden bg-pebble-deep p-3">
+      <section className="min-h-[100dvh] bg-pebble-deep p-3">
         <Card className="space-y-2" padding="md" interactive>
           <p className="text-sm font-medium text-pebble-text-primary">{t('loading.curriculum')}</p>
           <p className="text-sm text-pebble-text-secondary">
@@ -2026,7 +2026,7 @@ export function SessionPage() {
 
   if (loadError || !currentUnit) {
     return (
-      <section className="h-[100vh] overflow-hidden bg-pebble-deep p-3">
+      <section className="min-h-[100dvh] bg-pebble-deep p-3">
         <Card className="space-y-2" padding="md" interactive>
           <p className="text-sm font-medium text-pebble-warning">{t('error.loadSession')}</p>
           <p className="text-sm text-pebble-text-secondary">{loadError || t('error.noUnits')}</p>
@@ -2095,8 +2095,8 @@ export function SessionPage() {
       ? [languageMeta.label, t('tags.stdoutBasics'), t('tags.practice')]
       : [languageMeta.label, t('tags.practice'), t('tags.runtimeVerified')]
   return (
-    <section className={`session-shell h-[100vh] overflow-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}>
-      <header className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-2.5 border-b border-pebble-border/25 bg-pebble-overlay/[0.04] px-3">
+    <section className={`session-shell flex min-h-[100dvh] flex-col overflow-x-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}>
+      <header className="grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2.5 border-b border-pebble-border/25 bg-pebble-overlay/[0.04] px-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <Link
             to="/"
@@ -2273,7 +2273,7 @@ export function SessionPage() {
         </div>
       </header>
 
-      <main className="h-[calc(100vh-64px)] overflow-hidden p-2.5">
+      <main className="min-h-0 flex-1 overflow-hidden p-2.5">
         <div className="grid h-full min-h-0 grid-cols-[clamp(380px,24vw,420px)_minmax(0,1fr)_clamp(360px,24vw,400px)] gap-2.5">
           <ProblemStatementPanel
             unitId={currentUnit.id}

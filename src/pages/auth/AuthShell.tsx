@@ -10,7 +10,7 @@ const FEATURES = [
 
 export function AuthShell({ children }: { children: ReactNode }) {
     return (
-        <div className="relative min-h-screen flex">
+        <div className="relative flex min-h-[100dvh]">
             {/* ── Left brand panel — desktop only ── */}
             <div className="hidden lg:flex w-[440px] xl:w-[500px] shrink-0 flex-col justify-between p-10 xl:p-12 border-r border-pebble-border/[0.12]">
                 {/* Empty top spacer — keeps content block vertically centered */}

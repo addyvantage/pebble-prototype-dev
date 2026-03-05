@@ -64,7 +64,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
     const resetLabel = fallbackText ? fallbackText('error.uiRecoverableReset') : 'Reset local data'
 
     return (
-      <div className="flex min-h-screen items-center justify-center bg-pebble-deep p-4 text-pebble-text-primary">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-pebble-deep p-4 text-pebble-text-primary">
         <div className="w-full max-w-lg rounded-2xl border border-pebble-border/35 bg-pebble-panel/95 p-6 shadow-[0_20px_60px_rgba(2,8,23,0.35)]">
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-pebble-warning/35 bg-pebble-warning/14 text-pebble-warning">
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />

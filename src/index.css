@@ -145,6 +145,7 @@ html {
   html,
   body {
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   body {
@@ -184,6 +185,7 @@ html {
     position: relative;
     z-index: 1;
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   button,

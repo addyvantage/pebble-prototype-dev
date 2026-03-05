@@ -62,7 +62,7 @@ export function LandingPage() {
 
 
   return (
-    <section className="page-enter h-full min-h-0 overflow-y-auto lg:overflow-visible">
+    <section className="page-enter min-h-0">
       <div className="flex min-h-0 flex-col gap-4">
         <Card className="relative w-full overflow-hidden rounded-none px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 xl:px-8 xl:py-7" interactive>
           <div className="pointer-events-none absolute inset-0 z-0">
@@ -80,7 +80,7 @@ export function LandingPage() {
 
           <div className="relative z-10 mx-auto w-full max-w-[1280px] px-1 sm:px-2 lg:px-3">
             <div className="grid h-full min-h-0 grid-cols-1 gap-y-7 lg:grid-cols-12 lg:gap-x-8 lg:gap-y-0 xl:gap-x-12">
-              <div className="col-span-1 flex min-h-0 flex-col justify-start gap-5 lg:col-span-8 lg:pr-4 xl:col-span-7 xl:gap-6">
+              <div className="col-span-1 flex min-h-0 min-w-0 flex-col justify-start gap-5 lg:col-span-8 lg:pr-4 xl:col-span-7 xl:gap-6">
                 <Badge className="w-fit">{t('landing.badge')}</Badge>
 
                 <div>
@@ -125,7 +125,7 @@ export function LandingPage() {
                 </div>
               </div>
 
-              <div className="col-span-1 flex min-h-0 items-center lg:col-span-4 lg:justify-end lg:translate-x-14 xl:col-span-5 xl:translate-x-16">
+              <div className="col-span-1 flex min-h-0 min-w-0 items-center lg:col-span-4 lg:justify-end lg:translate-x-14 xl:col-span-5 xl:translate-x-16">
                 <div className="w-full max-w-[620px] rounded-[14px] border border-pebble-border/34 bg-pebble-overlay/[0.08] p-2.5 shadow-[0_26px_60px_rgba(2,8,23,0.26)] lg:p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className={`text-[13px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>

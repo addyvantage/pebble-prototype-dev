@@ -5,6 +5,7 @@ import path from 'node:path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  envPrefix: ['VITE_', 'COGNITO_'],
   plugins: [
     nodePolyfills({
       // Polyfill `global`, `Buffer`, and `process` for Cognito SRP auth

@@ -333,8 +333,8 @@ export function PlacementPage() {
   }
 
   return (
-    <section className="h-[100vh] overflow-hidden p-3">
-      <Card padding="md" className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col space-y-4" interactive>
+    <section className="min-h-[100dvh] overflow-x-hidden p-3">
+      <Card padding="md" className="mx-auto flex min-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col space-y-4" interactive>
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Badge>{t('placement.badge')}</Badge>

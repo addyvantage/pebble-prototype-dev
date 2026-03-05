@@ -13,14 +13,44 @@ import {
 
 const USER_POOL_ID = import.meta.env.VITE_COGNITO_USER_POOL_ID as string | undefined
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID as string | undefined
+const USER_POOL_ID_FALLBACK = (import.meta.env as Record<string, unknown>).COGNITO_USER_POOL_ID as string | undefined
+const CLIENT_ID_FALLBACK = (import.meta.env as Record<string, unknown>).COGNITO_CLIENT_ID as string | undefined
 
-const isConfigured = Boolean(USER_POOL_ID && CLIENT_ID)
+const RESOLVED_USER_POOL_ID = USER_POOL_ID ?? USER_POOL_ID_FALLBACK
+const RESOLVED_CLIENT_ID = CLIENT_ID ?? CLIENT_ID_FALLBACK
+
+const isConfigured = Boolean(RESOLVED_USER_POOL_ID && RESOLVED_CLIENT_ID)
+
+function maskEnvValue(value?: string) {
+    if (!value) {
+        return 'missing'
+    }
+    if (value.length <= 6) {
+        return `${value.slice(0, 1)}***${value.slice(-1)}`
+    }
+    return `${value.slice(0, 3)}***${value.slice(-3)}`
+}
+
+if (import.meta.env.DEV) {
+    const detected = {
+        VITE_COGNITO_USER_POOL_ID: maskEnvValue(USER_POOL_ID),
+        COGNITO_USER_POOL_ID: maskEnvValue(USER_POOL_ID_FALLBACK),
+        VITE_COGNITO_CLIENT_ID: maskEnvValue(CLIENT_ID),
+        COGNITO_CLIENT_ID: maskEnvValue(CLIENT_ID_FALLBACK),
+        resolved: {
+            userPoolId: maskEnvValue(RESOLVED_USER_POOL_ID),
+            clientId: maskEnvValue(RESOLVED_CLIENT_ID),
+            source: USER_POOL_ID && CLIENT_ID ? 'VITE_' : (USER_POOL_ID_FALLBACK && CLIENT_ID_FALLBACK ? 'COGNITO_' : 'incomplete'),
+        },
+    }
+    console.debug('[auth] Cognito env detection', detected)
+}
 
 let userPool: CognitoUserPool | null = null
 if (isConfigured) {
     userPool = new CognitoUserPool({
-        UserPoolId: USER_POOL_ID!,
-        ClientId: CLIENT_ID!,
+        UserPoolId: RESOLVED_USER_POOL_ID!,
+        ClientId: RESOLVED_CLIENT_ID!,
     })
 }
 

@@ -170,7 +170,7 @@ export function AuthLoginPage() {
                         <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-3.5 py-3 text-[12px] text-amber-400">
                             <p className="font-semibold">Cognito not configured</p>
                             <p className="mt-1 leading-relaxed text-amber-400/80">
-                                Set{' '}
+                                On Vercel, set{' '}
                                 <code className="rounded bg-pebble-overlay/[0.15] px-1 py-px font-mono text-amber-300 text-[11px]">
                                     VITE_COGNITO_USER_POOL_ID
                                 </code>{' '}
@@ -178,11 +178,7 @@ export function AuthLoginPage() {
                                 <code className="rounded bg-pebble-overlay/[0.15] px-1 py-px font-mono text-amber-300 text-[11px]">
                                     VITE_COGNITO_CLIENT_ID
                                 </code>{' '}
-                                in your{' '}
-                                <code className="rounded bg-pebble-overlay/[0.15] px-1 py-px font-mono text-amber-300 text-[11px]">
-                                    .env
-                                </code>{' '}
-                                after deploying the CDK auth stack.
+                                (must redeploy after changing env vars).
                             </p>
                         </div>
                         {import.meta.env.DEV && (

@@ -162,7 +162,7 @@ export function AppLayout() {
 
   return (
     <div
-      className="relative min-h-screen overflow-hidden bg-pebble-deep text-pebble-text-primary"
+      className="relative min-h-[100dvh] overflow-x-hidden bg-pebble-deep text-pebble-text-primary"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-14rem] top-[-12rem] h-[28rem] w-[28rem] rounded-full bg-pebble-accent/8 blur-3xl" />
@@ -170,11 +170,11 @@ export function AppLayout() {
       </div>
 
       {isImmersiveRoute ? (
-        <div className="relative h-screen w-full">
+        <div className="relative min-h-[100dvh] w-full">
           <Outlet />
         </div>
       ) : (
-        <div className={`relative flex flex-col ${isLandingRoute ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh] overflow-hidden'}`}>
+        <div className="relative flex min-h-[100dvh] flex-col">
           <header className="w-full">
             <Card className={`pebble-header rounded-none p-0 ${isLandingRoute ? 'mb-0' : 'mb-1'}`}>
               <PageContainer>
@@ -311,9 +311,9 @@ export function AppLayout() {
             </Card>
           </header>
 
-          <main className={isLandingRoute ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1 pb-4'}>
+          <main className={isLandingRoute ? 'flex-1 min-h-0' : 'flex-1 pb-4'}>
             {isLandingRoute ? (
-              <div className="h-full min-h-0">
+              <div className="min-h-0">
                 <Outlet />
               </div>
             ) : (

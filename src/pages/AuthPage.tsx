@@ -153,9 +153,8 @@ export function AuthPage() {
                             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
                                 <p className="font-semibold">Cognito not configured</p>
                                 <p className="mt-1 leading-relaxed">
-                                    Set <code className="rounded bg-pebble-overlay/20 px-1 py-0.5 font-mono">VITE_COGNITO_USER_POOL_ID</code> and{' '}
-                                    <code className="rounded bg-pebble-overlay/20 px-1 py-0.5 font-mono">VITE_COGNITO_CLIENT_ID</code> in your{' '}
-                                    <code className="rounded bg-pebble-overlay/20 px-1 py-0.5 font-mono">.env</code> file after deploying the CDK auth stack.
+                                    On Vercel, set <code className="rounded bg-pebble-overlay/20 px-1 py-0.5 font-mono">VITE_COGNITO_USER_POOL_ID</code> and{' '}
+                                    <code className="rounded bg-pebble-overlay/20 px-1 py-0.5 font-mono">VITE_COGNITO_CLIENT_ID</code> (must redeploy after changing env vars).
                                 </p>
                             </div>
                             {import.meta.env.DEV && (
