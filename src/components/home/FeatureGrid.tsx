@@ -19,7 +19,7 @@ const tiles: FeatureTile[] = [
   {
     id: 'runtime',
     title: 'Run code with real feedback',
-    detail: 'Execute quickly, compare expected output, and tighten your loop with clear run diagnostics.',
+    detail: 'Run against examples and hidden checks, isolate the failing case fast, and rerun with cleaner intent.',
     tag: 'Runtime',
     tone: 'blue',
     preview: 'runtime',
@@ -28,7 +28,7 @@ const tiles: FeatureTile[] = [
   {
     id: 'coach',
     title: 'Pebble Coach',
-    detail: 'Hint, Explain, and Next-step guidance that stays aligned with your current code context.',
+    detail: 'Hint, Explain, and next-step guidance stay anchored to your current code, latest run output, and recovery state.',
     tag: 'Coach',
     tone: 'indigo',
     preview: 'coach',
@@ -37,7 +37,7 @@ const tiles: FeatureTile[] = [
   {
     id: 'languages',
     title: 'Multilingual mentor',
-    detail: 'Preview guidance in multiple languages while preserving the same technical context.',
+    detail: 'Switch guidance across English and Indian languages without losing technical precision or the coding context.',
     tag: 'Language',
     tone: 'blue',
     preview: 'languages',
@@ -46,7 +46,7 @@ const tiles: FeatureTile[] = [
   {
     id: 'browser',
     title: 'LeetCode-style problems browser',
-    detail: 'Filter by topic, difficulty, and acceptance while keeping random practice one click away.',
+    detail: 'Browse by topic, difficulty, and readiness so the next rep feels selected, not random.',
     tag: 'Browser',
     tone: 'slate',
     preview: 'browser',
@@ -57,30 +57,30 @@ const tiles: FeatureTile[] = [
 function tilePlacementClass(id: FeatureTile['id']) {
   if (id === 'runtime') return 'md:col-span-2 xl:col-span-7 xl:col-start-1 xl:row-start-1'
   if (id === 'coach') return 'md:col-span-1 xl:col-span-5 xl:col-start-8 xl:row-start-1'
-  if (id === 'languages') return 'md:col-span-1 xl:col-span-5 xl:col-start-1 xl:row-start-2'
-  return 'md:col-span-1 xl:col-span-7 xl:col-start-6 xl:row-start-2'
+  if (id === 'languages') return 'md:col-span-1 xl:col-span-7 xl:col-start-1 xl:row-start-2'
+  return 'md:col-span-1 xl:col-span-5 xl:col-start-8 xl:row-start-2'
 }
 
 function toneClass(tone: TileTone, isDark: boolean) {
   if (tone === 'blue') {
     return isDark
-      ? 'border-pebble-accent/46 bg-pebble-accent/18 text-pebble-text-primary'
-      : 'border-pebble-accent/55 bg-pebble-accent/12 text-pebble-accent'
+      ? 'border-pebble-accent/42 bg-pebble-accent/18 text-pebble-text-primary shadow-[0_10px_20px_rgba(0,0,0,0.14)]'
+      : 'border-pebble-accent/46 bg-pebble-accent/12 text-pebble-accent shadow-[0_8px_16px_rgba(55,72,110,0.06)]'
   }
   if (tone === 'indigo') {
     return isDark
-      ? 'border-pebble-border/44 bg-pebble-overlay/[0.14] text-pebble-text-primary'
-      : 'border-pebble-border/52 bg-pebble-overlay/[0.12] text-pebble-text-secondary'
+      ? 'border-pebble-border/30 bg-pebble-overlay/[0.10] text-pebble-text-primary shadow-[0_10px_20px_rgba(0,0,0,0.12)]'
+      : 'border-pebble-border/34 bg-pebble-overlay/[0.10] text-pebble-text-secondary shadow-[0_8px_16px_rgba(55,72,110,0.05)]'
   }
   return isDark
-    ? 'border-pebble-border/44 bg-pebble-overlay/[0.14] text-pebble-text-primary'
-    : 'border-pebble-border/52 bg-pebble-overlay/[0.12] text-pebble-text-secondary'
+    ? 'border-pebble-border/30 bg-pebble-overlay/[0.10] text-pebble-text-primary shadow-[0_10px_20px_rgba(0,0,0,0.12)]'
+    : 'border-pebble-border/34 bg-pebble-overlay/[0.10] text-pebble-text-secondary shadow-[0_8px_16px_rgba(55,72,110,0.05)]'
 }
 
 function previewSurfaceClass(tone: TileTone, isDark: boolean) {
   const base = isDark
-    ? 'border bg-pebble-canvas/44 shadow-[inset_0_1px_0_rgba(var(--pebble-overlay),0.08)]'
-    : 'border bg-pebble-canvas/72 shadow-[inset_0_1px_0_rgba(var(--pebble-overlay),0.14)]'
+    ? 'border bg-pebble-canvas/40 shadow-[inset_0_1px_0_rgba(var(--pebble-overlay),0.08)]'
+    : 'border bg-white/72 shadow-[inset_0_1px_0_rgba(var(--pebble-overlay),0.20)]'
   if (tone === 'blue') {
     return `${base} ${isDark ? 'border-pebble-accent/36' : 'border-pebble-accent/44'}`
   }
@@ -105,8 +105,8 @@ function onTileMouseLeave(event: MouseEvent<HTMLElement>) {
 
 function RuntimePreview({ tone, isDark }: { tone: TileTone; isDark: boolean }) {
   return (
-    <div className={`rounded-2xl border p-3 ${previewSurfaceClass(tone, isDark)}`}>
-      <div className="mb-2.5 flex items-center justify-between gap-2">
+    <div className={`rounded-2xl border p-4 ${previewSurfaceClass(tone, isDark)}`}>
+      <div className="mb-3 flex items-center justify-between gap-2">
         <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${isDark
           ? 'border-pebble-accent/52 bg-pebble-accent/20 text-pebble-text-primary'
           : 'border-pebble-accent/58 bg-pebble-accent/12 text-pebble-accent'
@@ -120,17 +120,37 @@ function RuntimePreview({ tone, isDark }: { tone: TileTone; isDark: boolean }) {
           Fail #2
         </span>
       </div>
-      <div className={`rounded-xl border px-2.5 py-2 font-mono text-[11.5px] leading-relaxed ${isDark
+      <div className={`rounded-xl border px-3 py-2.5 font-mono text-[11.5px] leading-[1.72] ${isDark
         ? 'border-pebble-border/40 bg-pebble-canvas/46 text-pebble-text-primary'
-        : 'border-pebble-border/50 bg-pebble-canvas/76 text-pebble-text-secondary'
+        : 'border-pebble-border/42 bg-[#f7faff] text-pebble-text-secondary'
         }`}>
         <div>def solve(nums, target):</div>
         <div className="opacity-90">  seen = {'{}'}</div>
         <div className="opacity-90">  return -1, -1</div>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] text-pebble-text-secondary">
-        <div className={`rounded-md border bg-emerald-500/12 px-2 py-1 ${isDark ? 'border-emerald-300/55 text-emerald-100' : 'border-emerald-500/60 text-emerald-800'}`}>expected: 12</div>
-        <div className={`rounded-md border bg-rose-500/12 px-2 py-1 ${isDark ? 'border-rose-300/55 text-rose-100' : 'border-rose-500/60 text-rose-800'}`}>got: -1 -1</div>
+      <div className={`mt-3 rounded-xl border px-3 py-2.5 ${isDark
+        ? 'border-amber-300/35 bg-amber-400/12'
+        : 'border-amber-500/35 bg-amber-50/80'
+        }`}>
+        <div className="flex items-center justify-between gap-2 text-[10px] font-semibold">
+          <span className={isDark ? 'text-amber-100' : 'text-amber-800'}>Expected</span>
+          <span className={isDark ? 'text-amber-100' : 'text-amber-800'}>Actual</span>
+        </div>
+        <div className={`mt-1.5 grid grid-cols-2 gap-1.5 text-[11px] ${isDark ? 'text-pebble-text-primary' : 'text-pebble-text-secondary'}`}>
+          <div className={`rounded-md border px-2 py-1 ${isDark ? 'border-emerald-300/40 bg-emerald-400/12' : 'border-emerald-400/45 bg-emerald-50/80'}`}>1 2</div>
+          <div className={`rounded-md border px-2 py-1 ${isDark ? 'border-amber-300/42 bg-amber-400/12 text-amber-100' : 'border-amber-400/48 bg-white/70 text-amber-800'}`}>-1 -1</div>
+        </div>
+      </div>
+      <div className={`mt-3 rounded-lg border px-3 py-2 text-[11px] leading-[1.6] ${isDark ? 'border-pebble-accent/28 bg-pebble-accent/10 text-pebble-text-secondary' : 'border-pebble-accent/28 bg-pebble-accent/8 text-pebble-text-secondary'}`}>
+        Pebble isolates the fail case first, then points you to the exact recovery move.
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${isDark ? 'border-pebble-accent/42 bg-pebble-accent/14 text-pebble-text-primary' : 'border-pebble-accent/46 bg-pebble-accent/10 text-pebble-accent'}`}>
+          Case isolated
+        </span>
+        <span className="rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.05] px-2 py-0.5 text-[10px] font-medium text-pebble-text-secondary">
+          Next: inspect complement logic
+        </span>
       </div>
     </div>
   )
@@ -138,7 +158,7 @@ function RuntimePreview({ tone, isDark }: { tone: TileTone; isDark: boolean }) {
 
 function CoachPreview({ tone, isDark }: { tone: TileTone; isDark: boolean }) {
   return (
-    <div className={`rounded-2xl border p-3 ${previewSurfaceClass(tone, isDark)}`}>
+    <div className={`rounded-2xl border p-4 ${previewSurfaceClass(tone, isDark)}`}>
       <div className="flex flex-wrap gap-1.5">
         {['Hint', 'Explain', 'Next step'].map((chip) => (
           <span
@@ -152,19 +172,23 @@ function CoachPreview({ tone, isDark }: { tone: TileTone; isDark: boolean }) {
           </span>
         ))}
       </div>
-      <div className="mt-2.5 space-y-1.5">
-        <div className={`w-[92%] rounded-lg border px-2.5 py-2 text-[11.5px] leading-snug ${isDark
+      <div className="mt-3 space-y-2.5">
+        <div className={`w-[94%] rounded-lg border px-3 py-2.5 text-[11.5px] leading-[1.6] ${isDark
           ? 'border-pebble-border/40 bg-pebble-canvas/48 text-pebble-text-primary'
           : 'border-pebble-border/50 bg-pebble-canvas/70 text-pebble-text-primary'
           }`}>
-          Check target - current before storing in seen.
+          Your run failed on case #2. Check the complement before you store the current value.
         </div>
-        <div className={`ml-auto w-[88%] rounded-lg border px-2.5 py-2 text-[11.5px] leading-snug ${isDark
-          ? 'border-pebble-border/40 bg-pebble-canvas/48 text-pebble-text-primary'
-          : 'border-pebble-border/50 bg-pebble-canvas/70 text-pebble-text-primary'
+        <div className={`ml-auto w-[90%] rounded-lg border px-3 py-2.5 text-[11.5px] leading-[1.6] ${isDark
+          ? 'border-pebble-accent/30 bg-pebble-accent/10 text-pebble-text-primary'
+          : 'border-pebble-accent/34 bg-pebble-accent/10 text-pebble-text-primary'
           }`}>
-          Give me one concise next step.
+          One next step: test whether `target - nums[i]` already exists in `seen` first.
         </div>
+      </div>
+      <div className="mt-3 flex items-center justify-between rounded-lg border border-pebble-border/26 bg-pebble-overlay/[0.05] px-2.5 py-2 text-[10.5px] text-pebble-text-secondary">
+        <span>Tiered guidance</span>
+        <span className="font-medium text-pebble-text-primary">Grounded in latest run</span>
       </div>
     </div>
   )
@@ -172,27 +196,31 @@ function CoachPreview({ tone, isDark }: { tone: TileTone; isDark: boolean }) {
 
 function BrowserPreview({ tone, isDark }: { tone: TileTone; isDark: boolean }) {
   const rows = [
-    { title: 'Two Sum', difficulty: 'Easy', acceptance: '63%', solved: true },
-    { title: 'Valid Parentheses', difficulty: 'Easy', acceptance: '58%', solved: false },
-    { title: 'Merge Intervals', difficulty: 'Hard', acceptance: '41%', solved: false },
+    { title: 'Two Sum', difficulty: 'Easy', acceptance: '63%', solved: true, recommended: false },
+    { title: 'Valid Parentheses', difficulty: 'Easy', acceptance: '58%', solved: false, recommended: true },
+    { title: 'Merge Intervals', difficulty: 'Hard', acceptance: '41%', solved: false, recommended: false },
   ]
 
   return (
-    <div className={`rounded-2xl border p-3 ${previewSurfaceClass(tone, isDark)}`}>
-      <div className={`mb-2.5 flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] ${isDark
+    <div className={`rounded-2xl border p-4 ${previewSurfaceClass(tone, isDark)}`}>
+      <div className={`mb-3 flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] ${isDark
         ? 'border-pebble-border/40 bg-pebble-canvas/48 text-pebble-text-primary'
         : 'border-pebble-border/50 bg-pebble-canvas/70 text-pebble-text-secondary'
         }`}>
         <Search className="h-3.5 w-3.5" />
         Search problems, topics, tags
       </div>
+      <div className="mb-3 flex items-center justify-between rounded-lg border border-pebble-border/24 bg-pebble-overlay/[0.05] px-2.5 py-2 text-[10.5px] text-pebble-text-secondary">
+        <span>Picked for Array momentum</span>
+        <span className="font-medium text-pebble-text-primary">12 min rep</span>
+      </div>
       <div className="space-y-1.5">
         {rows.map((row) => (
           <div
             key={row.title}
             className={`grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 rounded-lg border px-2.5 py-2 ${isDark
-              ? 'border-pebble-border/40 bg-pebble-panel/52'
-              : 'border-pebble-border/50 bg-pebble-panel/78'
+              ? row.recommended ? 'border-pebble-accent/34 bg-pebble-accent/10' : 'border-pebble-border/40 bg-pebble-panel/52'
+              : row.recommended ? 'border-pebble-accent/38 bg-pebble-accent/10' : 'border-pebble-border/50 bg-pebble-panel/78'
               }`}
           >
             <span className="truncate text-[11.5px] font-medium text-pebble-text-primary">{row.title}</span>
@@ -207,7 +235,9 @@ function BrowserPreview({ tone, isDark }: { tone: TileTone; isDark: boolean }) {
             </span>
             <span className={`text-[10.5px] font-medium ${isDark ? 'text-pebble-text-primary' : 'text-pebble-text-secondary'}`}>{row.acceptance}</span>
             <span className="inline-flex w-4 items-center justify-center">
-              {row.solved ? (
+              {row.recommended ? (
+                <span className={`rounded-full px-1.5 py-0.5 text-[8.5px] font-semibold uppercase tracking-[0.08em] ${isDark ? 'bg-pebble-accent/20 text-pebble-text-primary' : 'bg-pebble-accent/12 text-pebble-accent'}`}>Rec</span>
+              ) : row.solved ? (
                 <CheckCircle2 className="h-3.5 w-3.5 text-pebble-accent" />
               ) : (
                 <span className="h-2 w-2 rounded-full bg-pebble-border/55" />
@@ -373,7 +403,7 @@ function LanguagePreviewAnimated({ tone, isDark }: { tone: TileTone; isDark: boo
   return (
     <div
       ref={containerRef}
-      className={`pointer-events-none relative isolate rounded-2xl border p-3.5 select-none ${previewSurfaceClass(tone, isDark)}`}
+      className={`pointer-events-none relative isolate rounded-2xl border p-4 select-none ${previewSurfaceClass(tone, isDark)}`}
     >
       <div className={`relative rounded-xl border px-3 py-2.5 text-[12px] text-pebble-text-primary ${isDark
         ? 'border-pebble-border/42 bg-pebble-canvas/48'
@@ -430,7 +460,7 @@ function LanguagePreviewAnimated({ tone, isDark }: { tone: TileTone; isDark: boo
         </AnimatePresence>
       </div>
 
-      <div className={`mt-2.5 rounded-xl border px-3 py-2.5 text-[12px] leading-relaxed text-pebble-text-primary ${isDark
+      <div className={`mt-3 rounded-xl border px-3 py-3 text-[12px] leading-[1.72] text-pebble-text-primary ${isDark
         ? 'border-pebble-border/42 bg-pebble-canvas/48'
         : 'border-pebble-border/52 bg-pebble-canvas/72'
         } relative z-10`}>
@@ -445,6 +475,10 @@ function LanguagePreviewAnimated({ tone, isDark }: { tone: TileTone; isDark: boo
             {LANGUAGE_COPY[hintLanguage]}
           </motion.p>
         </AnimatePresence>
+      </div>
+      <div className="mt-3 flex items-center justify-between rounded-lg border border-pebble-border/24 bg-pebble-overlay/[0.05] px-2.5 py-2 text-[10.5px] text-pebble-text-secondary">
+        <span>Same logic, local language</span>
+        <span className="font-medium text-pebble-text-primary">Mentor stays in sync</span>
       </div>
 
       {!reduceMotion && autoplayEnabled ? (
@@ -490,30 +524,49 @@ export function FeatureGrid() {
   const isDark = theme === 'dark'
 
   return (
-    <section className="card-premium relative mt-1 overflow-hidden rounded-[24px] px-4 py-5 md:px-5 md:py-6">
+    <section className="landing-showcase-shell relative mt-3 overflow-hidden rounded-[32px] px-4 py-6 md:px-6 md:py-8">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pebble-overlay/64 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-pebble-overlay/[0.08] to-transparent" />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.12fr_0.88fr] lg:items-end">
-        <div className="space-y-2">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-pebble-overlay/[0.08] to-transparent" />
+      <div className="pointer-events-none absolute right-[-8%] top-[-10%] h-48 w-48 rounded-full bg-pebble-accent/10 blur-3xl" />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.06fr_0.94fr] lg:items-end">
+        <div className="space-y-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pebble-text-muted">
             Built for fast recovery loops
           </p>
-          <h2 className="text-balance text-[1.78rem] font-semibold leading-[1.08] tracking-[-0.02em] text-pebble-text-primary md:text-[2.08rem] lg:text-[2.28rem]">
+          <h2 className="max-w-[17ch] text-balance text-[1.84rem] font-semibold leading-[1.05] tracking-[-0.03em] text-pebble-text-primary md:text-[2.18rem] lg:text-[2.42rem]">
             A learning surface tuned for <span className="text-pebble-accent">measurable momentum</span>
           </h2>
         </div>
-        <p className="max-w-[62ch] text-[14px] leading-[1.7] text-pebble-text-secondary md:text-[14.5px] lg:justify-self-end lg:text-right">
-          Pebble blends high-signal execution, contextual coaching, and focused analytics into one calm interface so every session compounds.
-        </p>
+        <div className="space-y-3 lg:justify-self-end lg:text-right">
+          <p className="max-w-[58ch] text-[14px] leading-[1.8] text-pebble-text-secondary md:text-[14.5px]">
+            Pebble blends high-signal execution, contextual coaching, and focused analytics into one calm interface so every session compounds.
+          </p>
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            {['Real runtime checks', 'Coach in context', 'Multilingual mentoring'].map((chip) => (
+              <span key={chip} className={`rounded-full border px-2.5 py-0.5 text-[10.5px] font-medium ${isDark ? 'border-pebble-border/30 bg-pebble-overlay/[0.06] text-pebble-text-secondary' : 'border-pebble-border/32 bg-pebble-overlay/[0.05] text-pebble-text-secondary'}`}>
+                {chip}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-12">
+      <div className="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
         {tiles.map((tile) => {
           const Icon = tile.icon
+          const isPrimaryStory = tile.id === 'runtime' || tile.id === 'coach'
           return (
             <motion.article
               key={tile.id}
-              className={`card-premium group relative isolate overflow-hidden rounded-[24px] p-4 md:p-5 ${isDark ? 'border-pebble-border/28' : 'border-pebble-border/44'} ${tilePlacementClass(tile.id)}`}
+              className={`group relative isolate overflow-hidden rounded-[28px] p-5 md:p-6 ${
+                isPrimaryStory
+                  ? isDark
+                    ? 'border border-pebble-accent/24 bg-[linear-gradient(180deg,rgba(59,130,246,0.14)_0%,rgba(255,255,255,0.025)_100%)] shadow-[0_18px_44px_rgba(18,24,38,0.32),inset_0_1px_0_rgba(255,255,255,0.08)]'
+                    : 'border border-pebble-accent/22 bg-[linear-gradient(180deg,rgba(59,130,246,0.10)_0%,rgba(255,255,255,0.76)_100%)] shadow-[0_16px_36px_rgba(55,72,110,0.13),inset_0_1px_0_rgba(255,255,255,0.82)]'
+                  : isDark
+                    ? 'border border-pebble-border/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.045)_0%,rgba(255,255,255,0.01)_100%)] shadow-[0_18px_44px_rgba(18,24,38,0.24),inset_0_1px_0_rgba(255,255,255,0.06)]'
+                    : 'border border-pebble-border/26 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(244,248,255,0.96)_100%)] shadow-[0_14px_30px_rgba(55,72,110,0.08),inset_0_1px_0_rgba(255,255,255,0.84)]'
+              } ${tilePlacementClass(tile.id)}`}
               style={{ ['--mx' as string]: '50%', ['--my' as string]: '50%' }}
               onMouseMove={onTileMouseMove}
               onMouseLeave={onTileMouseLeave}
@@ -538,16 +591,16 @@ export function FeatureGrid() {
                 </span>
               </div>
 
-              <div className="relative z-10 mt-3 space-y-1.5">
-                <h3 className="text-[17px] font-semibold leading-[1.22] tracking-tight text-pebble-text-primary">
+              <div className="relative z-10 mt-4 space-y-2.5">
+                <h3 className="text-[17px] font-semibold leading-[1.18] tracking-tight text-pebble-text-primary">
                   {tile.title}
                 </h3>
-                <p className="text-[13.25px] leading-[1.56] text-pebble-text-secondary">
+                <p className="max-w-[48ch] text-[13.25px] leading-[1.66] text-pebble-text-secondary">
                   {tile.detail}
                 </p>
               </div>
 
-              <div className="relative z-10 mt-3">
+              <div className="relative z-10 mt-4">
                 <TilePreview preview={tile.preview} tone={tile.tone} isDark={isDark} />
               </div>
             </motion.article>

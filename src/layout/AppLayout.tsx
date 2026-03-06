@@ -247,9 +247,9 @@ export function AppLayout() {
                     <NavLink
                       to="/"
                       aria-label="PebbleCode home"
-                      className="-ml-4 inline-flex h-10 sm:h-11 md:h-12 items-center flex-shrink-0"
+                      className="-ml-8 inline-flex h-10 sm:h-11 md:h-12 items-center flex-shrink-0"
                     >
-                      <BrandLogo className="-translate-y-px h-10 sm:h-11 md:h-12 w-[152px] sm:w-[172px] md:w-[192px] select-none pointer-events-none object-contain object-left block" />
+                      <BrandLogo className="-translate-y-px h-10 sm:h-11 md:h-12 w-[188px] sm:w-[204px] md:w-[220px] origin-left scale-[1.38] select-none pointer-events-none object-contain object-left block" />
                     </NavLink>
                   </div>
 

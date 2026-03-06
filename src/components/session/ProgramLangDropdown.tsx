@@ -119,7 +119,7 @@ export function ProgramLangDropdown({
             setOpen((prev) => !prev)
           }
         }}
-        className="inline-flex items-center gap-1 rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+        className="inline-flex h-10 items-center gap-1.5 rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3.5 text-sm font-medium text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
       >
         {selected?.label ?? value}
         <ChevronDown
@@ -147,7 +147,7 @@ export function ProgramLangDropdown({
             selectAt(activeIndex)
           }
         }}
-        className={`absolute right-0 top-[calc(100%+6px)] z-[90] min-w-[140px] origin-top-right rounded-xl p-1.5 backdrop-blur-xl transition duration-150 ${menuSurfaceClass} ${
+        className={`absolute right-0 top-[calc(100%+8px)] z-[90] min-w-[168px] origin-top-right rounded-2xl p-2 backdrop-blur-xl transition duration-150 ${menuSurfaceClass} ${
           open
             ? 'pointer-events-auto scale-100 opacity-100'
             : 'pointer-events-none scale-[0.97] opacity-0'
@@ -167,7 +167,7 @@ export function ProgramLangDropdown({
               title={isDisabled ? (opt.disabledReason ?? '') : undefined}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => selectAt(index)}
-              className={`flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
+              className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
                 isDisabled
                   ? 'cursor-not-allowed border-transparent bg-transparent text-pebble-text-muted/70 opacity-60'
                   : isSelected
@@ -193,7 +193,7 @@ export function ProgramLangDropdown({
               onFooterAction()
               setOpen(false)
             }}
-            className="mt-1 flex w-full items-center justify-center rounded-lg border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2 py-1.5 text-[11px] font-medium text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16]"
+            className="mt-1.5 flex w-full items-center justify-center rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-2 text-xs font-medium text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16]"
           >
             {footerActionLabel}
           </button>

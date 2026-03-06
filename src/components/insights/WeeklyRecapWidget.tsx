@@ -9,14 +9,14 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { ChevronDown, ChevronUp, Mic, Play, RefreshCw, Square, Volume2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, Mic, Play, RefreshCw, Sparkles, Square, Volume2, Waves } from 'lucide-react'
 import {
   normalizeAppLanguageCode,
-  resolvePollyVoiceSupport,
-  type AppLanguageCode,
   type RecapVoiceMode,
+  type AppLanguageCode,
 } from '../../../shared/recapVoice'
 import { Card } from '../ui/Card'
+import { Button } from '../ui/Button'
 import { useAuth } from '../../hooks/useAuth'
 import { getLanguageOption, type LanguageCode } from '../../i18n/languages'
 import { useI18n } from '../../i18n/useI18n'
@@ -313,15 +313,12 @@ function extractRecapSummary(
 
 function friendlyPlaybackStatus(recap: RecapData | null) {
   if (!recap) {
-    return 'Generate your recap to hear this week’s mentor summary.'
+    return 'Generate a mentor-style summary to hear how your practice, recovery, and momentum evolved this week.'
   }
   if (recap.playback.provider === 'polly' && recap.audioUrl) {
-    return `Cloud voice ready (${recap.playback.pollyVoiceId ?? 'Polly'} · ${recap.playback.locale}).`
+    return 'Your recap audio is ready to play.'
   }
-  if (recap.playback.mode === 'device') {
-    return 'Using your device voice preference for this recap.'
-  }
-  return 'Audio voice unavailable right now — script is ready and device voice is available.'
+  return 'Your recap script is ready, and Pebble can play it with the best available voice.'
 }
 
 export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?: string }) {
@@ -343,7 +340,6 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
 
   const [voicePrefs, setVoicePrefs] = useState<WeeklyRecapVoicePreferences>(() =>
     loadWeeklyRecapVoicePreferences('guest'))
-  const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([])
   const [recapData, setRecapData] = useState<RecapData | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -355,15 +351,6 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const mountedRef = useRef(true)
-
-  const pollySupport = useMemo(
-    () =>
-      resolvePollyVoiceSupport({
-        appLanguage,
-        preferredVoiceId: voicePrefs.preferredPollyVoiceId,
-      }),
-    [appLanguage, voicePrefs.preferredPollyVoiceId],
-  )
 
   const summary = useMemo(
     () =>
@@ -377,14 +364,9 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
 
   const refreshBrowserVoices = useCallback(async () => {
     if (!isBrowserSpeechSynthesisAvailable()) {
-      setBrowserVoices([])
       return
     }
-    const voices = await loadBrowserVoices()
-    if (!mountedRef.current) {
-      return
-    }
-    setBrowserVoices(voices)
+    await loadBrowserVoices()
   }, [])
 
   useEffect(() => {
@@ -597,27 +579,6 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
     }
   }, [playing, recapData, stopPlayback, voicePrefs.preferredBrowserVoiceURI])
 
-  const handleVoiceModeChange = useCallback((mode: RecapVoiceMode) => {
-    setVoicePrefs((current) => ({
-      ...current,
-      mode,
-    }))
-  }, [])
-
-  const handlePollyVoiceChange = useCallback((voiceId: string) => {
-    setVoicePrefs((current) => ({
-      ...current,
-      preferredPollyVoiceId: voiceId || null,
-    }))
-  }, [])
-
-  const handleBrowserVoiceChange = useCallback((voiceURI: string) => {
-    setVoicePrefs((current) => ({
-      ...current,
-      preferredBrowserVoiceURI: voiceURI || null,
-    }))
-  }, [])
-
   const formattedWeek = recapData?.weekStart
     ? new Date(`${recapData.weekStart}T00:00:00Z`).toLocaleDateString('en-US', {
       month: 'short',
@@ -630,164 +591,161 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
     || isBrowserSpeechSynthesisAvailable()
   )
 
-  const selectedBrowserVoiceName = browserVoices.find(
-    (voice) => voice.voiceURI === voicePrefs.preferredBrowserVoiceURI,
-  )?.name
+  const currentLanguageLabel = languageOption.romanizedName
+  const recapMeta = recapData
+    ? [
+        'Last 7 days',
+        'Mentor summary',
+        canPlay ? 'Audio ready' : 'Script ready',
+      ]
+    : ['Last 7 days', 'Mentor summary']
 
   return (
-    <Card padding="sm" interactive className="space-y-3.5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="space-y-0.5">
+    <Card padding="sm" interactive className="space-y-5 rounded-[26px] border-pebble-border/28 bg-gradient-to-b from-pebble-overlay/[0.11] to-pebble-overlay/[0.04] p-5 shadow-[0_18px_44px_rgba(2,8,23,0.14)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1.5">
           <p className="text-base font-semibold tracking-tight text-pebble-text-primary">
             Weekly Pebble Recap
           </p>
-          <p className="text-sm text-pebble-text-secondary">
-            Personal mentor summary for your last 7 days
+          <p className="text-sm leading-6 text-pebble-text-secondary">
+            A mentor-style summary of your last 7 days
             {formattedWeek ? ` · week of ${formattedWeek}` : ''}
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-pebble-border/30 bg-pebble-chip-surface/55 px-3 py-1 text-xs font-medium tracking-wide text-pebble-text-secondary">
+        <div className="inline-flex items-center gap-2 rounded-full border border-pebble-border/28 bg-pebble-chip-surface/55 px-3 py-1.5 text-xs font-medium tracking-wide text-pebble-text-secondary">
           <Mic className="h-3.5 w-3.5" aria-hidden />
-          {languageOption.romanizedName}
+          {currentLanguageLabel}
         </div>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-3">
-        <label className="space-y-1 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.03] p-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
-            Voice mode
-          </span>
-          <select
-            value={voicePrefs.mode}
-            onChange={(event) => handleVoiceModeChange(event.target.value as RecapVoiceMode)}
-            className="w-full rounded-lg border border-pebble-border/35 bg-pebble-chip-surface/70 px-2 py-1.5 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
-          >
-            <option value="auto">Auto (Polly, then device)</option>
-            <option value="polly">Prefer Polly</option>
-            <option value="device">Device voice only</option>
-          </select>
-        </label>
+      <div className="space-y-4 rounded-[22px] border border-pebble-border/24 bg-pebble-overlay/[0.04] px-4 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {recapMeta.map((item) => (
+            <span
+              key={item}
+              className="inline-flex items-center rounded-full border border-pebble-border/22 bg-pebble-chip-surface/42 px-2.5 py-1 text-[11px] font-medium text-pebble-text-secondary"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
 
-        <label className="space-y-1 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.03] p-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
-            Polly voice
-          </span>
-          <select
-            value={voicePrefs.preferredPollyVoiceId ?? ''}
-            onChange={(event) => handlePollyVoiceChange(event.target.value)}
-            disabled={!pollySupport.supported || voicePrefs.mode === 'device'}
-            className="w-full rounded-lg border border-pebble-border/35 bg-pebble-chip-surface/70 px-2 py-1.5 text-sm text-pebble-text-primary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
-          >
-            <option value="">
-              {pollySupport.supported ? `Auto (${pollySupport.voiceId ?? 'default'})` : 'Unavailable for this language'}
-            </option>
-            {pollySupport.availableVoices.map((voiceId) => (
-              <option key={voiceId} value={voiceId}>
-                {voiceId}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="space-y-1 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.03] p-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
-            Device voice
-          </span>
-          <select
-            value={voicePrefs.preferredBrowserVoiceURI ?? ''}
-            onChange={(event) => handleBrowserVoiceChange(event.target.value)}
-            className="w-full rounded-lg border border-pebble-border/35 bg-pebble-chip-surface/70 px-2 py-1.5 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
-          >
-            <option value="">Auto ({languageOption.romanizedName})</option>
-            {browserVoices.map((voice) => (
-              <option key={voice.voiceURI} value={voice.voiceURI}>
-                {voice.name} ({voice.lang})
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="rounded-xl border border-pebble-border/28 bg-pebble-overlay/[0.03] px-3 py-2">
-        <p className="text-xs text-pebble-text-secondary">{friendlyPlaybackStatus(recapData)}</p>
-        {selectedBrowserVoiceName && (
-          <p className="mt-1 text-[11px] text-pebble-text-muted">
-            Device preference: {selectedBrowserVoiceName}
+        <div className="space-y-2">
+          <p className="text-sm leading-6 text-pebble-text-secondary">
+            {friendlyPlaybackStatus(recapData)}
           </p>
-        )}
-        {playing && playingProvider === 'device' && lastDeviceVoiceName && (
-          <p className="mt-1 text-[11px] text-pebble-text-muted">
-            Playing with {lastDeviceVoiceName}
-          </p>
-        )}
+          {playing && playingProvider === 'device' && lastDeviceVoiceName ? (
+            <p className="text-[12px] text-pebble-text-muted">
+              Playing with the best available voice for this language.
+            </p>
+          ) : null}
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-pebble-text-secondary">
-          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-          Loading recap…
+        <div className="space-y-3 rounded-[22px] border border-pebble-border/24 bg-pebble-canvas/40 px-4 py-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-pebble-text-primary">
+            <RefreshCw className="h-4 w-4 animate-spin text-pebble-accent" />
+            Loading recap…
+          </div>
+          <div className="space-y-2.5">
+            <div className="h-3 w-2/3 animate-pulse rounded-full bg-pebble-overlay/[0.12]" />
+            <div className="h-3 w-full animate-pulse rounded-full bg-pebble-overlay/[0.08]" />
+            <div className="h-3 w-5/6 animate-pulse rounded-full bg-pebble-overlay/[0.08]" />
+          </div>
         </div>
       ) : (
         <>
-          {!recapData && (
-            <p className="text-sm text-pebble-text-secondary">
-              No recap generated yet for this week. Tap generate and Pebble will narrate your momentum.
-            </p>
-          )}
+          <div className="space-y-4">
+            {!recapData ? (
+              <div className="rounded-[22px] border border-pebble-border/24 bg-pebble-canvas/38 px-4 py-4">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="mt-0.5 h-4.5 w-4.5 shrink-0 text-pebble-accent" />
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium text-pebble-text-primary">
+                      No recap generated yet for this week.
+                    </p>
+                    <p className="text-sm leading-6 text-pebble-text-secondary">
+                      Generate a mentor summary to hear how your practice, recovery, and momentum evolved.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[22px] border border-pebble-border/22 bg-pebble-canvas/40 px-4 py-4">
+                <div className="flex items-start gap-3">
+                  <Waves className="mt-0.5 h-4.5 w-4.5 shrink-0 text-pebble-accent" />
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium text-pebble-text-primary">
+                      This week’s recap is ready.
+                    </p>
+                    <p className="text-sm leading-6 text-pebble-text-secondary">
+                      Press play to hear Pebble summarize your progress, setbacks, and recovery pattern.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
-          {errorMsg && (
-            <p className="rounded-lg border border-amber-400/35 bg-amber-300/12 px-3 py-1.5 text-sm text-amber-900 dark:text-amber-200">
-              {errorMsg}
-            </p>
-          )}
+            {errorMsg && (
+              <p className="rounded-2xl border border-amber-400/35 bg-amber-300/12 px-4 py-3 text-sm leading-6 text-amber-900 dark:text-amber-200">
+                {errorMsg}
+              </p>
+            )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handlePlay}
-              disabled={!canPlay}
-              className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition
-                ${playing
-                  ? 'border-pebble-accent/55 bg-pebble-accent/16 text-pebble-accent'
-                  : 'border-pebble-border/40 bg-pebble-chip-surface/60 text-pebble-text-secondary hover:border-pebble-border hover:text-pebble-text-primary'
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="h-11 rounded-2xl px-4 text-sm font-semibold"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
+                {generating ? 'Generating…' : recapData ? 'Regenerate' : 'Generate recap'}
+              </Button>
+
+              <button
+                onClick={handlePlay}
+                disabled={!canPlay}
+                className={`inline-flex h-11 items-center gap-2 rounded-2xl border px-4 text-sm font-medium transition ${
+                  playing
+                    ? 'border-pebble-accent/55 bg-pebble-accent/16 text-pebble-accent'
+                    : 'border-pebble-border/36 bg-pebble-chip-surface/54 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-chip-surface/66'
                 } disabled:opacity-40`}
-            >
-              {playing ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              {playing ? 'Stop' : 'Play recap'}
-            </button>
+              >
+                {playing ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                {playing ? 'Stop' : 'Play recap'}
+              </button>
 
-            <button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="inline-flex items-center gap-2 rounded-lg border border-pebble-border/40 bg-pebble-overlay/[0.04] px-3 py-2 text-sm font-medium text-pebble-text-secondary transition hover:border-pebble-border hover:text-pebble-text-primary disabled:opacity-40"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${generating ? 'animate-spin' : ''}`} />
-              {generating ? 'Generating…' : recapData ? 'Regenerate' : 'Generate recap'}
-            </button>
-
-            <button
-              onClick={() => setScriptExpanded((value) => !value)}
-              disabled={!recapData}
-              className="inline-flex items-center gap-1 rounded-lg border border-transparent px-2 py-1 text-xs text-pebble-text-muted transition hover:border-pebble-border/30 hover:text-pebble-text-secondary disabled:opacity-40"
-            >
-              {scriptExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {scriptExpanded ? 'Hide script' : 'Show script'}
-            </button>
+              <button
+                onClick={() => setScriptExpanded((value) => !value)}
+                disabled={!recapData}
+                className="inline-flex h-10 items-center gap-1.5 rounded-2xl border border-transparent px-3 text-sm font-medium text-pebble-text-secondary transition hover:border-pebble-border/26 hover:bg-pebble-overlay/[0.05] hover:text-pebble-text-primary disabled:opacity-40"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                {scriptExpanded ? 'Hide script' : 'Show script'}
+                {scriptExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+            </div>
           </div>
 
           {scriptExpanded && recapData && (
-            <div className="rounded-xl border border-pebble-border/35 bg-pebble-canvas/45 px-3 py-2">
-              <p className="text-sm leading-relaxed text-pebble-text-secondary">
+            <div className="rounded-[22px] border border-pebble-border/28 bg-pebble-canvas/48 px-4 py-4">
+              <div className="mb-2 flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-pebble-accent" />
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
+                  Transcript
+                </p>
+              </div>
+              <p className="text-sm leading-7 text-pebble-text-secondary">
                 {recapData.script}
               </p>
             </div>
           )}
 
           {recapData && (
-            <div className="flex items-center gap-2 text-[11px] text-pebble-text-muted">
+            <div className="flex items-center gap-2 text-[11px] font-medium text-pebble-text-muted">
               <Volume2 className="h-3.5 w-3.5" />
-              {recapData.playback.provider === 'polly' && recapData.audioUrl
-                ? `Polly ${recapData.playback.pollyVoiceId ?? ''} · ${recapData.playback.locale}`
-                : `Device speech · ${recapData.playback.locale}`}
+              {canPlay ? 'Playback ready' : 'Script ready'}
             </div>
           )}
         </>

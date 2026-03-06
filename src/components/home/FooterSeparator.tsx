@@ -11,8 +11,8 @@ export function FooterSeparator() {
   return (
     <div className="relative h-[36px] w-full overflow-hidden sm:h-[42px] md:h-[48px]">
       <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2">
-        <div className="mx-auto h-px w-[min(92vw,1280px)] bg-gradient-to-r from-transparent via-pebble-accent/58 to-transparent dark:via-sky-300/74" />
-        <div className="mx-auto mt-[-1px] h-[5px] w-[min(44vw,440px)] bg-gradient-to-r from-transparent via-pebble-accent/42 to-transparent blur-[8px] dark:via-sky-300/56" />
+        <div className="mx-auto h-px w-[min(92vw,1280px)] bg-gradient-to-r from-transparent via-pebble-accent/42 to-transparent dark:via-sky-300/58" />
+        <div className="mx-auto mt-[-1px] h-[4px] w-[min(40vw,400px)] bg-gradient-to-r from-transparent via-pebble-accent/28 to-transparent blur-[7px] dark:via-sky-300/38" />
       </div>
 
       <div className="pointer-events-none absolute inset-0">
@@ -20,7 +20,7 @@ export function FooterSeparator() {
           <span
             // eslint-disable-next-line react/no-array-index-key
             key={`footer-sparkle-${index}`}
-            className="absolute h-[2.5px] w-[2.5px] rounded-full bg-pebble-accent/60 shadow-[0_0_8px_rgba(37,99,235,0.42)] dark:bg-sky-300/82 dark:shadow-[0_0_10px_rgba(125,211,252,0.52)]"
+            className="absolute h-[2.5px] w-[2.5px] rounded-full bg-pebble-accent/42 shadow-[0_0_6px_rgba(37,99,235,0.28)] dark:bg-sky-300/62 dark:shadow-[0_0_8px_rgba(125,211,252,0.38)]"
             style={{
               left: sparkle.left,
               top: sparkle.top,
@@ -34,7 +34,7 @@ export function FooterSeparator() {
         ))}
       </div>
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-pebble-accent/[0.02] to-transparent dark:via-sky-300/[0.04]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-pebble-accent/[0.015] to-transparent dark:via-sky-300/[0.03]" />
     </div>
   )
 }

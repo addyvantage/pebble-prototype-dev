@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { isPlacementLanguage, type PlacementLanguage } from '../../data/onboardingData'
+import type { PlacementLanguage } from '../../data/onboardingData'
 import type { ProblemExample, SqlTableSchema } from '../../data/problemsBank'
-import { getLocalizedUnitSolution } from '../../data/solutionsBank'
+import { getLocalizedUnitSolution, type UnitSolution } from '../../data/solutionsBank'
 import type { UnitSubmission } from '../../lib/submissionsStore'
 import { useI18n } from '../../i18n/useI18n'
 import { DifficultyPill } from '../ui/DifficultyPill'
@@ -51,6 +51,64 @@ const LANGUAGE_LABELS: Record<PlacementLanguage | 'sql', string> = {
   sql: 'SQL',
 }
 
+const SOLUTION_LANGUAGE_ORDER: PlacementLanguage[] = ['python', 'javascript', 'cpp', 'java', 'c']
+
+function resolvePreferredSolutionLanguage(
+  language: PlacementLanguage | 'sql',
+  trackLanguage?: PlacementLanguage,
+) {
+  return language === 'sql' ? (trackLanguage ?? 'python') : language
+}
+
+function resolveAvailableSolutionLanguages(solution: UnitSolution | null) {
+  if (!solution) {
+    return [] as PlacementLanguage[]
+  }
+  return SOLUTION_LANGUAGE_ORDER.filter((lang) => Boolean(solution.implementations[lang]?.trim()))
+}
+
+function resolveSolutionImplementation(input: {
+  solution: UnitSolution | null
+  preferredLanguage: PlacementLanguage
+  fallbackLanguage: PlacementLanguage
+  availableLanguages: PlacementLanguage[]
+}) {
+  const { solution, preferredLanguage, fallbackLanguage, availableLanguages } = input
+  if (!solution) {
+    return {
+      code: null,
+      codeLanguage: null as PlacementLanguage | null,
+      usedFallback: false,
+    }
+  }
+
+  const preferredCode = solution.implementations[preferredLanguage]?.trim()
+  if (preferredCode) {
+    return {
+      code: preferredCode,
+      codeLanguage: preferredLanguage,
+      usedFallback: false,
+    }
+  }
+
+  const fallbackCode = solution.implementations[fallbackLanguage]?.trim()
+  if (fallbackCode) {
+    return {
+      code: fallbackCode,
+      codeLanguage: fallbackLanguage,
+      usedFallback: true,
+    }
+  }
+
+  const nextLanguage = availableLanguages[0] ?? null
+  const nextCode = nextLanguage ? solution.implementations[nextLanguage]?.trim() ?? null : null
+  return {
+    code: nextCode || null,
+    codeLanguage: nextLanguage,
+    usedFallback: Boolean(nextCode),
+  }
+}
+
 export function ProblemStatementPanel({
   unitId,
   title,
@@ -77,63 +135,26 @@ export function ProblemStatementPanel({
   const isUrdu = isRTL
   const proseClass = isUrdu ? 'rtlText' : ''
   const [activeTab, setActiveTab] = useState<'problem' | 'solutions' | 'submissions'>('problem')
-  const [solutionLanguage, setSolutionLanguage] = useState<PlacementLanguage>('python')
   const [copied, setCopied] = useState(false)
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
 
   const solution = useMemo(() => getLocalizedUnitSolution(unitId, lang), [lang, unitId])
-  const preferredSolutionLanguage: PlacementLanguage = language === 'sql'
-    ? (trackLanguage ?? 'python')
-    : language
+  const preferredSolutionLanguage = resolvePreferredSolutionLanguage(language, trackLanguage)
   const fallbackSolutionLanguage: PlacementLanguage = trackLanguage ?? 'python'
   const resolvedExamples = examples?.map((item) => ({
     input: item.input,
     expected: item.output,
   })) ?? tests.slice(0, 2)
 
-  const availableSolutionLanguages = useMemo(() => {
-    if (!solution) {
-      return [] as PlacementLanguage[]
-    }
-    const languages = (Object.keys(solution.implementations) as string[])
-      .filter((langKey): langKey is PlacementLanguage => isPlacementLanguage(langKey))
-      .filter((langKey) => Boolean(solution.implementations[langKey]))
-    const order = [preferredSolutionLanguage, fallbackSolutionLanguage, 'python'] as PlacementLanguage[]
-    languages.sort((left, right) => {
-      const leftRank = order.indexOf(left)
-      const rightRank = order.indexOf(right)
-      if (leftRank === -1 && rightRank === -1) {
-        return left.localeCompare(right)
-      }
-      if (leftRank === -1) {
-        return 1
-      }
-      if (rightRank === -1) {
-        return -1
-      }
-      return leftRank - rightRank
-    })
-    return languages
-  }, [fallbackSolutionLanguage, preferredSolutionLanguage, solution])
-
-  const defaultSolutionLanguage = useMemo<PlacementLanguage>(() => {
-    if (solution?.implementations[preferredSolutionLanguage]) {
-      return preferredSolutionLanguage
-    }
-    if (solution?.implementations[fallbackSolutionLanguage]) {
-      return fallbackSolutionLanguage
-    }
-    if (solution?.implementations.python) {
-      return 'python'
-    }
-    return availableSolutionLanguages[0] ?? 'python'
-  }, [availableSolutionLanguages, fallbackSolutionLanguage, preferredSolutionLanguage, solution])
+  const availableSolutionLanguages = useMemo(
+    () => resolveAvailableSolutionLanguages(solution),
+    [solution],
+  )
 
   useEffect(() => {
-    setSolutionLanguage(defaultSolutionLanguage)
     setCopied(false)
     setSelectedSubmissionId('')
-  }, [defaultSolutionLanguage, unitId])
+  }, [unitId, preferredSolutionLanguage])
 
   useEffect(() => {
     if (!copied) {
@@ -144,16 +165,17 @@ export function ProblemStatementPanel({
     return () => window.clearTimeout(timeoutId)
   }, [copied])
 
-  const selectedSolutionCode = solution?.implementations[solutionLanguage] ?? null
-
-  useEffect(() => {
-    if (availableSolutionLanguages.length === 0) {
-      return
-    }
-    if (!availableSolutionLanguages.includes(solutionLanguage)) {
-      setSolutionLanguage(availableSolutionLanguages[0])
-    }
-  }, [availableSolutionLanguages, solutionLanguage])
+  const selectedSolution = useMemo(
+    () =>
+      resolveSolutionImplementation({
+        solution,
+        preferredLanguage: preferredSolutionLanguage,
+        fallbackLanguage: fallbackSolutionLanguage,
+        availableLanguages: availableSolutionLanguages,
+      }),
+    [availableSolutionLanguages, fallbackSolutionLanguage, preferredSolutionLanguage, solution],
+  )
+  const selectedSolutionCode = selectedSolution.code
   const lastAcceptedSubmission = useMemo(
     () => submissions.find((submission) => submission.status === 'accepted') ?? null,
     [submissions],
@@ -181,11 +203,11 @@ export function ProblemStatementPanel({
   return (
     <section
       className={classNames(
-        'flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-pebble-border/30 bg-gradient-to-b from-pebble-overlay/[0.12] to-pebble-overlay/[0.04]',
+        'session-surface-muted flex h-full min-h-0 flex-col overflow-hidden rounded-[28px]',
         className,
       )}
     >
-      <div className="flex items-center gap-1 border-b border-pebble-border/25 px-3 py-2">
+      <div className="flex items-center gap-1 border-b border-pebble-border/20 px-4 py-3">
         <TabButton
           active={activeTab === 'problem'}
           onClick={() => setActiveTab('problem')}
@@ -203,26 +225,26 @@ export function ProblemStatementPanel({
         />
       </div>
 
-      <div className="pebble-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-3">
+      <div className="pebble-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-5">
         {activeTab === 'problem' && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h2 className={classNames('text-xl font-semibold text-pebble-text-primary', proseClass)}>{title}</h2>
-              <div className="flex flex-wrap items-center gap-2">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <h2 className={classNames('text-[1.55rem] font-semibold leading-tight text-pebble-text-primary', proseClass)}>{title}</h2>
+              <div className="flex flex-wrap items-center gap-2.5">
                 <DifficultyPill difficulty={difficulty} label={difficultyLabel} className="px-2.5 py-1 text-xs" />
-                <span className="rounded-full border border-pebble-accent/35 bg-pebble-accent/12 px-2.5 py-1 text-xs text-pebble-accent">
+                <span className="rounded-full border border-pebble-accent/35 bg-pebble-accent/12 px-3 py-1 text-xs font-medium text-pebble-accent">
                   {concept}
                 </span>
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.07] px-2.5 py-1 text-xs text-pebble-text-secondary"
+                    className="rounded-full border border-pebble-border/24 bg-pebble-overlay/[0.07] px-3 py-1 text-xs text-pebble-text-secondary"
                   >
                     {tag}
                   </span>
                 ))}
               </div>
-              <p className={classNames('text-sm leading-relaxed text-pebble-text-secondary', proseClass)}>{prompt}</p>
+              <p className={classNames('max-w-[62ch] text-[15px] leading-7 text-pebble-text-secondary', proseClass)}>{prompt}</p>
             </div>
 
             <Section title={t('problem.section.description')}>
@@ -242,15 +264,15 @@ export function ProblemStatementPanel({
             </Section>
 
             {functionMode && (
-              <div className="rounded-xl border border-pebble-accent/35 bg-pebble-accent/10 px-3 py-2 text-xs text-pebble-text-primary">
+              <div className="session-inset rounded-2xl border-pebble-accent/28 bg-pebble-accent/10 px-4 py-3 text-sm leading-6 text-pebble-text-primary">
                 {t('problem.functionModeBanner')}
               </div>
             )}
 
-            <section className="space-y-1">
-              <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.section.constraints')}</h3>
+            <section className="space-y-2">
+              <h3 className={classNames('text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', proseClass)}>{t('problem.section.constraints')}</h3>
               <ul className={classNames(
-                'list-disc space-y-1 text-sm text-pebble-text-secondary',
+                'list-disc space-y-2 text-[15px] leading-7 text-pebble-text-secondary',
                 isUrdu ? 'rtlText pr-4 pl-0' : 'pl-4',
               )}>
                 {constraints.map((constraint) => (
@@ -259,30 +281,30 @@ export function ProblemStatementPanel({
               </ul>
             </section>
 
-            <section className="space-y-2">
-              <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('problem.section.examples')}</h3>
-              <div className="grid gap-2">
+            <section className="space-y-3">
+              <h3 className={classNames('text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', proseClass)}>{t('problem.section.examples')}</h3>
+              <div className="grid gap-3">
                 {resolvedExamples.map((example, index) => (
                   <div
                     key={`${title}-example-${index}`}
-                    className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-2"
+                    className="session-inset rounded-2xl p-3.5"
                   >
-                    <p className={classNames('text-xs font-medium text-pebble-text-primary', proseClass)}>
+                    <p className={classNames('text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', proseClass)}>
                       {t('problem.example')} {index + 1}
                     </p>
-                    <div className="mt-1 grid gap-1 text-xs text-pebble-text-secondary">
+                    <div className="mt-3 grid gap-2.5 text-sm text-pebble-text-secondary">
                       <p className={classNames(
-                        'rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 px-2 py-1',
+                        'rounded-xl border border-pebble-border/18 bg-pebble-canvas/50 px-3 py-2.5',
                         proseClass,
                       )}>
-                        <span className={classNames('font-medium text-pebble-text-primary', proseClass)}>{t('problem.inputLabel')}:</span>{' '}
+                        <span className={classNames('font-semibold text-pebble-text-primary', proseClass)}>{t('problem.inputLabel')}:</span>{' '}
                         <span className={isUrdu ? 'ltrSafe inline-block' : ''}>{compactText(example.input, t('common.empty'))}</span>
                       </p>
                       <p className={classNames(
-                        'rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 px-2 py-1',
+                        'rounded-xl border border-pebble-border/18 bg-pebble-canvas/50 px-3 py-2.5',
                         proseClass,
                       )}>
-                        <span className={classNames('font-medium text-pebble-text-primary', proseClass)}>{t('problem.outputLabel')}:</span>{' '}
+                        <span className={classNames('font-semibold text-pebble-text-primary', proseClass)}>{t('problem.outputLabel')}:</span>{' '}
                         <span className={isUrdu ? 'ltrSafe inline-block' : ''}>{compactText(example.expected, t('common.empty'))}</span>
                       </p>
                     </div>
@@ -336,29 +358,29 @@ export function ProblemStatementPanel({
         )}
 
         {activeTab === 'solutions' && (
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <h3 className={classNames('text-lg font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.howToSolve')}</h3>
-              <p className={classNames('text-sm text-pebble-text-secondary', proseClass)}>
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <h3 className={classNames('text-xl font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.howToSolve')}</h3>
+              <p className={classNames('max-w-[60ch] text-[15px] leading-7 text-pebble-text-secondary', proseClass)}>
                 {t('solutions.walkthrough')}
               </p>
             </div>
 
             {!solution || availableSolutionLanguages.length === 0 ? (
-              <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3 text-sm text-pebble-text-secondary">
+              <div className="session-inset rounded-2xl p-4 text-sm text-pebble-text-secondary">
                 {t('solutions.notPublished')}
               </div>
             ) : (
               <>
-                <section className="space-y-1">
-                  <h4 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.intuition')}</h4>
-                  <p className={classNames('text-sm text-pebble-text-secondary', proseClass)}>{solution.intuition}</p>
+                <section className="space-y-2">
+                  <h4 className={classNames('text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', proseClass)}>{t('solutions.intuition')}</h4>
+                  <p className={classNames('text-[15px] leading-7 text-pebble-text-secondary', proseClass)}>{solution.intuition}</p>
                 </section>
 
-                <section className="space-y-1">
-                  <h4 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.approach')}</h4>
+                <section className="space-y-2">
+                  <h4 className={classNames('text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', proseClass)}>{t('solutions.approach')}</h4>
                   <ul className={classNames(
-                    'list-disc space-y-1 text-sm text-pebble-text-secondary',
+                    'list-disc space-y-2 text-[15px] leading-7 text-pebble-text-secondary',
                     isUrdu ? 'rtlText pr-4 pl-0' : 'pl-4',
                   )}>
                     {solution.approach.map((step) => (
@@ -367,8 +389,8 @@ export function ProblemStatementPanel({
                   </ul>
                 </section>
 
-                <section className="space-y-1">
-                  <h4 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('solutions.complexity')}</h4>
+                <section className="session-inset space-y-2 rounded-2xl p-4">
+                  <h4 className={classNames('text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', proseClass)}>{t('solutions.complexity')}</h4>
                   <p className={classNames('text-sm text-pebble-text-secondary', proseClass)}>
                     {t('solutions.time')}:{' '}
                     <span className={isUrdu ? 'inlineLtrToken' : ''}>{solution.complexity.time}</span>
@@ -379,48 +401,44 @@ export function ProblemStatementPanel({
                   </p>
                 </section>
 
-                <section className="space-y-2">
+                <section className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="text-sm font-semibold text-pebble-text-primary">{t('solutions.implementation')}</h4>
+                    <h4 className="text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">{t('solutions.implementation')}</h4>
                     <button
                       type="button"
                       onClick={() => void copySolution()}
-                      className="rounded-lg border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
+                      className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-1.5 text-xs font-medium text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
                     >
                       {copied ? t('actions.copied') : t('actions.copy')}
                     </button>
                   </div>
 
-                  {language !== 'sql' && !solution?.implementations[language] ? (
-                    <p className={classNames('text-xs text-pebble-text-secondary', proseClass)}>{t('solutions.languageFallback', { language: LANGUAGE_LABELS[language] })}</p>
-                  ) : null}
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {availableSolutionLanguages.map((lang) => (
-                      <button
-                        key={lang}
-                        type="button"
-                        onClick={() => setSolutionLanguage(lang)}
-                        className={`rounded-lg border px-2.5 py-1 text-xs transition ${
-                          solutionLanguage === lang
-                            ? 'border-pebble-accent/45 bg-pebble-accent/14 text-pebble-text-primary'
-                            : 'border-pebble-border/30 bg-pebble-overlay/[0.07] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
-                        }`}
-                      >
-                        {LANGUAGE_LABELS[lang]}
-                      </button>
-                    ))}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-full border border-pebble-accent/40 bg-pebble-accent/14 px-3 py-1.5 text-[11px] font-semibold text-pebble-text-primary">
+                      {selectedSolution.codeLanguage ? LANGUAGE_LABELS[selectedSolution.codeLanguage] : LANGUAGE_LABELS[preferredSolutionLanguage]}
+                    </span>
+                    {selectedSolution.usedFallback ? (
+                      <span className="rounded-full border border-pebble-warning/35 bg-pebble-warning/12 px-3 py-1.5 text-[11px] font-medium text-pebble-warning">
+                        Fallback
+                      </span>
+                    ) : null}
                   </div>
+
+                  {selectedSolution.usedFallback ? (
+                    <p className={classNames('text-xs text-pebble-text-secondary', proseClass)}>
+                      Solution for {LANGUAGE_LABELS[preferredSolutionLanguage]} is not available yet.
+                    </p>
+                  ) : null}
 
                   {selectedSolutionCode ? (
                     <pre
                       dir="ltr"
-                      className="max-h-72 overflow-auto rounded-xl border border-pebble-border/30 bg-pebble-canvas/55 p-3 text-[12px] leading-relaxed text-pebble-text-primary"
+                      className="session-inset pebble-scrollbar max-h-80 overflow-auto rounded-[22px] p-4 text-[12.5px] leading-7 text-pebble-text-primary"
                     >
-                      <code>{selectedSolutionCode}</code>
+                      <code className={`language-${selectedSolution.codeLanguage ?? preferredSolutionLanguage}`}>{selectedSolutionCode}</code>
                     </pre>
                   ) : (
-                    <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3 text-sm text-pebble-text-secondary">
+                    <div className="session-inset rounded-2xl p-4 text-sm text-pebble-text-secondary">
                       Solution not available in this language yet.
                     </div>
                   )}
@@ -431,25 +449,25 @@ export function ProblemStatementPanel({
         )}
 
         {activeTab === 'submissions' && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {submissions.length === 0 ? (
-              <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3 text-sm text-pebble-text-secondary">
+              <div className="session-inset rounded-2xl p-4 text-sm text-pebble-text-secondary">
                 {t('submissions.none')}
               </div>
             ) : (
               <>
-                <div className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3">
+                <div className="session-inset rounded-2xl p-4">
                   <p className={classNames('text-xs uppercase tracking-[0.06em] text-pebble-text-muted', proseClass)}>{t('submissions.lastAccepted')}</p>
                   {lastAcceptedSubmission ? (
-                    <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="mt-3 flex items-center justify-between gap-3">
                       <div className="space-y-0.5">
-                        <p className={classNames('text-sm font-semibold text-pebble-text-primary', isUrdu ? 'inlineLtrToken' : '')}>{LANGUAGE_LABELS[lastAcceptedSubmission.language]}</p>
+                        <p className={classNames('text-base font-semibold text-pebble-text-primary', isUrdu ? 'inlineLtrToken' : '')}>{LANGUAGE_LABELS[lastAcceptedSubmission.language]}</p>
                         <p className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>
                           {new Date(lastAcceptedSubmission.timestamp).toLocaleString()}
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-2 py-0.5 text-xs text-pebble-success">
+                        <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-3 py-1 text-xs font-semibold text-pebble-success">
                           {t('submissions.accepted')}
                         </span>
                         <p className={classNames('mt-1 text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>
@@ -463,9 +481,9 @@ export function ProblemStatementPanel({
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', proseClass)}>{t('submissions.recent')}</h3>
-                  <div className="grid gap-1.5">
+                <div className="space-y-3">
+                  <h3 className={classNames('text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', proseClass)}>{t('submissions.recent')}</h3>
+                  <div className="grid gap-2">
                     {submissions.map((submission) => {
                       const active = (selectedSubmission?.id ?? submissions[0]?.id) === submission.id
                       return (
@@ -473,15 +491,15 @@ export function ProblemStatementPanel({
                           key={submission.id}
                           type="button"
                           onClick={() => setSelectedSubmissionId(submission.id)}
-                          className={`rounded-xl border px-3 py-2 text-left transition ${
+                          className={`rounded-2xl border px-4 py-3 text-left transition ${
                             active
-                              ? 'border-pebble-accent/45 bg-pebble-accent/12'
-                              : 'border-pebble-border/30 bg-pebble-overlay/[0.06] hover:bg-pebble-overlay/[0.12]'
+                              ? 'border-pebble-accent/45 bg-pebble-accent/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                              : 'border-pebble-border/24 bg-pebble-overlay/[0.05] hover:bg-pebble-overlay/[0.12]'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span
-                              className={`rounded-full border px-2 py-0.5 text-xs ${
+                              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
                                 submission.status === 'accepted'
                                   ? 'border-pebble-success/35 bg-pebble-success/15 text-pebble-success'
                                   : 'border-pebble-warning/35 bg-pebble-warning/15 text-pebble-warning'
@@ -491,7 +509,7 @@ export function ProblemStatementPanel({
                             </span>
                             <span className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>{new Date(submission.timestamp).toLocaleString()}</span>
                           </div>
-                          <p className={classNames('mt-1 text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>
+                          <p className={classNames('mt-2 text-xs text-pebble-text-secondary', isUrdu ? 'inlineLtrToken' : '')}>
                             {LANGUAGE_LABELS[submission.language]} • {submission.runtimeMs}ms • {submission.passCount}/{submission.totalCount}
                           </p>
                         </button>
@@ -534,11 +552,11 @@ function SubmissionDetail({ submission, isUrdu }: { submission: UnitSubmission; 
   }
 
   return (
-    <div className="space-y-2 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.06] p-3">
+    <div className="session-inset space-y-3 rounded-2xl p-4">
       <div className="flex items-center justify-between gap-2">
-        <h4 className={classNames('text-sm font-semibold text-pebble-text-primary', isUrdu ? 'rtlText' : '')}>{t('submissions.detail')}</h4>
+        <h4 className={classNames('text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', isUrdu ? 'rtlText' : '')}>{t('submissions.detail')}</h4>
         <span
-          className={`rounded-full border px-2 py-0.5 text-xs ${
+          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
             submission.status === 'accepted'
               ? 'border-pebble-success/35 bg-pebble-success/15 text-pebble-success'
               : 'border-pebble-warning/35 bg-pebble-warning/15 text-pebble-warning'
@@ -548,13 +566,13 @@ function SubmissionDetail({ submission, isUrdu }: { submission: UnitSubmission; 
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 p-2">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-pebble-border/18 bg-pebble-canvas/50 p-3">
           <p className={classNames('text-xs uppercase tracking-[0.06em] text-pebble-text-muted', isUrdu ? 'rtlText' : '')}>{t('submissions.runtime')}</p>
           <p className={classNames('mt-1 text-sm font-medium text-pebble-text-primary', isUrdu ? 'inlineLtrToken' : '')}>{submission.runtimeMs}ms</p>
           <p className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'rtlText' : '')}>{t('submissions.beatsPlaceholder')}</p>
         </div>
-        <div className="rounded-lg border border-pebble-border/30 bg-pebble-canvas/45 p-2">
+        <div className="rounded-2xl border border-pebble-border/18 bg-pebble-canvas/50 p-3">
           <p className={classNames('text-xs uppercase tracking-[0.06em] text-pebble-text-muted', isUrdu ? 'rtlText' : '')}>{t('submissions.memory')}</p>
           <p className="mt-1 text-sm font-medium text-pebble-text-primary">--</p>
           <p className={classNames('text-xs text-pebble-text-secondary', isUrdu ? 'rtlText' : '')}>{t('submissions.pendingBenchmark')}</p>
@@ -569,7 +587,7 @@ function SubmissionDetail({ submission, isUrdu }: { submission: UnitSubmission; 
         <button
           type="button"
           onClick={() => void copyCode()}
-          className="rounded-lg border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
+          className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-1.5 text-xs font-medium text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
         >
           {copied ? t('actions.copied') : t('actions.copy')}
         </button>
@@ -577,7 +595,7 @@ function SubmissionDetail({ submission, isUrdu }: { submission: UnitSubmission; 
 
       <pre
         dir="ltr"
-        className="max-h-60 overflow-auto rounded-xl border border-pebble-border/30 bg-pebble-canvas/55 p-3 text-[12px] leading-relaxed text-pebble-text-primary"
+        className="session-inset pebble-scrollbar max-h-60 overflow-auto rounded-[22px] p-4 text-[12.5px] leading-7 text-pebble-text-primary"
       >
         <code>{submission.code}</code>
       </pre>
@@ -598,10 +616,10 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+      className={`rounded-xl px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] transition ${
         active
-          ? 'bg-pebble-overlay/[0.16] text-pebble-text-primary'
-          : 'text-pebble-text-secondary hover:bg-pebble-overlay/[0.12] hover:text-pebble-text-primary'
+          ? 'border border-pebble-accent/30 bg-pebble-accent/12 text-pebble-text-primary'
+          : 'border border-transparent text-pebble-text-secondary hover:border-pebble-border/24 hover:bg-pebble-overlay/[0.12] hover:text-pebble-text-primary'
       }`}
     >
       {label}
@@ -613,9 +631,9 @@ function Section({ title, children }: { title: string; children: string }) {
   const { isRTL } = useI18n()
   const isUrdu = isRTL
   return (
-    <section className="space-y-1">
-      <h3 className={classNames('text-sm font-semibold text-pebble-text-primary', isUrdu ? 'rtlText' : '')}>{title}</h3>
-      <p className={classNames('text-sm text-pebble-text-secondary', isUrdu ? 'rtlText' : '')}>{children}</p>
+    <section className="space-y-2">
+      <h3 className={classNames('text-sm font-semibold uppercase tracking-[0.08em] text-pebble-text-muted', isUrdu ? 'rtlText' : '')}>{title}</h3>
+      <p className={classNames('max-w-[60ch] text-[15px] leading-7 text-pebble-text-secondary', isUrdu ? 'rtlText' : '')}>{children}</p>
     </section>
   )
 }

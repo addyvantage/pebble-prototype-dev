@@ -1,8 +1,8 @@
+import { BrainCircuit, CheckCircle2, ChevronRight, Code2, Flag, GraduationCap, Route, Sparkles, Target } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
 import {
   languageMetadata,
   type PlacementLanguage,
@@ -10,34 +10,54 @@ import {
 } from '../data/onboardingData'
 import { getPebbleUserState, savePebbleOnboarding } from '../utils/pebbleUserState'
 
-const levels: Array<{ id: PlacementLevel; label: string; subtitle: string }> = [
+const levels: Array<{ id: PlacementLevel; label: string; subtitle: string; outcome: string; icon: typeof GraduationCap }> = [
   {
     id: 'beginner',
     label: 'Beginner',
     subtitle: 'Learning syntax and core problem-solving patterns',
+    outcome: 'Start with guided reps, lower friction, and fast confidence wins.',
+    icon: GraduationCap,
   },
   {
     id: 'intermediate',
     label: 'Intermediate',
     subtitle: 'Comfortable coding independently with common algorithms',
+    outcome: 'Focus on consistency, cleaner execution, and sharper debugging.',
+    icon: Target,
   },
   {
     id: 'pro',
     label: 'Pro',
     subtitle: 'Targeting advanced interviews and production-level quality',
+    outcome: 'Lean into stronger runtime judgment and higher-signal recovery loops.',
+    icon: Flag,
   },
 ]
 
-function selectCardClass(isSelected: boolean) {
-  return `group rounded-[18px] border p-4 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
-    isSelected
-      ? 'border-pebble-accent/60 bg-pebble-accent/14 text-pebble-text-primary shadow-[0_14px_30px_rgba(37,99,235,0.16),inset_0_1px_0_rgba(255,255,255,0.18)]'
-      : 'border-pebble-border/30 bg-pebble-overlay/[0.05] text-pebble-text-secondary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.1] hover:text-pebble-text-primary'
-  }`
-}
-
 function summaryValue(value: string | null) {
   return value ?? 'Not selected yet'
+}
+
+function selectCardClass(isSelected: boolean) {
+  return [
+    'group relative overflow-hidden rounded-[22px] border p-5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45',
+    isSelected
+      ? 'border-pebble-accent/60 bg-pebble-accent/14 text-pebble-text-primary shadow-[0_18px_38px_rgba(37,99,235,0.16),inset_0_1px_0_rgba(255,255,255,0.2)]'
+      : 'border-pebble-border/24 bg-pebble-overlay/[0.05] text-pebble-text-secondary hover:-translate-y-[1px] hover:border-pebble-border/42 hover:bg-pebble-overlay/[0.10] hover:text-pebble-text-primary',
+  ].join(' ')
+}
+
+function compactOutcome(levelLabel: string | null, languageLabel: string | null) {
+  if (levelLabel && languageLabel) {
+    return `Pebble will start you on a ${levelLabel.toLowerCase()} path in ${languageLabel}, with placement pacing and coach help tuned from the first session.`
+  }
+  if (levelLabel) {
+    return `Pebble will tune the path depth around a ${levelLabel.toLowerCase()} starting point once you confirm a coding language.`
+  }
+  if (languageLabel) {
+    return `Pebble will shape the editor, solutions, and guidance around ${languageLabel} once you confirm your current level.`
+  }
+  return 'Choose your level and language to preview the starting path Pebble will build for you.'
 }
 
 export function OnboardingPage() {
@@ -46,45 +66,83 @@ export function OnboardingPage() {
 
   const [level, setLevel] = useState<PlacementLevel | null>(existingState.onboarding?.level ?? null)
   const [language, setLanguage] = useState<PlacementLanguage | null>(existingState.onboarding?.language ?? null)
+  const [showAllLanguages, setShowAllLanguages] = useState(false)
 
   const selectedLevel = levels.find((item) => item.id === level) ?? null
   const selectedLanguage = languageMetadata.find((item) => item.id === language) ?? null
   const canContinue = Boolean(level && language)
+  const visibleLanguages = showAllLanguages ? languageMetadata : languageMetadata.slice(0, 4)
 
   function handleContinue() {
-    if (!level || !language) {
-      return
-    }
-
+    if (!level || !language) return
     savePebbleOnboarding({ language, level })
     navigate(`/placement?lang=${language}&level=${level}`)
   }
 
   return (
-    <section className="page-enter mx-auto w-full max-w-[1100px] px-1 pb-5 pt-1">
-      <Card padding="lg" className="relative overflow-hidden" interactive>
-        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-pebble-accent/16 blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 bottom-[-8rem] h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
+    <section className="page-enter mx-auto w-full max-w-[1180px] px-3 pb-8 pt-3 lg:px-4">
+      <div className="onboarding-stage relative rounded-[32px] px-6 pb-6 pt-7 sm:px-8 sm:pt-8 lg:px-10 lg:pb-7">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-pebble-accent/16 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 bottom-[-7rem] h-80 w-80 rounded-full bg-sky-400/10 blur-3xl" />
 
-        <div className="relative space-y-6">
-          <div className="space-y-2">
-            <Badge>Onboarding</Badge>
-            <h1 className="text-balance text-3xl font-semibold tracking-[-0.02em] text-pebble-text-primary sm:text-4xl">
-              Personalize your Pebble learning track
-            </h1>
-            <p className="max-w-2xl text-[15px] leading-relaxed text-pebble-text-secondary sm:text-base">
-              Choose your current level and preferred language so Pebble can start you at the right depth from day one.
-            </p>
+        <div className="relative space-y-8 lg:space-y-9">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-[700px] space-y-4">
+              <Badge>Onboarding</Badge>
+              <div className="space-y-3">
+                <h1 className="max-w-[14ch] text-balance text-[2.35rem] font-semibold tracking-[-0.03em] text-pebble-text-primary sm:text-[2.8rem] lg:text-[3.2rem]">
+                  Personalize your Pebble learning track
+                </h1>
+                <p className="max-w-[58ch] text-[15px] leading-7 text-pebble-text-secondary sm:text-base">
+                  Choose your current level and preferred language so Pebble can start you at the right depth from day one.
+                </p>
+              </div>
+            </div>
+
+            <div className="onboarding-stage-muted rounded-[24px] px-4 py-4 lg:max-w-[330px]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
+                Placement-aligned setup
+              </p>
+              <div className="mt-3 grid gap-2.5">
+                <div className="flex items-start gap-2.5">
+                  <BrainCircuit className="mt-0.5 h-4 w-4 text-pebble-accent" />
+                  <p className="text-sm leading-6 text-pebble-text-secondary">
+                    Pebble adapts your first units, coaching depth, and placement pacing from this setup.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <Sparkles className="mt-0.5 h-4 w-4 text-pebble-accent" />
+                  <p className="text-sm leading-6 text-pebble-text-secondary">
+                    Your selections shape runtime hints, solution language, and the first recovery loop you see.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="space-y-5">
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Step 1</p>
-                <h2 className="text-xl font-semibold text-pebble-text-primary">Select your current level</h2>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)] lg:gap-6">
+            <div className="space-y-6">
+              <section className="space-y-3">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
+                      Step 1 · Current level
+                    </p>
+                    <h2 className="text-[1.45rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">
+                      Select your current level
+                    </h2>
+                  </div>
+                  {selectedLevel ? (
+                    <span className="rounded-full border border-pebble-accent/42 bg-pebble-accent/14 px-3 py-1.5 text-[11px] font-semibold text-pebble-accent">
+                      {selectedLevel.label} selected
+                    </span>
+                  ) : null}
+                </div>
+
                 <div className="grid gap-3 md:grid-cols-3">
                   {levels.map((item) => {
                     const selected = level === item.id
+                    const Icon = item.icon
                     return (
                       <button
                         key={item.id}
@@ -92,93 +150,182 @@ export function OnboardingPage() {
                         onClick={() => setLevel(item.id)}
                         className={selectCardClass(selected)}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[15px] font-semibold text-pebble-text-primary">{item.label}</p>
-                          {selected && (
-                            <span className="rounded-full border border-pebble-accent/45 bg-pebble-accent/18 px-2 py-0.5 text-[10px] font-semibold text-pebble-accent">
+                        <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-pebble-overlay/[0.08] to-transparent" />
+                        <div className="relative flex items-start justify-between gap-3">
+                          <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border ${
+                            selected
+                              ? 'border-pebble-accent/45 bg-pebble-accent/18 text-pebble-accent'
+                              : 'border-pebble-border/22 bg-pebble-overlay/[0.08] text-pebble-text-secondary'
+                          }`}>
+                            <Icon className="h-4.5 w-4.5" />
+                          </span>
+                          {selected ? (
+                            <span className="rounded-full border border-pebble-accent/45 bg-pebble-accent/18 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-pebble-accent">
                               Selected
                             </span>
-                          )}
+                          ) : null}
                         </div>
-                        <p className="mt-2 text-[12.5px] leading-relaxed text-pebble-text-secondary">{item.subtitle}</p>
+                        <div className="relative mt-5 space-y-2.5">
+                          <p className="text-[1.02rem] font-semibold text-pebble-text-primary">{item.label}</p>
+                          <p className="text-[13px] leading-6 text-pebble-text-secondary">{item.subtitle}</p>
+                          <p className="pt-1 text-[12px] leading-6 text-pebble-text-muted">{item.outcome}</p>
+                        </div>
                       </button>
                     )
                   })}
                 </div>
-              </div>
+              </section>
 
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Step 2</p>
-                <h2 className="text-xl font-semibold text-pebble-text-primary">Select language focus</h2>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {languageMetadata.map((item) => {
+              <section className="space-y-3">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
+                      Step 2 · Language focus
+                    </p>
+                    <h2 className="text-[1.45rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">
+                      Select language focus
+                    </h2>
+                  </div>
+                  {selectedLanguage ? (
+                    <span className="rounded-full border border-pebble-accent/42 bg-pebble-accent/14 px-3 py-1.5 text-[11px] font-semibold text-pebble-accent">
+                      {selectedLanguage.label} selected
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+                  {visibleLanguages.map((item, index) => {
                     const selected = language === item.id
+                    const isLastSingle = !showAllLanguages && index === visibleLanguages.length - 1
                     return (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => setLanguage(item.id)}
-                        className={selectCardClass(selected)}
+                        className={`${selectCardClass(selected)} xl:col-span-2 ${isLastSingle ? 'sm:col-span-2 xl:col-span-2' : ''} ${showAllLanguages || !isLastSingle ? '' : 'xl:col-start-auto'}`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-base font-semibold text-pebble-text-primary">{item.label}</p>
-                          {selected && (
-                            <span className="rounded-full border border-pebble-accent/45 bg-pebble-accent/18 px-2 py-0.5 text-[10px] font-semibold text-pebble-accent">
+                        <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-pebble-overlay/[0.08] to-transparent" />
+                        <div className="relative flex items-start justify-between gap-3">
+                          <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border ${
+                            selected
+                              ? 'border-pebble-accent/45 bg-pebble-accent/18 text-pebble-accent'
+                              : 'border-pebble-border/22 bg-pebble-overlay/[0.08] text-pebble-text-secondary'
+                          }`}>
+                            <Code2 className="h-4.5 w-4.5" />
+                          </span>
+                          {selected ? (
+                            <span className="rounded-full border border-pebble-accent/45 bg-pebble-accent/18 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-pebble-accent">
                               Selected
                             </span>
-                          )}
+                          ) : null}
                         </div>
-                        <p className="mt-2 text-[12.5px] leading-relaxed text-pebble-text-secondary">{item.purpose}</p>
+                        <div className="relative mt-5 space-y-2.5">
+                          <p className="text-[1.02rem] font-semibold text-pebble-text-primary">{item.label}</p>
+                          <p className="text-[13px] leading-6 text-pebble-text-secondary">{item.purpose}</p>
+                        </div>
                       </button>
                     )
                   })}
                 </div>
-              </div>
+
+                {languageMetadata.length > 4 ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllLanguages((prev) => !prev)}
+                    className="inline-flex items-center gap-2 rounded-full border border-pebble-border/24 bg-pebble-overlay/[0.06] px-3.5 py-1.5 text-xs font-medium text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.12] hover:text-pebble-text-primary"
+                  >
+                    {showAllLanguages ? 'Show fewer languages' : 'Show all languages'}
+                    <ChevronRight className={`h-3.5 w-3.5 transition ${showAllLanguages ? 'rotate-90' : ''}`} />
+                  </button>
+                ) : null}
+              </section>
             </div>
 
-            <aside className="rounded-[20px] border border-pebble-border/30 bg-pebble-overlay/[0.08] p-4 shadow-[0_18px_42px_rgba(2,8,23,0.16)]">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Selection preview</p>
-                <span className="rounded-full border border-pebble-border/36 bg-pebble-overlay/[0.12] px-2 py-0.5 text-[10px] font-semibold text-pebble-text-secondary">
-                  Step 1/2
+            <aside className="onboarding-stage-strong rounded-[28px] p-5 lg:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
+                    Selection preview
+                  </p>
+                  <h3 className="mt-2 text-xl font-semibold text-pebble-text-primary">
+                    Your starting path
+                  </h3>
+                </div>
+                <span className="rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-pebble-text-secondary">
+                  2-step setup
                 </span>
               </div>
 
-              <div className="space-y-2 rounded-2xl border border-pebble-border/28 bg-pebble-canvas/55 p-3">
-                <div className="flex items-center justify-between gap-2 text-[12px]">
-                  <span className="text-pebble-text-muted">Level</span>
-                  <span className="font-semibold text-pebble-text-primary">{summaryValue(selectedLevel?.label ?? null)}</span>
+              <div className="mt-5 space-y-4">
+                <div className="onboarding-stage-muted rounded-[22px] p-4">
+                  <div className="grid gap-3">
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-pebble-text-muted">Level</span>
+                      <span className="font-semibold text-pebble-text-primary">{summaryValue(selectedLevel?.label ?? null)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-pebble-text-muted">Language</span>
+                      <span className="font-semibold text-pebble-text-primary">{summaryValue(selectedLanguage?.label ?? null)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-2 text-[12px]">
-                  <span className="text-pebble-text-muted">Language</span>
-                  <span className="font-semibold text-pebble-text-primary">{summaryValue(selectedLanguage?.label ?? null)}</span>
-                </div>
-              </div>
 
-              <div className="mt-4 space-y-2">
-                <p className="text-[12px] font-semibold text-pebble-text-primary">What you&apos;ll get</p>
-                <ul className="space-y-1.5 text-[12px] leading-relaxed text-pebble-text-secondary">
-                  <li className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] px-2.5 py-1.5">Weekly placement set tuned to your level.</li>
-                  <li className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] px-2.5 py-1.5">Guided units with clear test-driven checkpoints.</li>
-                  <li className="rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.05] px-2.5 py-1.5">Pebble Coach hints that adapt to your struggle pattern.</li>
-                </ul>
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
+                    What you&apos;ll get
+                  </p>
+                  <div className="grid gap-2.5">
+                    {[
+                      'Weekly placement set tuned to your level.',
+                      'Guided units with clear test-driven checkpoints.',
+                      'Pebble Coach hints that adapt to your struggle pattern.',
+                    ].map((item) => (
+                      <div key={item} className="onboarding-stage-muted flex items-start gap-2.5 rounded-[18px] px-3.5 py-3">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-pebble-accent" />
+                        <p className="text-[13px] leading-6 text-pebble-text-secondary">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[22px] border border-pebble-accent/22 bg-pebble-accent/10 px-4 py-4">
+                  <div className="flex items-start gap-2.5">
+                    <Route className="mt-0.5 h-4.5 w-4.5 shrink-0 text-pebble-accent" />
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-pebble-accent">
+                        Starting path outcome
+                      </p>
+                      <p className="text-[14px] leading-6 text-pebble-text-primary">
+                        {compactOutcome(selectedLevel?.label ?? null, selectedLanguage?.label ?? null)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </aside>
           </div>
 
-          <div className="sticky bottom-0 z-10 -mx-6 mt-1 border-t border-pebble-border/24 bg-pebble-panel/90 px-6 py-3 backdrop-blur-md sm:-mx-8 sm:px-8">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-pebble-text-secondary">
-                {canContinue ? 'Great. Continue to your placement set.' : 'Select both level and language to continue.'}
-              </p>
-              <Button onClick={handleContinue} disabled={!canContinue}>
+          <div className="sticky bottom-0 z-10 -mx-6 border-t border-pebble-border/20 bg-pebble-panel/92 px-6 py-4 backdrop-blur-md sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
+                  Ready to continue
+                </p>
+                <p className="text-sm leading-6 text-pebble-text-secondary">
+                  {canContinue ? 'Great. Continue to your placement set.' : 'Select both level and language to continue.'}
+                </p>
+              </div>
+              <Button
+                onClick={handleContinue}
+                disabled={!canContinue}
+                className="h-11 rounded-2xl px-5 text-sm font-semibold"
+              >
                 Continue
               </Button>
             </div>
           </div>
         </div>
-      </Card>
+      </div>
     </section>
   )
 }
-

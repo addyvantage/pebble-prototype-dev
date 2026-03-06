@@ -3,9 +3,9 @@ type ButtonSize = 'sm' | 'md'
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'relative border border-pebble-accent/50 bg-pebble-accent/22 text-pebble-text-primary shadow-[0_10px_22px_rgba(2,8,23,0.28)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[46%] before:rounded-t-[inherit] before:bg-pebble-overlay/18 before:content-[\'\'] hover:bg-pebble-accent/30 hover:border-pebble-accent/65 hover:shadow-[0_12px_26px_rgba(2,8,23,0.3)] focus-visible:ring-pebble-accent/50',
+    'relative border border-pebble-accent/52 bg-pebble-accent/24 text-pebble-text-primary shadow-[0_12px_26px_rgba(2,8,23,0.24)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[46%] before:rounded-t-[inherit] before:bg-pebble-overlay/20 before:content-[\'\'] hover:-translate-y-[1px] hover:bg-pebble-accent/32 hover:border-pebble-accent/68 hover:shadow-[0_16px_30px_rgba(2,8,23,0.28)] focus-visible:ring-pebble-accent/50',
   secondary:
-    'border border-pebble-border/35 bg-pebble-overlay/8 text-pebble-text-secondary hover:bg-pebble-overlay/14 hover:text-pebble-text-primary focus-visible:ring-pebble-border/45',
+    'border border-pebble-border/34 bg-pebble-overlay/10 text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:-translate-y-[1px] hover:border-pebble-border/48 hover:bg-pebble-overlay/16 hover:text-pebble-text-primary focus-visible:ring-pebble-border/45',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {

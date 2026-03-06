@@ -59,7 +59,6 @@ import {
   getLocalizedProblem,
   getLocalizedStarter,
 } from '../i18n/problemContent'
-import { markProblemSolved } from '../lib/solvedStore'
 import { logSolveEvent } from '../lib/solveEvents'
 import {
   dateKeyForTimeZone,
@@ -430,6 +429,7 @@ export function SessionPage() {
   const queryUnit = searchParams.get('unit')
   const queryProblemId = searchParams.get('problem')
 
+  // Session should behave like an app workspace with independently scrollable rails.
   useBodyScrollLock(true)
 
   const learningTrack = useMemo<LearningTrack>(() => {
@@ -1895,7 +1895,6 @@ export function SessionPage() {
         } else {
           markProblemAttempt(activeProblem.id, mode === 'submit')
           if (mode === 'submit') {
-            markProblemSolved(activeProblem.id)
             logSolveEvent({ problemId: activeProblem.id, verdict: 'accepted' })
           }
         }
@@ -2280,23 +2279,22 @@ export function SessionPage() {
       : [sessionLanguageLabel, t('tags.practice'), t('tags.runtimeVerified')]
   return (
     <section
-      className={`session-shell flex h-[100dvh] max-h-[100dvh] min-h-0 flex-col overflow-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}
+      className={`session-shell flex h-[100dvh] flex-col overflow-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}
     >
-      {/* Viewport-locked shell: each column scrolls internally, page height never grows. */}
-      <header className="grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2.5 border-b border-pebble-border/25 bg-pebble-overlay/[0.04] px-3">
+      <header className="session-topbar grid h-[72px] shrink-0 grid-cols-[minmax(0,1.1fr)_auto_minmax(0,1.25fr)] items-center gap-3 px-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <Link
             to="/"
             aria-label={t('nav.home')}
             title={t('nav.home')}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.09] text-pebble-text-primary transition hover:-translate-y-[1px] hover:bg-pebble-overlay/[0.15] active:bg-pebble-overlay/[0.2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/55"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.09] text-pebble-text-primary transition hover:-translate-y-[1px] hover:bg-pebble-overlay/[0.15] active:bg-pebble-overlay/[0.2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/55"
           >
             <Home className="h-4 w-4" aria-hidden="true" />
           </Link>
 
           <span
             title="Track controls recommendations and pacing. You can solve in any language."
-            className="hidden rounded-lg border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2 py-1 text-xs text-pebble-text-secondary md:inline-flex"
+            className="hidden rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-1.5 text-xs font-medium text-pebble-text-secondary md:inline-flex"
           >
             Track: {languageMeta.label} • {levelLabel}
           </span>
@@ -2308,27 +2306,32 @@ export function SessionPage() {
           </Link>
         </div>
 
-        <div className="flex min-w-0 items-center justify-center gap-2">
+        <div className="flex min-w-0 items-center justify-center gap-2.5">
           <button
             type="button"
             onClick={moveToPreviousUnit}
             disabled={!previousEnabled}
             title={t('topBar.prevUnit')}
             aria-label={t('a11y.prevUnit')}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] text-pebble-text-primary transition hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16] disabled:cursor-not-allowed disabled:opacity-45"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] text-pebble-text-primary transition hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16] disabled:cursor-not-allowed disabled:opacity-45"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
-          <p className="max-w-[420px] truncate px-1 text-sm font-semibold text-pebble-text-primary">
-            {activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
-          </p>
+          <div className="min-w-0 px-1 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
+              Active unit
+            </p>
+            <p className="max-w-[460px] truncate text-sm font-semibold text-pebble-text-primary">
+              {activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
+            </p>
+          </div>
           <button
             type="button"
             onClick={moveToNextUnit}
             disabled={!nextEnabled}
             title={t('topBar.nextUnit')}
             aria-label={t('a11y.nextUnit')}
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border bg-pebble-overlay/[0.08] text-pebble-text-primary transition hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16] disabled:cursor-not-allowed disabled:opacity-45 ${allTestsPassed && nextEnabled
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border bg-pebble-overlay/[0.08] text-pebble-text-primary transition hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16] disabled:cursor-not-allowed disabled:opacity-45 ${allTestsPassed && nextEnabled
               ? 'border-pebble-success/45 shadow-[0_0_0_1px_rgba(74,222,128,0.28),0_0_16px_rgba(74,222,128,0.22)]'
               : 'border-pebble-border/30'
               }`}
@@ -2347,13 +2350,13 @@ export function SessionPage() {
             onClick={() => setPageSettingsOpen(true)}
             className="h-8 w-8 rounded-full border-pebble-border/30 bg-pebble-overlay/[0.08] p-0 text-pebble-text-primary hover:border-pebble-border/45 hover:bg-pebble-overlay/[0.16]"
           >
-            <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
+            <Settings2 className="h-[18px] w-[18px]" aria-hidden="true" />
           </Button>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label={t('a11y.openUnits')}
-            className="rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-1.5 text-sm text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
+            className="rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3.5 py-2 text-sm font-medium text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
           >
             ☰ {t('topBar.units')}
           </button>
@@ -2374,7 +2377,7 @@ export function SessionPage() {
             disabled={reportLoading}
             aria-label="Export recovery report"
             title="Export Recovery Report"
-            className="flex items-center gap-1.5 rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3 py-1.5 text-[13px] text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16] disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-2xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-3.5 py-2 text-[13px] font-medium text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16] disabled:opacity-50"
             onClick={async () => {
               setReportLoading(true)
               setReportToast(null)
@@ -2439,7 +2442,7 @@ export function SessionPage() {
             disabled={shareLoading}
             aria-label="Share session snapshot"
             title="Share Session Snapshot"
-            className="flex items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/[0.08] px-3 py-1.5 text-[13px] text-pebble-text-primary transition hover:bg-violet-500/[0.16] disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-2xl border border-violet-500/30 bg-violet-500/[0.08] px-3.5 py-2 text-[13px] font-medium text-pebble-text-primary transition hover:bg-violet-500/[0.16] disabled:opacity-50"
             onClick={async () => {
               setShareLoading(true)
               setShareToast(null)
@@ -2503,8 +2506,8 @@ export function SessionPage() {
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-hidden p-2.5">
-        <div className="grid h-full min-h-0 overflow-hidden grid-cols-[clamp(380px,24vw,420px)_minmax(0,1fr)_clamp(360px,24vw,400px)] gap-2.5">
+      <main className="flex-1 min-h-0 overflow-hidden px-3 pb-3 pt-3">
+        <div className="grid h-full min-h-0 grid-cols-[clamp(360px,22vw,410px)_minmax(0,1.16fr)_clamp(352px,23vw,398px)] gap-3">
           <ProblemStatementPanel
             unitId={currentUnit.id}
             title={activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
@@ -2529,21 +2532,21 @@ export function SessionPage() {
           />
 
           <div
-            className="grid min-h-0 min-w-0 gap-2.5 overflow-hidden"
+            className="grid h-full min-h-0 min-w-0 gap-3 overflow-hidden"
             style={{
-              gridTemplateRows: 'minmax(0,1fr) clamp(240px,30vh,340px)',
+              gridTemplateRows: 'minmax(360px,44vh) minmax(260px,1fr)',
             }}
           >
-            <section className="session-panel flex min-h-0 flex-col overflow-hidden">
-              <div className="flex items-center justify-between gap-3 border-b border-pebble-border/25 px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-[0.08em] text-pebble-text-muted">{t('editor.code')}</p>
-                  <p className="truncate text-sm font-medium text-pebble-text-primary">
+            <section className="session-surface-strong flex min-h-0 flex-col overflow-hidden rounded-[28px]">
+              <div className="flex items-center justify-between gap-3 border-b border-pebble-border/20 px-4 py-3">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-pebble-text-muted">{t('editor.code')}</p>
+                  <p className="truncate text-base font-semibold text-pebble-text-primary">
                     {activeProblem?.title ?? currentUnitCopy?.title ?? currentUnit.title}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <ProgramLangDropdown
                     value={sessionLanguage}
                     options={dropdownLanguageOptions}
@@ -2559,7 +2562,7 @@ export function SessionPage() {
                     size="sm"
                     title={t('editor.resetCode')}
                     onClick={handleResetCode}
-                    className="h-9 w-9 rounded-xl border-pebble-border/35 bg-pebble-overlay/[0.09] p-0 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16]"
+                    className="h-10 w-10 rounded-2xl border-pebble-border/35 bg-pebble-overlay/[0.08] p-0 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16]"
                   >
                     <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   </Button>
@@ -2570,7 +2573,7 @@ export function SessionPage() {
                     title={t('topBar.sessionSettings')}
                     aria-label={t('a11y.openSessionSettings')}
                     onClick={() => setSessionSettingsOpen(true)}
-                    className="h-9 w-9 rounded-xl border-pebble-border/35 bg-pebble-overlay/[0.09] p-0 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16]"
+                    className="h-10 w-10 rounded-2xl border-pebble-border/35 bg-pebble-overlay/[0.08] p-0 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16]"
                   >
                     <Settings2 className="h-4 w-4" aria-hidden="true" />
                   </Button>
@@ -2579,7 +2582,7 @@ export function SessionPage() {
                     size="sm"
                     onClick={() => void runAllTests('run')}
                     disabled={isRunningAll}
-                    className="gap-2"
+                    className="h-10 rounded-2xl gap-2 px-4 text-sm font-semibold"
                   >
                     <Play className="h-3.5 w-3.5" aria-hidden="true" />
                     {isRunningAll && activeAction === 'run' ? t('actions.running') : t('actions.run')}
@@ -2590,7 +2593,7 @@ export function SessionPage() {
                     size="sm"
                     onClick={() => void runAllTests('submit')}
                     disabled={isRunningAll}
-                    className={submitAccepted ? '!border-pebble-success/45 !bg-pebble-success/18 !text-pebble-success' : ''}
+                    className={`h-10 rounded-2xl px-4 text-sm font-medium ${submitAccepted ? '!border-pebble-success/45 !bg-pebble-success/18 !text-pebble-success' : ''}`}
                   >
                     {isRunningAll && activeAction === 'submit'
                       ? t('actions.submitting')
@@ -2601,7 +2604,23 @@ export function SessionPage() {
                 </div>
               </div>
 
-              <div dir="ltr" className="ltrSafe min-h-0 flex-1 overflow-hidden">
+              <div className="border-b border-pebble-border/12 px-4 py-2">
+                <div className="session-inset flex items-center justify-between gap-3 rounded-2xl px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-pebble-text-muted">Workspace</p>
+                    <p className="truncate text-xs text-pebble-text-secondary">
+                      Runtime-aware editor with grounded mentor guidance and judged testcases.
+                    </p>
+                  </div>
+                  <div className="hidden items-center gap-2 lg:flex">
+                    <span className="session-chip rounded-full px-2.5 py-1 text-[11px] font-medium">Editor focus</span>
+                    <span className="session-chip rounded-full px-2.5 py-1 text-[11px] font-medium">{currentModeDescriptor.mode === 'function' ? 'Function mode' : 'Stdio mode'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div dir="ltr" className="ltrSafe min-h-0 flex-1 overflow-hidden px-4 pb-3 pt-2.5">
+                <div className="session-inset h-full overflow-hidden rounded-[24px]">
                 <Editor
                   height="100%"
                   language={getMonacoLanguageForSession(sessionLanguage)}
@@ -2629,14 +2648,16 @@ export function SessionPage() {
                     },
                   }}
                 />
+                </div>
               </div>
 
-
-
-              <div className="flex items-center justify-between gap-2 border-t border-pebble-border/25 px-3 py-2 text-xs text-pebble-text-secondary">
-                <p className="truncate">{runMessage}</p>
+              <div className="flex items-center justify-between gap-3 border-t border-pebble-border/20 px-4 py-3 text-xs text-pebble-text-secondary">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-pebble-text-muted">Session status</p>
+                  <p className="truncate text-sm text-pebble-text-secondary">{runMessage}</p>
+                </div>
                 {currentIsCompleted ? (
-                  <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-2 py-0.5 text-xs text-pebble-success">
+                  <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-3 py-1 text-xs font-semibold text-pebble-success">
                     {t('editor.completed')}
                   </span>
                 ) : null}
@@ -2650,7 +2671,7 @@ export function SessionPage() {
               resultsByIndex={testResultsByIndex}
               summaryLabel={summaryLabel}
               sqlPreview={sqlPreviewTable}
-              className="min-h-0 min-w-0"
+              className="h-full min-h-0 min-w-0 overflow-hidden"
             />
           </div>
 

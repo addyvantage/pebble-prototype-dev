@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Card } from '../ui/Card'
 import { useI18n } from '../../i18n/useI18n'
-import { Check, Sparkles, Flame, X, RefreshCw } from 'lucide-react'
+import { Check, Sparkles, Flame, X, RefreshCw, Target } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { loadDailyPlan, toggleTaskDone, computeStreak, computeEffortScore, type PlanState } from '../../lib/planStore'
 import { generatePlan, type PlannerContext } from '../../api/plan'
@@ -14,6 +14,38 @@ import { useTheme } from '../../hooks/useTheme'
 
 function classNames(...values: Array<string | undefined>) {
     return values.filter(Boolean).join(' ')
+}
+
+function buildExpectedOutcome(params: {
+    tasks: Array<{ label: string; detail: string; estimatedMinutes: number }>
+    streak: number
+    effortScore: number
+}) {
+    const { tasks, streak, effortScore } = params
+    const labels = tasks.map((task) => `${task.label} ${task.detail}`.toLowerCase()).join(' ')
+    const totalMinutes = tasks.reduce((sum, task) => sum + task.estimatedMinutes, 0)
+
+    const mentionsReview = /review|mistake|incorrect|rerun|recovery/.test(labels)
+    const mentionsWarmup = /warm|win|start|fresh|first/.test(labels)
+    const mentionsDrill = /drill|specific|syntax|api|focus|practice/.test(labels)
+
+    if (streak === 0 && mentionsWarmup) {
+        return 'Today should leave you back in rhythm with one clean win and a clearer next step.'
+    }
+
+    if (mentionsReview && mentionsWarmup) {
+        return 'By the end of this session, you should have one clean win, one reviewed mistake, and better recovery flow.'
+    }
+
+    if (mentionsDrill && effortScore >= 100) {
+        return 'You should finish today with focused reps completed and less friction on the exact patterns you are reinforcing.'
+    }
+
+    if (totalMinutes <= 20) {
+        return 'This session should help you leave with momentum restored, not mentally drained.'
+    }
+
+    return 'You should finish today with steady momentum, one completed focus loop, and stronger confidence for the next session.'
 }
 
 export function TodayPlanCard() {
@@ -152,33 +184,72 @@ export function TodayPlanCard() {
     const expandedTask = plan?.tasks.find(t => t.id === expandedTaskId)
     const portalHost = document.getElementById('pebble-portal') ?? document.body
     const planSurfaceClass = theme === 'dark'
-        ? 'bg-pebble-overlay/[0.04]'
-        : 'bg-[rgba(231,237,249,0.94)] border-pebble-border/28 shadow-[0_14px_34px_rgba(55,72,110,0.14)]'
+        ? 'landing-primary-card border-pebble-accent/20'
+        : 'landing-primary-card border-pebble-accent/18'
     const taskRowClass = theme === 'dark'
-        ? 'border border-pebble-border/22 bg-pebble-canvas/48 hover:bg-pebble-canvas/64'
-        : 'border border-pebble-border/26 bg-[rgba(221,229,244,0.78)] hover:bg-[rgba(214,223,241,0.92)]'
+        ? 'border border-pebble-border/18 bg-pebble-canvas/38 hover:bg-pebble-canvas/50'
+        : 'border border-pebble-border/22 bg-[rgba(240,245,253,0.92)] hover:bg-[rgba(233,240,251,1)]'
+    const insetPanelClass = theme === 'dark'
+        ? 'border border-pebble-border/16 bg-pebble-overlay/[0.04]'
+        : 'border border-pebble-border/18 bg-white/58'
+    const darkMetaChipClass = theme === 'dark'
+        ? 'pebble-chip text-[hsl(220_16%_84%)]'
+        : 'pebble-chip text-pebble-text-muted'
+    const darkSubtitleClass = theme === 'dark'
+        ? 'text-[hsl(220_14%_80%)]'
+        : 'text-pebble-text-secondary'
+    const darkLabelClass = theme === 'dark'
+        ? 'text-[hsl(220_12%_76%)]'
+        : 'text-pebble-text-muted'
+    const streakChipClass = theme === 'dark'
+        ? 'border-orange-300/38 bg-orange-400/16 text-[hsl(33_100%_76%)]'
+        : 'border-orange-500/20 bg-orange-500/10 text-orange-500'
+    const effortChipClass = theme === 'dark'
+        ? 'border-pebble-accent/34 bg-pebble-accent/16 text-[hsl(214_100%_76%)]'
+        : 'border-pebble-accent/20 bg-pebble-accent/10 text-pebble-accent'
+    const outcomeLabelClass = theme === 'dark'
+        ? 'text-[hsl(220_12%_76%)]'
+        : 'text-pebble-text-muted'
+    const outcomeBodyClass = theme === 'dark'
+        ? 'text-[hsl(220_18%_88%)]'
+        : 'text-[hsl(223_28%_24%)]'
+    const expectedOutcome = plan
+        ? buildExpectedOutcome({
+            tasks: plan.tasks.slice(0, 3),
+            streak,
+            effortScore: currentEffort,
+        })
+        : null
 
     return (
         <>
-            <Card className={`flex flex-col p-4 lg:p-5 rounded-[24px] ${planSurfaceClass}`}>
-                <div className="mb-4 flex items-start justify-between gap-3">
+            <Card className={`flex flex-col rounded-[24px] p-5 lg:p-6 ${planSurfaceClass}`}>
+                <div className="mb-5 flex items-start justify-between gap-3">
                     <div className="space-y-0.5">
-                        <h2 className={`text-[14px] font-semibold text-pebble-text-primary tracking-tight ${isRTL ? 'rtlText' : ''}`}>
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <span className="pebble-chip-strong rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-pebble-accent">
+                                Daily loop
+                            </span>
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] ${darkMetaChipClass}`}>
+                                25 min focus
+                            </span>
+                        </div>
+                        <h2 className={`text-[15px] font-semibold text-pebble-text-primary tracking-tight ${isRTL ? 'rtlText' : ''}`}>
                             {plan ? plan.title : t('home.todayPlan.title')}
                         </h2>
-                        <p className={`text-[12.5px] text-pebble-text-secondary ${isRTL ? 'rtlText' : ''}`}>
+                        <p className={`max-w-[42ch] text-[13px] leading-[1.68] ${darkSubtitleClass} ${isRTL ? 'rtlText' : ''}`}>
                             {plan ? plan.subtitle : t('home.todayPlan.subtitle')}
                         </p>
                     </div>
                     {plan && (
                         <div className="flex items-center gap-2">
                             {streak > 0 && (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-500">
+                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium shadow-[0_8px_18px_rgba(55,72,110,0.08)] ${streakChipClass}`}>
                                     <Flame className="h-3 w-3" />
                                     {t('home.plan.streak', { count: String(streak) })}
                                 </span>
                             )}
-                            <span className="inline-flex items-center rounded-full border border-pebble-accent/20 bg-pebble-accent/10 px-2 py-0.5 text-xs font-medium text-pebble-accent">
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium shadow-[0_8px_18px_rgba(55,72,110,0.08)] ${effortChipClass}`}>
                                 {t('home.plan.effortScore', { score: `${currentEffort}/${plan.scoring.targetEffortScore}` })}
                             </span>
                         </div>
@@ -186,26 +257,58 @@ export function TodayPlanCard() {
                 </div>
 
                 {!plan ? (
-                    <div className="flex flex-col items-center justify-center rounded-[14px] border border-dashed border-pebble-border/30 bg-pebble-overlay/[0.02] py-5 px-4 text-center">
+                    <div className={`rounded-[18px] border border-dashed px-4 py-6 ${insetPanelClass}`}>
+                        <div className="mx-auto max-w-[36rem] text-center">
+                            <p className={`text-[13px] font-medium text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
+                                Generate a focused set of small wins from your recent momentum.
+                            </p>
+                            <p className={`mt-2 text-[12.5px] leading-[1.7] text-pebble-text-secondary ${isRTL ? 'rtlText' : ''}`}>
+                                Pebble will shape one warm-up, one recovery task, and one review step so the session starts with clear intent.
+                            </p>
+                        </div>
                         <button
                             onClick={handleGenerate}
                             disabled={isGenerating}
-                            className={classNames(buttonClass('primary'), "w-full sm:w-auto px-6 py-2.5", isGenerating ? "opacity-50 cursor-not-allowed" : undefined)}
+                            className={classNames(buttonClass('primary'), "mt-4 w-full sm:mx-auto sm:w-auto px-6 py-2.5", isGenerating ? "opacity-50 cursor-not-allowed" : undefined)}
                         >
                             <Sparkles className="mr-2 h-4 w-4" />
                             {isGenerating ? t('home.plan.generating') : t('home.plan.generate')}
                         </button>
-                        <p className={`mt-4 text-[13px] text-pebble-text-muted ${isRTL ? 'rtlText' : ''}`}>
-                            Get a personalized plan based on your recent activity
-                        </p>
+                        <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
+                            {[t('home.todayPlan.item1'), t('home.todayPlan.item2'), t('home.todayPlan.item3')].map((item) => (
+                                <div key={item} className={`rounded-[14px] px-3 py-3 text-left ${insetPanelClass}`}>
+                                    <p className={`text-[12px] font-medium leading-[1.5] text-pebble-text-secondary ${isRTL ? 'rtlText' : ''}`}>
+                                        {item}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <ul className="flex flex-col gap-2">
+                        <div className={`flex items-center justify-between rounded-[14px] px-3 py-2.5 ${insetPanelClass}`}>
+                            <div className="min-w-0">
+                                <p className={`text-[11px] uppercase tracking-[0.08em] ${darkLabelClass} ${isRTL ? 'rtlText' : ''}`}>
+                                    Session pacing
+                                </p>
+                                <p className={`text-[12.5px] ${darkSubtitleClass} ${isRTL ? 'rtlText' : ''}`}>
+                                    Three deliberate tasks tuned for consistency over thrash.
+                                </p>
+                            </div>
+                            <div className="ml-3 hidden min-w-[110px] sm:block">
+                                <div className="h-2 overflow-hidden rounded-full border border-pebble-border/24 bg-pebble-overlay/[0.06]">
+                                    <div
+                                        className="h-full rounded-full bg-pebble-accent/70"
+                                        style={{ width: `${Math.max(10, (state.completedTasks.length / Math.max(plan.tasks.slice(0, 3).length, 1)) * 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <ul className="flex flex-col gap-2.5">
                             {plan.tasks.slice(0, 3).map((task) => {
                                 const checked = state.completedTasks.includes(task.id)
                                 return (
-                                    <li key={task.id} className={`relative flex items-center justify-between rounded-[12px] px-4 py-2.5 transition-colors ${taskRowClass}`}>
+                                    <li key={task.id} className={`relative flex items-center justify-between rounded-[12px] px-4 py-3 transition-colors ${taskRowClass}`}>
 
                                         <div className="flex min-w-0 items-center gap-3">
                                             <button
@@ -255,7 +358,7 @@ export function TodayPlanCard() {
                                 )
                             })}
                         </ul>
-                        <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center justify-between px-1 pt-1">
                             <button
                                 onClick={handleGenerate}
                                 disabled={isGenerating}
@@ -265,6 +368,23 @@ export function TodayPlanCard() {
                                 {isGenerating ? t('home.plan.generating') : t('home.plan.regenerate')}
                             </button>
                         </div>
+                        {expectedOutcome ? (
+                            <div className="px-1 pt-2.5">
+                                <div className="flex items-start gap-2">
+                                    <span className="mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pebble-accent/10 text-pebble-accent">
+                                        <Target className="h-3 w-3" aria-hidden="true" />
+                                    </span>
+                                    <div className="min-w-0">
+                                        <p className={`text-[10.5px] font-semibold uppercase tracking-[0.08em] ${outcomeLabelClass} ${isRTL ? 'rtlText' : ''}`}>
+                                            Expected by end of session
+                                        </p>
+                                        <p className={`mt-1 text-[13px] leading-[1.65] ${outcomeBodyClass} ${isRTL ? 'rtlText' : ''}`}>
+                                            {expectedOutcome}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
                 )}
             </Card>

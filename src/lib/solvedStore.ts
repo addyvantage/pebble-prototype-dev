@@ -1,42 +1,52 @@
-type SolvedRecord = {
-    solvedAtISO: string
+import { loadSolvedProblems, saveSolvedProblems, type SolvedProblemsMap } from './solvedProblemsStore'
+
+export type SolvedRecord = {
+  solvedAt: number
+  solvedAtISO: string
+  attempts: number
 }
 
-const SOLVED_KEY = 'pebble.solvedProblems.v1'
-
 export function getSolvedMap(): Record<string, SolvedRecord> {
-    try {
-        const raw = localStorage.getItem(SOLVED_KEY)
-        if (raw) {
-            return JSON.parse(raw) as Record<string, SolvedRecord>
-        }
-    } catch {
-        // Ignore parse errors, return empty map
+  const solved = loadSolvedProblems()
+  const normalized: Record<string, SolvedRecord> = {}
+  for (const [problemId, entry] of Object.entries(solved)) {
+    const solvedAt = entry?.solvedAt ?? 0
+    if (solvedAt <= 0) {
+      continue
     }
-    return {}
+    normalized[problemId] = {
+      solvedAt,
+      solvedAtISO: new Date(solvedAt).toISOString(),
+      attempts: Math.max(1, entry?.attempts ?? 0),
+    }
+  }
+  return normalized
 }
 
 export function isProblemSolved(problemId: string): boolean {
-    if (!problemId) return false
-    const map = getSolvedMap()
-    return Boolean(map[problemId])
+  if (!problemId) return false
+  return (loadSolvedProblems()[problemId]?.solvedAt ?? 0) > 0
 }
 
 export function markProblemSolved(problemId: string): void {
-    if (!problemId) return
-    const map = getSolvedMap()
-    if (!map[problemId]) {
-        map[problemId] = {
-            solvedAtISO: new Date().toISOString(),
-        }
-        try {
-            localStorage.setItem(SOLVED_KEY, JSON.stringify(map))
-        } catch {
-            // Ignore storage errors on quota hit
-        }
-    }
+  if (!problemId) return
+  const current = loadSolvedProblems()
+  const existing = current[problemId]
+  if ((existing?.solvedAt ?? 0) > 0) {
+    return
+  }
+
+  const solvedAt = Date.now()
+  const next: SolvedProblemsMap = {
+    ...current,
+    [problemId]: {
+      solvedAt,
+      attempts: Math.max(1, existing?.attempts ?? 0),
+    },
+  }
+  saveSolvedProblems(next)
 }
 
 export function clearSolvedMap(): void {
-    localStorage.removeItem(SOLVED_KEY)
+  saveSolvedProblems({})
 }

@@ -1,11 +1,7 @@
 import { Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
-import { StatusPill } from '../components/ui/StatusPill'
-import { Component as EtheralShadow } from '../components/ui/etheral-shadow'
 import { buttonClass } from '../components/ui/buttonStyles'
-import { InteractiveGradientButton } from '../components/ui/interactive-gradient-button'
 import { useI18n } from '../i18n/useI18n'
 import { useTheme } from '../hooks/useTheme'
 import { getRecentActivity } from '../lib/recentStore'
@@ -16,6 +12,7 @@ import { RecommendedNextCard } from '../components/home/RecommendedNextCard'
 import { FeatureGrid } from '../components/home/FeatureGrid'
 import { SiteFooter } from '../components/layout/SiteFooter'
 import { FooterSeparator } from '../components/home/FooterSeparator'
+import { PebbleHero } from '../components/landing/PebbleHero'
 
 function classNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(' ')
@@ -26,176 +23,127 @@ export function LandingPage() {
   const { theme } = useTheme()
   const isUrdu = lang === 'ur'
 
-  const etherealColor = theme === 'dark'
-    ? 'rgba(120, 170, 255, 0.22)'
-    : 'rgba(59, 130, 246, 0.30)'
-  const previewInnerOutlineClass = theme === 'dark'
-    ? 'border-[rgba(255,255,255,0.12)]'
-    : 'border-[rgba(129,144,174,0.56)]'
-  const previewOuterCardClass = theme === 'dark'
-    ? 'border-[rgba(193,209,236,0.38)] bg-[linear-gradient(155deg,rgba(34,45,71,0.97)_0%,rgba(24,33,56,0.985)_56%,rgba(17,25,44,0.99)_100%)] shadow-[0_28px_68px_rgba(1,6,18,0.58),inset_0_1px_0_rgba(228,238,255,0.08)]'
-    : 'border-[rgba(144,164,200,0.66)] bg-[linear-gradient(152deg,rgba(236,243,255,0.985)_0%,rgba(228,238,252,0.992)_58%,rgba(219,231,248,0.995)_100%)] shadow-[0_24px_56px_rgba(66,90,134,0.22),inset_0_1px_0_rgba(255,255,255,0.92)]'
-  const previewCodePanelClass = theme === 'dark'
-    ? 'bg-[hsl(222_28%_20%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
-    : 'bg-[linear-gradient(160deg,rgba(223,233,248,0.95)_0%,rgba(213,226,245,0.98)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]'
-  const previewCoachPanelClass = theme === 'dark'
-    ? 'bg-[hsl(222_27%_21%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
-    : 'bg-[linear-gradient(165deg,rgba(227,236,250,0.92)_0%,rgba(218,230,247,0.96)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.84)]'
-  const sideCardSurfaceClass = theme === 'dark'
-    ? 'bg-pebble-overlay/[0.04]'
-    : 'bg-[rgba(231,237,249,0.94)] border-pebble-border/28 shadow-[0_14px_34px_rgba(55,72,110,0.14)]'
+  const continueSurfaceClass = theme === 'dark'
+    ? 'landing-secondary-card border-pebble-border/24'
+    : 'landing-secondary-card border-pebble-border/26'
+  const recommendedSurfaceClass = theme === 'dark'
+    ? 'landing-primary-card border-pebble-accent/22'
+    : 'landing-primary-card border-pebble-accent/22'
 
   const recent = getRecentActivity()
   const recentProblem = recent ? getProblemById(recent.problemId) : null
   const localizedRecent = recentProblem ? getLocalizedProblem(recentProblem, lang) : null
+  const recentTimeAgo = recent
+    ? (() => {
+        const diffMinutes = Math.max(1, Math.round((Date.now() - recent.timestamp) / 60000))
+        if (diffMinutes < 60) return `${diffMinutes}m ago`
+        const diffHours = Math.round(diffMinutes / 60)
+        if (diffHours < 24) return `${diffHours}h ago`
+        return `${Math.round(diffHours / 24)}d ago`
+      })()
+    : null
 
   const trustChips = [t('landing.trust1'), t('landing.trust2'), t('landing.trust3')]
-  const ctaBaseClass = 'inline-flex h-[44px] items-center justify-center gap-2 rounded-full px-6 text-[15px] font-medium tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out'
-  const openSessionCtaClass = `${ctaBaseClass} font-semibold border border-[#B9C8E8] bg-[#F5F8FF] text-[#1B2A4A] shadow-[0_1px_0_rgba(255,255,255,0.92)_inset,0_10px_24px_rgba(15,23,42,0.08)] hover:-translate-y-[1px] hover:bg-[#F9FBFF] hover:border-[#9FB6E6] hover:text-[#13223F] hover:shadow-[0_1px_0_rgba(255,255,255,0.96)_inset,0_12px_26px_rgba(15,23,42,0.10)] dark:bg-[#0B1220] dark:border-[#2E4A7A] dark:text-[#EAF0FF] dark:shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_10px_28px_rgba(0,0,0,0.45)] dark:hover:-translate-y-[1px] dark:hover:bg-[#0F182B] dark:hover:border-[#4167A4] dark:hover:text-[#F3F7FF] dark:hover:shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_12px_30px_rgba(0,0,0,0.52)] transition-[background-color,border-color,box-shadow,color,transform] duration-150 ease-out focus-visible:ring-[#4F8BFF]/45 dark:focus-visible:ring-[#8DB6FF]/55 focus-visible:ring-offset-[#F5F8FF] dark:focus-visible:ring-offset-[#0B1220]`
+  const tryPebbleCtaClass = 'inline-flex min-w-[184px] h-[52px] items-center justify-center gap-2 rounded-full px-8 text-[18px] font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out'
+  const openSessionCtaClass = 'inline-flex h-[44px] items-center justify-center gap-2 rounded-full px-6 text-[15px] font-semibold tracking-tight border border-[#B9C8E8] bg-[#F5F8FF] text-[#1B2A4A] shadow-[0_1px_0_rgba(255,255,255,0.92)_inset,0_10px_24px_rgba(15,23,42,0.08)] hover:-translate-y-[1px] hover:bg-[#F9FBFF] hover:border-[#9FB6E6] hover:text-[#13223F] hover:shadow-[0_1px_0_rgba(255,255,255,0.96)_inset,0_12px_26px_rgba(15,23,42,0.10)] dark:bg-[#0B1220] dark:border-[#2E4A7A] dark:text-[#EAF0FF] dark:shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_10px_28px_rgba(0,0,0,0.45)] dark:hover:-translate-y-[1px] dark:hover:bg-[#0F182B] dark:hover:border-[#4167A4] dark:hover:text-[#F3F7FF] dark:hover:shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_12px_30px_rgba(0,0,0,0.52)] transition-[background-color,border-color,box-shadow,color,transform] duration-150 ease-out focus-visible:ring-[#4F8BFF]/45 dark:focus-visible:ring-[#8DB6FF]/55 focus-visible:ring-offset-[#F5F8FF] dark:focus-visible:ring-offset-[#0B1220]'
 
   return (
     <section className="page-enter min-h-0">
-      <div className="flex min-h-0 flex-col gap-4">
-        <Card className="relative w-full overflow-hidden rounded-none px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 xl:px-8 xl:py-7" interactive>
-          <div className="pointer-events-none absolute inset-0 z-0">
-            <EtheralShadow
-              className="absolute inset-0"
-              color={etherealColor}
-              animation={{ scale: 62, speed: 78 }}
-              noise={theme === 'dark'
-                ? { opacity: 0.28, scale: 1.35 }
-                : { opacity: 0.10, scale: 1.15 }}
-              sizing="fill"
-              showTitle={false}
-            />
-          </div>
+      <div className="flex min-h-0 flex-col gap-6 lg:gap-7">
+        <PebbleHero
+          theme={theme}
+          isUrdu={isUrdu}
+          badgeText={t('landing.badge')}
+          headline={lang === 'en'
+            ? 'Elite coding practice with real runtime feedback\nand mentor-level guidance.'
+            : t('landing.headline')}
+          subheadline={t('landing.subheadline')}
+          tryPebbleLabel={t('landing.tryPebble')}
+          openSessionLabel={t('landing.openSession')}
+          trustChips={trustChips}
+          previewLabel={t('landing.previewLabel')}
+          previewUsingRun={t('landing.previewUsingRun')}
+          previewUnit={t('landing.previewUnit')}
+          previewTests={t('landing.previewTests')}
+          previewFail={t('landing.previewFail')}
+          previewCoach={t('landing.previewCoach')}
+          previewCoachHint={t('landing.previewCoachHint')}
+          tryPebbleCtaClass={tryPebbleCtaClass}
+          openSessionCtaClass={openSessionCtaClass}
+        />
 
-          <div className="relative z-10 mx-auto w-full max-w-[1280px] px-1 sm:px-2 lg:px-2">
-            <div className="grid h-full min-h-0 grid-cols-1 gap-y-7 lg:grid-cols-12 lg:gap-x-9 lg:gap-y-0 xl:gap-x-12">
-              <div className="col-span-1 flex min-h-0 min-w-0 flex-col items-start justify-start gap-4 sm:gap-5 lg:-ml-3 lg:col-span-8 lg:justify-center lg:pr-2 xl:-ml-4 xl:col-span-8 xl:pr-3">
-                <Badge className="w-fit">{t('landing.badge')}</Badge>
-
-                <div className="max-w-[52rem]">
-                  <h1
-                    className={`max-w-[31ch] text-balance text-3xl font-semibold tracking-tight leading-[1.12] md:text-[2.35rem] lg:text-[2.5rem] xl:text-[2.74rem] ${isUrdu ? 'rtlText' : ''}`}
-                  >
-                    <span className={`font-bold ${theme === 'dark' ? 'text-pebble-text-primary' : 'text-pebble-accent'}`}>
-                      {lang === 'en' ? (
-                        'Elite coding practice with real runtime feedback and mentor-level guidance.'
-                      ) : (
-                        t('landing.headline')
-                      )}
-                    </span>
-                  </h1>
-                </div>
-                <p className={`max-w-[66ch] text-[13.5px] leading-relaxed text-pebble-text-secondary sm:text-[14.5px] ${isUrdu ? 'rtlText' : ''}`}>
-                  {t('landing.subheadline')}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <InteractiveGradientButton asChild className={ctaBaseClass}>
-                    <Link to="/onboarding">
-                      {t('landing.tryPebble')}
-                    </Link>
-                  </InteractiveGradientButton>
-                  <Link to="/session/1" className={openSessionCtaClass}>
-                    {t('landing.openSession')}
-                  </Link>
-                </div>
-
-                <div className="flex flex-wrap justify-start gap-2.5 pt-1.5">
-                  {trustChips.map((chip) => (
-                    <span
-                      key={chip}
-                      className="rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2.5 py-0.5 text-[11.5px] font-medium text-pebble-text-secondary"
-                    >
-                      {chip}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="col-span-1 flex min-h-0 min-w-0 items-center lg:col-span-4 lg:justify-end lg:translate-x-12 xl:col-span-4 xl:translate-x-14">
-                <div className={`w-full max-w-[620px] rounded-[14px] border p-2.5 lg:p-3 ${previewOuterCardClass}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className={`text-[13px] font-semibold uppercase tracking-[0.08em] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-                      {t('landing.previewLabel')}
-                    </p>
-                    <span className="rounded-full border border-pebble-border/48 bg-pebble-overlay/[0.14] px-2 py-0.5 text-[10.5px] uppercase tracking-[0.06em] text-pebble-text-primary">
-                      {t('landing.previewUsingRun')}
-                    </span>
-                  </div>
-
-                  <div className="mt-1.5 space-y-1.5">
-                    <div className={`rounded-[10px] border ${previewInnerOutlineClass} p-2.5 ${previewCodePanelClass}`}>
-                      <div className="mb-1.5 flex items-center justify-between text-[13px] text-pebble-text-primary">
-                        <span>{t('landing.previewUnit')}</span>
-                        <span>{t('landing.previewTests')}</span>
-                      </div>
-                      <pre dir="ltr" className={`ltrSafe overflow-hidden rounded-[6px] border ${previewInnerOutlineClass} bg-[hsl(222_22%_26%)] p-1.5 font-mono text-[13px] leading-snug text-[hsl(220_20%_92%)]`}>
-                        <code>
-                          <span className="block">def two_sum(nums, target):</span>
-                          <span className="block">    seen = &#123;&#125;</span>
-                          <span className="block dark:text-[hsl(220_12%_65%)] text-pebble-text-muted">    # TODO</span>
-                          <span className="block">    return -1, -1</span>
-                        </code>
-                      </pre>
-                      <StatusPill variant="fail" showIcon className="mt-1.5 max-w-full whitespace-normal break-words leading-tight">
-                        {t('landing.previewFail')}
-                      </StatusPill>
-                    </div>
-
-                    <div className={`rounded-[10px] border ${previewInnerOutlineClass} p-2.5 ${previewCoachPanelClass}`}>
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-pebble-accent/28 text-[11px] font-semibold text-pebble-text-primary">
-                          P
-                        </span>
-                        <p className={`text-[13px] font-semibold text-pebble-text-primary dark:text-[hsl(220_20%_94%)] ${isUrdu ? 'rtlText' : ''}`}>
-                          {t('landing.previewCoach')}
-                        </p>
-                      </div>
-                      <p className={`mt-1 text-[13.5px] leading-[1.6] text-pebble-text-secondary dark:text-[hsl(220_15%_78%)] line-clamp-2 ${isUrdu ? 'rtlText' : ''}`}>
-                        {t('landing.previewCoachHint')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div className="-mt-2 grid grid-cols-1 gap-4 lg:grid-cols-[1.12fr_0.88fr] lg:gap-4">
-          <TodayPlanCard />
-          <div className="flex flex-col gap-4">
-            <Card className={`relative overflow-hidden p-3 flex flex-col justify-center ${sideCardSurfaceClass}`} interactive>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pebble-accent/15 text-pebble-accent shrink-0">
+        <section className="landing-subsection mt-3 rounded-[32px] px-3 py-5 sm:px-4 sm:py-6 lg:px-5 lg:py-7">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pebble-overlay/60 to-transparent" />
+          <div className="pointer-events-none absolute left-[-8%] top-0 h-40 w-40 rounded-full bg-pebble-accent/10 blur-3xl" />
+          <div className="pointer-events-none absolute right-[-6%] bottom-[-10%] h-44 w-44 rounded-full bg-pebble-accent/8 blur-3xl" />
+          <div className="relative grid grid-cols-1 gap-5 lg:grid-cols-[1.08fr_0.92fr] lg:gap-6">
+            <TodayPlanCard />
+            <div className="flex flex-col gap-5">
+            <Card className={`relative flex flex-col overflow-hidden rounded-[24px] p-5 ${continueSurfaceClass}`} interactive>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-pebble-accent/22 bg-pebble-accent/12 text-pebble-accent">
                     <Play className="h-4 w-4" aria-hidden="true" />
                   </div>
                   {localizedRecent ? (
-                    <div className="space-y-0.5 min-w-0">
-                      <p className={`text-[12.5px] font-semibold text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                    <div className="min-w-0 space-y-1.5">
+                      <p className={`text-[12px] font-semibold uppercase tracking-[0.08em] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
                         {t('home.continue.title')}
                       </p>
-                      <p className={`text-[14.5px] font-medium text-pebble-text-primary truncate ${isUrdu ? 'rtlText' : ''}`}>
+                      <p className={`truncate text-[1rem] font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
                         {localizedRecent.title}
+                      </p>
+                      <p className={`text-[12.5px] leading-[1.68] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                        Resume the thread, rerun the last failing case, and close the loop while context is still warm.
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-0.5 min-w-0">
-                      <p className={`text-[12.5px] font-semibold text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                    <div className="min-w-0 space-y-1.5">
+                      <p className={`text-[12px] font-semibold uppercase tracking-[0.08em] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
                         {t('home.continue.title')}
                       </p>
-                      <p className={`text-[14px] text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
+                      <p className={`text-[1rem] font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
                         {t('home.continue.empty.title')}
+                      </p>
+                      <p className={`text-[12.5px] leading-[1.68] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                        Pick a first problem and Pebble will keep your runtime context ready to continue next time.
                       </p>
                     </div>
                   )}
                 </div>
+              </div>
 
-                <div className="flex shrink-0">
+              {localizedRecent ? (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-pebble-accent/24 bg-pebble-accent/10 px-2 py-0.5 text-[10.5px] font-medium text-pebble-accent">
+                    {recentProblem?.difficulty}
+                  </span>
+                  {localizedRecent.topics.slice(0, 1).map((topic) => (
+                    <span key={topic} className="rounded-full border border-pebble-border/24 bg-pebble-overlay/[0.05] px-2 py-0.5 text-[10.5px] font-medium text-pebble-text-secondary">
+                      {topic}
+                    </span>
+                  ))}
+                  {recentTimeAgo ? (
+                    <span className="rounded-full border border-pebble-border/24 bg-pebble-overlay/[0.05] px-2 py-0.5 text-[10.5px] font-medium text-pebble-text-secondary">
+                      {t('home.continue.lastOpened', { timeAgo: recentTimeAgo })}
+                    </span>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  {['Guided warm-up', 'Real runtime checks', 'Coach in context'].map((label) => (
+                    <span key={label} className="rounded-full border border-pebble-border/24 bg-pebble-overlay/[0.05] px-2 py-0.5 text-[10.5px] font-medium text-pebble-text-secondary">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-auto flex items-center justify-between gap-3 rounded-[16px] border border-pebble-border/18 bg-pebble-overlay/[0.04] px-3 py-3">
+                <p className={`text-[12px] leading-[1.6] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                  {localizedRecent ? 'Jump straight back into the same unit and keep your recovery loop short.' : 'Start a first session and Pebble will build your continuation context automatically.'}
+                </p>
+                <div className="shrink-0">
                   {localizedRecent ? (
                     <Link to={`/session?problem=${localizedRecent.id}`} className={classNames(buttonClass('primary'), "px-3 py-1.5 text-[13px]")}>
                       {t('home.continue.resume')}
@@ -208,9 +156,10 @@ export function LandingPage() {
                 </div>
               </div>
             </Card>
-            <RecommendedNextCard className={`flex-1 ${sideCardSurfaceClass}`} />
+            <RecommendedNextCard className={`flex-1 ${recommendedSurfaceClass}`} />
           </div>
-        </div>
+          </div>
+        </section>
 
         <FeatureGrid />
 

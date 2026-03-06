@@ -1,4 +1,4 @@
-import { ChevronDown, Search, Shuffle } from 'lucide-react'
+import { ChevronDown, Search, Shuffle, SlidersHorizontal, Sparkles, Target } from 'lucide-react'
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TopicCloud } from '../components/problems/TopicCloud'
@@ -11,6 +11,7 @@ import { ProblemsTable } from '../components/problems/ProblemsTable'
 import { ProblemPreviewPanel } from '../components/problems/ProblemPreviewPanel'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { useTheme } from '../hooks/useTheme'
 import {
   getDefaultProblemLanguage,
   getProblemTopicIds,
@@ -46,8 +47,10 @@ function getSolvedTimestamp(solvedMap: SolvedProblemsMap, problemId: string) {
 
 export function ProblemsPage() {
   const { t, isRTL, lang } = useI18n()
+  const { theme } = useTheme()
   const navigate = useNavigate()
   const isUrdu = isRTL
+  const isDark = theme === 'dark'
 
   const solvedMap = useSyncExternalStore(subscribeSolvedProblems, loadSolvedProblems, loadSolvedProblems)
 
@@ -253,16 +256,47 @@ export function ProblemsPage() {
     Medium: t('difficulty.medium'),
     Hard: t('difficulty.hard'),
   } as const
+  const eyebrowPillClass = isDark
+    ? 'inline-flex items-center gap-2 rounded-full border border-[rgba(132,168,255,0.28)] bg-[linear-gradient(180deg,rgba(20,31,62,0.88)_0%,rgba(14,24,49,0.92)_100%)] px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[hsl(218_85%_92%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(8,15,35,0.24)] transition-colors duration-150 hover:border-[rgba(144,182,255,0.4)] hover:text-[hsl(220_100%_96%)]'
+    : 'inline-flex items-center gap-2 rounded-full border border-[rgba(88,122,196,0.18)] bg-[linear-gradient(180deg,rgba(250,252,255,0.98)_0%,rgba(240,246,255,0.94)_100%)] px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[hsl(222_34%_34%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_8px_22px_rgba(89,109,148,0.08)] transition-colors duration-150 hover:border-[rgba(88,122,196,0.28)] hover:text-[hsl(222_36%_28%)]'
+  const eyebrowIconClass = isDark ? 'h-3.5 w-3.5 text-[hsl(216_92%_74%)]' : 'h-3.5 w-3.5 text-[hsl(220_82%_56%)]'
 
   return (
-    <section className="page-enter space-y-2 pb-1">
-      <Card padding="sm" interactive className="space-y-0">
-        <h1 className={`text-3xl font-semibold tracking-[-0.02em] text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
-          {t('problems.title')}
-        </h1>
-        <p className={`max-w-4xl text-sm text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-          {t('problems.subtitle')}
-        </p>
+    <section className="page-enter space-y-4 pb-4">
+      <Card padding="sm" interactive className="problems-page-shell overflow-hidden rounded-[32px] px-4 py-5 md:px-6 md:py-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pebble-overlay/72 to-transparent" />
+        <div className="pointer-events-none absolute -right-10 top-0 h-40 w-40 rounded-full bg-pebble-accent/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-[56rem] space-y-2">
+            <div className={`pebble-section-label ${eyebrowPillClass}`}>
+              <Sparkles className={eyebrowIconClass} aria-hidden="true" />
+              Practice intelligence
+            </div>
+            <div className="space-y-1.5">
+              <h1 className={`text-[2rem] font-semibold tracking-[-0.03em] text-pebble-text-primary md:text-[2.35rem] ${isUrdu ? 'rtlText' : ''}`}>
+                {t('problems.title')}
+              </h1>
+              <p className={`max-w-[54rem] text-[14px] leading-[1.75] text-pebble-text-secondary md:text-[15px] ${isUrdu ? 'rtlText' : ''}`}>
+                {t('problems.subtitle')}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 lg:min-w-[440px]">
+            <div className="problems-subsection-shell rounded-[20px] px-3.5 py-3.5">
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Library</p>
+              <p className="mt-1.5 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{localizedProblems.length}</p>
+            </div>
+            <div className="problems-subsection-shell rounded-[20px] px-3.5 py-3.5">
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Solved</p>
+              <p className="mt-1.5 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{solvedCount}</p>
+            </div>
+            <div className="problems-subsection-shell rounded-[20px] px-3.5 py-3.5">
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Filtered</p>
+              <p className="mt-1.5 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{filteredProblems.length}</p>
+            </div>
+          </div>
+        </div>
       </Card>
 
       <TopicCloud
@@ -274,15 +308,33 @@ export function ProblemsPage() {
         isUrdu={isUrdu}
       />
 
-      <Card padding="sm" interactive className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative min-w-[280px] flex-1">
+      <Card padding="sm" interactive className="problems-focus-shell rounded-[30px] px-4 py-4 md:px-5 md:py-5">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-1">
+              <div className={`pebble-section-label ${eyebrowPillClass}`}>
+                <SlidersHorizontal className={eyebrowIconClass} aria-hidden="true" />
+                Command rail
+              </div>
+              <p className={`text-[13.5px] leading-[1.7] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                Search first, then refine by difficulty, language, and topic without losing context.
+              </p>
+            </div>
+            <div className={`pebble-chip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-medium ${isUrdu ? 'rtlText' : ''}`}>
+              <Target className="h-3.5 w-3.5 text-pebble-accent" aria-hidden="true" />
+              {t('problems.solvedCounter', { solved: solvedCount, total: localizedProblems.length })}
+              <span className="ltrSafe text-pebble-text-muted">({filteredSolved}/{filteredProblems.length})</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+          <label className="relative min-w-[320px] flex-[1.35]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble-text-muted" aria-hidden="true" />
             <input
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder={t('problems.searchPlaceholder')}
-              className={`h-10 w-full rounded-xl border border-pebble-border/35 bg-pebble-chip-surface pl-9 pr-3 text-sm text-pebble-text-primary placeholder:text-pebble-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${isUrdu ? 'rtlText text-right' : ''
+              className={`pebble-control h-12 w-full rounded-2xl pl-10 pr-4 text-[14px] placeholder:text-pebble-text-muted ${isUrdu ? 'rtlText text-right' : ''
                 }`}
             />
           </label>
@@ -320,7 +372,7 @@ export function ProblemsPage() {
             }}
           />
 
-          <label className="relative inline-flex h-10 min-w-[170px] items-center">
+          <label className="relative inline-flex h-12 min-w-[170px] items-center">
             <select
               value={filters.difficulty}
               onChange={(event) =>
@@ -329,7 +381,7 @@ export function ProblemsPage() {
                   difficulty: event.target.value as ProblemsFilterState['difficulty'],
                 }))
               }
-              className="h-full w-full appearance-none rounded-xl border border-pebble-border/35 bg-pebble-chip-surface pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+              className="h-full w-full appearance-none rounded-2xl border border-pebble-border/28 bg-pebble-chip-surface/82 pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
               aria-label={t('problems.filters.difficulty')}
             >
               <option value="any">{t('problems.filters.anyDifficulty')}</option>
@@ -342,11 +394,11 @@ export function ProblemsPage() {
             </span>
           </label>
 
-          <label className="relative inline-flex h-10 min-w-[170px] items-center">
+          <label className="relative inline-flex h-12 min-w-[170px] items-center">
             <select
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
-              className="h-full w-full appearance-none rounded-xl border border-pebble-border/35 bg-pebble-chip-surface pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+              className="h-full w-full appearance-none rounded-2xl border border-pebble-border/28 bg-pebble-chip-surface/82 pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
               aria-label={t('problems.sort.label')}
             >
               <option value="newest">{t('problems.sort.newest')}</option>
@@ -361,21 +413,33 @@ export function ProblemsPage() {
           </label>
 
           <div className="ml-auto flex items-center gap-2">
-            <span className={`rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] px-3 py-2 text-sm text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-              {t('problems.solvedCounter', { solved: solvedCount, total: localizedProblems.length })}
-              <span className="ltrSafe text-pebble-text-muted"> ({filteredSolved}/{filteredProblems.length})</span>
-            </span>
             <Button
               type="button"
               variant="secondary"
               onClick={pickRandomProblem}
               disabled={filteredProblems.length === 0}
-              className="gap-1.5"
+              className="h-12 rounded-2xl gap-1.5 border-pebble-accent/22 bg-pebble-accent/10 text-pebble-text-primary hover:bg-pebble-accent/14"
             >
               <Shuffle className="h-3.5 w-3.5" aria-hidden="true" />
               {t('problems.random')}
             </Button>
           </div>
+        </div>
+        </div>
+
+      </Card>
+
+      <Card padding="sm" interactive className="problems-page-shell rounded-[32px] px-4 py-4 md:px-5 md:py-5">
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">Results</p>
+            <h2 className={`mt-1 text-[1.1rem] font-semibold tracking-tight text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
+              Curated problem list
+            </h2>
+          </div>
+          <p className={`max-w-[42rem] text-[13.5px] leading-[1.7] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+            Scan titles first, then difficulty and acceptance. Open any row for a deeper preview before starting.
+          </p>
         </div>
 
         <ProblemsTable

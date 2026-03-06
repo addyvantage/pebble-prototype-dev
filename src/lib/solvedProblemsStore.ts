@@ -46,7 +46,12 @@ function readSolvedProblemsFromStorage(): SolvedProblemsMap {
     if (!isRecord(value)) {
       continue
     }
-    const solvedAt = typeof value.solvedAt === 'number' ? value.solvedAt : 0
+    const legacySolvedAtISO = typeof value.solvedAtISO === 'string' ? Date.parse(value.solvedAtISO) : NaN
+    const solvedAt = typeof value.solvedAt === 'number'
+      ? value.solvedAt
+      : Number.isFinite(legacySolvedAtISO)
+        ? legacySolvedAtISO
+        : 0
     const attempts = typeof value.attempts === 'number' ? value.attempts : 0
     if (attempts <= 0 && solvedAt <= 0) {
       continue

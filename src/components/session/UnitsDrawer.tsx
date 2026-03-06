@@ -71,7 +71,7 @@ export function UnitsDrawer({
 
       <aside
         dir="ltr"
-        className={`relative h-full w-[360px] max-w-[92vw] border-r p-4 backdrop-blur-xl shadow-[0_24px_80px_rgba(2,8,23,0.38),inset_0_1px_0_rgba(255,255,255,0.10)] transition-transform duration-200 translate-x-0 ${
+        className={`relative h-full w-[376px] max-w-[92vw] border-r p-5 backdrop-blur-xl shadow-[0_24px_80px_rgba(2,8,23,0.38),inset_0_1px_0_rgba(255,255,255,0.10)] transition-transform duration-200 translate-x-0 ${
           isDark
             ? 'border-white/12 bg-[linear-gradient(180deg,rgba(24,31,52,0.88)_0%,rgba(19,24,40,0.88)_100%)]'
             : 'border-[rgba(120,141,178,0.58)] bg-[linear-gradient(180deg,rgba(250,252,255,0.88)_0%,rgba(244,247,255,0.86)_100%)]'
@@ -96,7 +96,7 @@ export function UnitsDrawer({
             </button>
           </div>
 
-          <div className={`space-y-2 rounded-2xl border p-3 shadow-[0_10px_24px_rgba(2,8,23,0.12),inset_0_1px_0_rgba(255,255,255,0.16)] ${
+          <div className={`space-y-3 rounded-[22px] border p-4 shadow-[0_10px_24px_rgba(2,8,23,0.12),inset_0_1px_0_rgba(255,255,255,0.16)] ${
             isDark
               ? 'border-white/16 bg-[rgba(39,49,74,0.62)]'
               : 'border-[rgba(120,141,178,0.48)] bg-[rgba(255,255,255,0.68)]'
@@ -126,7 +126,7 @@ export function UnitsDrawer({
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('units.searchPlaceholder')}
               dir={isUrdu ? 'rtl' : 'ltr'}
-              className={`w-full rounded-xl border px-3 py-2 text-sm text-pebble-text-primary outline-none placeholder:text-pebble-text-secondary dark:placeholder:text-[hsl(220_12%_72%)] focus:border-pebble-accent/55 focus-visible:ring-2 focus-visible:ring-pebble-accent/35 focus-visible:ring-offset-0 ${
+              className={`w-full rounded-2xl border px-3.5 py-2.5 text-sm text-pebble-text-primary outline-none placeholder:text-pebble-text-secondary dark:placeholder:text-[hsl(220_12%_72%)] focus:border-pebble-accent/55 focus-visible:ring-2 focus-visible:ring-pebble-accent/35 focus-visible:ring-offset-0 ${
                 isDark
                   ? 'border-white/16 bg-[rgba(41,51,75,0.74)]'
                   : 'border-[rgba(120,141,178,0.48)] bg-[rgba(255,255,255,0.76)]'
@@ -145,7 +145,7 @@ export function UnitsDrawer({
                 <button
                   key={unit.id}
                   type="button"
-                  className={`w-full rounded-xl border px-3 py-2 text-left transition ${
+                  className={`w-full rounded-2xl border px-3.5 py-3 text-left transition ${
                     isCurrent
                       ? isDark
                         ? 'border-pebble-accent/65 bg-[rgba(74,124,255,0.18)] shadow-[inset_0_1px_0_rgba(170,205,255,0.12)]'
@@ -161,7 +161,7 @@ export function UnitsDrawer({
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold ${
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
                         isDone
                           ? isDark
                             ? 'bg-emerald-300/24 text-emerald-100'
@@ -179,7 +179,7 @@ export function UnitsDrawer({
                     </span>
                     <p className={`text-sm font-medium text-pebble-text-primary dark:text-[hsl(220_20%_92%)] ${isUrdu ? 'rtlText' : ''}`}>{unit.title}</p>
                   </div>
-                  <p className={`mt-1 text-xs text-pebble-text-secondary dark:text-[hsl(220_12%_74%)] ${isUrdu ? 'rtlText' : ''}`}>{unit.concept}</p>
+                    <p className={`mt-1.5 text-xs leading-5 text-pebble-text-secondary dark:text-[hsl(220_12%_74%)] ${isUrdu ? 'rtlText' : ''}`}>{unit.concept}</p>
                 </button>
               )
             })}

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { ChevronDown, DatabaseZap, Globe2, MoonStar, SunMedium } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { buttonClass } from '../ui/buttonStyles'
 import { LANGUAGES } from '../../i18n/languages'
@@ -43,8 +44,8 @@ function unlockBodyScroll() {
 }
 
 function segmentButtonClass(isActive: boolean) {
-  const activeClass = 'bg-pebble-panel text-pebble-text-primary shadow-[0_1px_8px_rgba(2,8,23,0.16)] ring-1 ring-pebble-border/35'
-  return `rounded-lg px-4 py-1.5 text-sm font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${isActive
+  const activeClass = 'bg-pebble-panel text-pebble-text-primary shadow-[0_12px_24px_rgba(2,8,23,0.18)] ring-1 ring-pebble-border/30'
+  return `inline-flex h-11 items-center justify-center gap-2 rounded-[16px] px-4 text-sm font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${isActive
     ? `${activeClass} scale-[1.01]`
     : 'bg-transparent text-pebble-text-secondary hover:text-pebble-text-primary'
     }`
@@ -93,15 +94,36 @@ export function SettingsModal({
     return null
   }
 
+  const isDark = theme === 'dark'
   const modalSurfaceClass =
     theme === 'light'
-      ? 'border border-pebble-border/25 bg-pebble-panel/92 shadow-[0_12px_48px_rgba(55,72,110,0.16)]'
-      : 'border border-pebble-border/40 bg-pebble-panel/92 shadow-glass'
+      ? 'pebble-panel-float border-pebble-border/28 bg-transparent'
+      : 'border border-[rgba(150,168,205,0.22)] bg-[hsl(228_27%_21%)] shadow-[0_32px_90px_rgba(2,8,23,0.54),0_8px_28px_rgba(8,15,35,0.26)]'
+  const sectionSurfaceClass = isDark
+    ? 'rounded-[22px] border border-[rgba(160,177,212,0.2)] bg-[linear-gradient(180deg,rgba(72,82,112,0.38)_0%,rgba(56,65,92,0.3)_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+    : 'rounded-[22px] border border-pebble-border/24 bg-pebble-overlay/[0.05] px-4 py-4'
+  const iconSurfaceClass = isDark
+    ? 'inline-flex h-10 w-10 items-center justify-center rounded-[14px] border border-[rgba(160,177,212,0.2)] bg-[rgba(255,255,255,0.045)] text-pebble-accent'
+    : 'inline-flex h-10 w-10 items-center justify-center rounded-[14px] border border-pebble-border/24 bg-pebble-overlay/[0.08] text-pebble-accent'
+  const segmentedRailClass = isDark
+    ? 'grid grid-cols-2 rounded-[18px] border border-[rgba(160,177,212,0.22)] bg-[rgba(255,255,255,0.04)] p-1.5'
+    : 'grid grid-cols-2 rounded-[18px] border border-pebble-border/32 bg-pebble-overlay/[0.08] p-1.5'
+  const closeButtonClass = isDark
+    ? 'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[rgba(160,177,212,0.22)] bg-[rgba(255,255,255,0.04)] text-pebble-text-secondary transition hover:bg-[rgba(255,255,255,0.08)] hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
+    : 'inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-pebble-border/30 bg-pebble-overlay/8 text-pebble-text-secondary transition hover:bg-pebble-overlay/14 hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
+  const destructiveSectionClass = isDark
+    ? 'rounded-[22px] border border-[rgba(229,94,124,0.24)] bg-[linear-gradient(180deg,rgba(107,41,58,0.22)_0%,rgba(78,33,46,0.18)_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+    : 'rounded-[22px] border border-rose-400/18 bg-rose-500/[0.04] px-4 py-4'
+  const destructiveIconClass = isDark
+    ? 'inline-flex h-10 w-10 items-center justify-center rounded-[14px] border border-[rgba(229,94,124,0.24)] bg-[rgba(229,94,124,0.12)] text-rose-300'
+    : 'inline-flex h-10 w-10 items-center justify-center rounded-[14px] border border-rose-400/22 bg-rose-500/[0.08] text-rose-600 dark:text-rose-300'
 
   return (
     <div
       role="presentation"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/42 px-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center px-4 ${
+        isDark ? 'bg-[rgba(4,8,18,0.62)] backdrop-blur-[3px]' : 'bg-black/42 backdrop-blur-[2px]'
+      }`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose()
@@ -113,20 +135,23 @@ export function SettingsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
-        className={`soft-ring w-full max-w-[500px] space-y-6 rounded-2xl p-6 backdrop-blur-2xl ${modalSurfaceClass}`}
+        className={`soft-ring w-full max-w-[540px] space-y-7 rounded-[28px] p-7 ${isDark ? '' : 'backdrop-blur-2xl'} ${modalSurfaceClass}`}
         style={{
           backgroundImage:
             theme === 'light'
-              ? 'linear-gradient(180deg, rgba(241,245,252,0.98) 0%, rgba(228,234,246,0.94) 100%)'
-              : 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%)',
+              ? 'linear-gradient(180deg, rgba(248,251,255,0.99) 0%, rgba(236,242,252,0.96) 100%)'
+              : 'linear-gradient(180deg, rgba(58,67,95,0.96) 0%, rgba(40,48,72,0.98) 100%)',
         }}
       >
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 id="settings-title" className={`text-xl font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
+          <div className="space-y-1.5">
+            <p className={`text-[11px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>
+              Workspace preferences
+            </p>
+            <h2 id="settings-title" className={`text-[1.35rem] font-semibold tracking-[-0.02em] text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
               {t('settings.title')}
             </h2>
-            <p className={`mt-1 text-sm text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+            <p className={`max-w-[38ch] text-sm leading-6 text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
               {t('settings.subtitle')}
             </p>
           </div>
@@ -134,7 +159,7 @@ export function SettingsModal({
             type="button"
             aria-label={t('settings.closeAria')}
             onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-pebble-border/35 bg-pebble-overlay/8 text-pebble-text-secondary transition hover:bg-pebble-overlay/14 hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40"
+            className={closeButtonClass}
           >
             <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
               <path
@@ -147,22 +172,45 @@ export function SettingsModal({
           </button>
         </div>
 
-        <div className="space-y-6">
-          <LanguageSelect
-            label={t('settings.language')}
-            value={lang}
-            onChange={setLang}
-            options={LANGUAGES}
-          />
+        <div className="space-y-5">
+          <section className={sectionSurfaceClass}>
+            <div className="mb-3 flex items-start gap-3">
+              <span className={iconSurfaceClass}>
+                <Globe2 className="h-4.5 w-4.5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-pebble-text-primary">{t('settings.language')}</p>
+                <p className="text-xs leading-5 text-pebble-text-secondary">Choose the app language Pebble should use across the interface.</p>
+              </div>
+            </div>
+            <div className="relative">
+              <LanguageSelect
+                label=""
+                value={lang}
+                onChange={setLang}
+                options={LANGUAGES}
+              />
+              <ChevronDown className="pointer-events-none absolute right-3 top-[calc(50%+2px)] h-4 w-4 -translate-y-1/2 text-pebble-text-muted" />
+            </div>
+          </section>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-pebble-text-primary">{t('settings.theme')}</p>
-            <div className="inline-flex rounded-xl border border-pebble-border/40 bg-pebble-overlay/[0.08] p-1">
+          <section className={sectionSurfaceClass}>
+            <div className="mb-3 flex items-start gap-3">
+              <span className={iconSurfaceClass}>
+                {theme === 'dark' ? <MoonStar className="h-4.5 w-4.5" /> : <SunMedium className="h-4.5 w-4.5" />}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-pebble-text-primary">{t('settings.theme')}</p>
+                <p className="text-xs leading-5 text-pebble-text-secondary">Switch between Pebble’s dark and light workspace styles.</p>
+              </div>
+            </div>
+            <div className={segmentedRailClass}>
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
                 className={segmentButtonClass(theme === 'dark')}
               >
+                <MoonStar className="h-4 w-4" />
                 {t('settings.themeDark')}
               </button>
               <button
@@ -170,20 +218,32 @@ export function SettingsModal({
                 onClick={() => setTheme('light')}
                 className={segmentButtonClass(theme === 'light')}
               >
+                <SunMedium className="h-4 w-4" />
                 {t('settings.themeLight')}
               </button>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-pebble-text-primary">{t('settings.data')}</p>
-            <button type="button" onClick={onResetLocalData} className={buttonClass('secondary')}>
+          <section className={destructiveSectionClass}>
+            <div className="mb-3 flex items-start gap-3">
+              <span className={destructiveIconClass}>
+                <DatabaseZap className="h-4.5 w-4.5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-pebble-text-primary">{t('settings.data')}</p>
+                <p className="text-xs leading-5 text-pebble-text-secondary">
+                  {t('settings.resetLocalDataHint')}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onResetLocalData}
+              className={`${buttonClass('secondary')} h-11 rounded-2xl border-rose-400/28 bg-rose-500/[0.08] px-4 text-sm font-semibold text-rose-700 hover:bg-rose-500/[0.12] dark:border-rose-400/30 dark:bg-rose-500/[0.10] dark:text-rose-200`}
+            >
               {t('settings.resetLocalData')}
             </button>
-            <p className="text-xs text-pebble-text-secondary">
-              {t('settings.resetLocalDataHint')}
-            </p>
-          </div>
+          </section>
         </div>
       </section>
     </div>

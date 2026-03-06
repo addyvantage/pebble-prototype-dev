@@ -647,10 +647,10 @@ export function PebbleChatPanel({
 
   return (
     <CardLayout className={className} dir="ltr">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
-            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-[box-shadow,transform] duration-300 motion-reduce:transition-none"
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] transition-[box-shadow,transform] duration-300 motion-reduce:transition-none"
             style={{
               background: dark ? '#25304A' : '#E8EEFA',
               boxShadow: avatarHovered
@@ -676,7 +676,7 @@ export function PebbleChatPanel({
           </div>
           <div>
             <p className={`text-base font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{t('chat.title')}</p>
-            <p className={`text-xs text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>{t('chat.subtitle')}</p>
+            <p className={`text-xs uppercase tracking-[0.08em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>{t('chat.subtitle')}</p>
           </div>
         </div>
 
@@ -684,16 +684,12 @@ export function PebbleChatPanel({
           <button
             type="button"
             onClick={() => setSettingsOpen((prev) => !prev)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-pebble-border/30 bg-pebble-overlay/[0.08] text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16] hover:text-pebble-text-primary"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16] hover:text-pebble-text-primary"
             title={t('a11y.openChatSettings')}
             aria-label={t('a11y.openChatSettings')}
           >
             <Settings2 className="h-4 w-4" aria-hidden="true" />
           </button>
-          <Badge variant={runStatus === 'success' ? 'success' : runStatus === 'error' ? 'warning' : 'neutral'}>
-            {runStatusLabel}
-          </Badge>
-
           {settingsOpen && (
             <div className="absolute right-0 top-10 z-20 w-72 rounded-xl border border-pebble-border/35 bg-pebble-panel/95 p-3 shadow-[0_14px_34px_rgba(2,8,23,0.3)]">
               <p className="text-xs uppercase tracking-[0.06em] text-pebble-text-muted">{t('chat.language')}</p>
@@ -728,14 +724,29 @@ export function PebbleChatPanel({
         </div>
       </div>
 
-      {hasRunContext && (
-        <p className={`inline-flex w-fit rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.1] px-2 py-0.5 text-[10px] font-medium text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-          {t('chat.usingRunOutput')}
-        </p>
-      )}
+      <div className="session-inset rounded-2xl px-3 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>Mentor context</p>
+            <p className={`text-sm leading-6 text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+              {hasRunContext ? t('chat.helperGrounded') : t('chat.helperUnlock')}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {hasRunContext && (
+              <p className={`inline-flex w-fit rounded-full border border-pebble-border/35 bg-pebble-overlay/[0.1] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.06em] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+                {t('chat.usingRunOutput')}
+              </p>
+            )}
+            <Badge variant={runStatus === 'success' ? 'success' : runStatus === 'error' ? 'warning' : 'neutral'}>
+              {runStatusLabel}
+            </Badge>
+          </div>
+        </div>
+      </div>
 
       {signatureHelper ? (
-        <div className="rounded-xl border border-pebble-warning/35 bg-pebble-warning/12 px-2.5 py-1.5 text-[11px] text-pebble-text-primary">
+        <div className="rounded-2xl border border-pebble-warning/35 bg-pebble-warning/12 px-3 py-3 text-[11px] text-pebble-text-primary">
           <p className={`font-semibold ${isUrdu ? 'rtlText' : ''}`}>{t('coach.requiredSignature')}</p>
           <p className="mt-0.5 ltrSafe font-mono text-[10px] text-pebble-text-primary">{signatureHelper.required}</p>
           <p className={`mt-0.5 ${isUrdu ? 'rtlText' : ''}`}>{t('coach.detectedSignature')}:</p>
@@ -743,13 +754,13 @@ export function PebbleChatPanel({
         </div>
       ) : null}
 
-      <div className="space-y-1">
-        <div className="flex flex-wrap gap-1">
+      <div className="space-y-2 rounded-2xl border border-pebble-border/20 bg-pebble-overlay/[0.05] px-3 py-3">
+        <div className="flex flex-wrap gap-1.5">
           {quickActions.map((action) => (
             <button
               key={action.label}
               type="button"
-              className="rounded-full border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-0.5 text-[11px] font-medium text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16] disabled:opacity-50"
+              className="rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.08] px-3 py-1.5 text-[11px] font-medium text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16] disabled:opacity-50"
               onClick={() => {
                 triggerAssistAction(action.action)
               }}
@@ -761,13 +772,13 @@ export function PebbleChatPanel({
         </div>
 
         {/* Tier selector pills */}
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1.5">
           {([1, 2, 3] as const).map((tier) => (
             <button
               key={tier}
               type="button"
               onClick={() => setSelectedTier(tier)}
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold transition ${selectedTier === tier
+              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${selectedTier === tier
                 ? 'border border-pebble-accent/50 bg-pebble-accent/20 text-pebble-text-primary'
                 : 'border border-pebble-border/25 bg-pebble-overlay/[0.05] text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]'
                 }`}
@@ -777,26 +788,34 @@ export function PebbleChatPanel({
           ))}
           <span
             key={selectedTier}
-            className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-pebble-border/35 bg-pebble-accent/[0.10] px-2 py-0.5 text-[10px] font-medium text-pebble-text-primary motion-safe:animate-[tierFadeIn_150ms_ease-out]"
+            className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-pebble-border/35 bg-pebble-accent/[0.10] px-2.5 py-1 text-[10px] font-medium text-pebble-text-primary motion-safe:animate-[tierFadeIn_150ms_ease-out]"
           >
             {selectedTier === 1 ? <Lightbulb className="h-3 w-3 text-pebble-accent" /> : selectedTier === 2 ? <Search className="h-3 w-3 text-pebble-accent" /> : <Wrench className="h-3 w-3 text-pebble-accent" />}
             {selectedTier === 1 ? 'Hint only' : selectedTier === 2 ? 'Explain + Approach' : 'Full fix'}
           </span>
         </div>
 
-        <p className={`text-[10px] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-          {hasRunContext ? t('chat.helperGrounded') : t('chat.helperUnlock')}
+        <p className={`text-[10px] uppercase tracking-[0.08em] text-pebble-text-muted ${isUrdu ? 'rtlText' : ''}`}>
+          {selectedTier === 1 ? 'Nudge only' : selectedTier === 2 ? 'Explain with direction' : 'Guided full fix'}
         </p>
       </div>
 
       {/* Messages own the vertical scroll so long hints never stretch the session shell. */}
-      <div className="pebble-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto rounded-xl border border-pebble-border/30 bg-pebble-canvas/45 p-2 pr-2">
+      <div className="pebble-scrollbar session-inset min-h-0 flex-1 space-y-2 overflow-y-auto rounded-[24px] p-3 pr-3">
+        {messages.length === 1 && assistantState === 'idle' && !agentError ? (
+          <div className="rounded-2xl border border-pebble-border/20 bg-pebble-overlay/[0.05] px-3.5 py-3.5 text-sm text-pebble-text-secondary">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">Need a nudge?</p>
+            <p className={`mt-2 leading-6 ${isUrdu ? 'rtlText' : ''}`}>
+              Ask Pebble for a hint, a clearer explanation, or the next recovery step after a failed run.
+            </p>
+          </div>
+        ) : null}
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`max-w-[95%] rounded-xl px-2.5 py-1.5 text-xs leading-relaxed ${message.role === 'user'
+            className={`max-w-[95%] rounded-2xl px-3 py-2.5 text-[13px] leading-7 ${message.role === 'user'
               ? 'ml-auto border border-pebble-accent/40 bg-pebble-accent/16 text-pebble-text-primary'
-              : 'mr-auto border border-pebble-border/30 bg-pebble-overlay/[0.08] text-pebble-text-primary'
+              : 'mr-auto border border-pebble-border/24 bg-pebble-overlay/[0.08] text-pebble-text-primary'
               }`}
           >
             {message.usedRunOutput && (
@@ -813,7 +832,7 @@ export function PebbleChatPanel({
         ))}
 
         {assistantState === 'thinking' && (
-          <div className={`mr-auto max-w-[95%] rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1.5 text-xs text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
+          <div className={`mr-auto max-w-[95%] rounded-2xl border border-pebble-border/24 bg-pebble-overlay/[0.08] px-3 py-2.5 text-xs text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
             <span className="inline-flex items-center gap-1.5">
               <span className="inline-flex gap-0.5">
                 <span className="h-1 w-1 animate-pulse rounded-full bg-pebble-accent/70" style={{ animationDelay: '0ms' }} />
@@ -826,7 +845,7 @@ export function PebbleChatPanel({
         )}
 
         {agentError && assistantState === 'idle' && (
-          <div className="mr-auto max-w-[95%] rounded-xl border border-pebble-warning/40 bg-pebble-warning/10 px-2.5 py-1.5 text-xs text-pebble-text-primary">
+          <div className="mr-auto max-w-[95%] rounded-2xl border border-pebble-warning/40 bg-pebble-warning/10 px-3 py-2.5 text-xs text-pebble-text-primary">
             <p className="font-medium text-pebble-warning">Couldn't reach Pebble</p>
             <p className="mt-0.5 text-pebble-text-secondary">{agentError}</p>
             {lastAsked && (
@@ -842,7 +861,7 @@ export function PebbleChatPanel({
         )}
 
         {assistantState === 'typing' && (
-          <div className="mr-auto max-w-[95%] rounded-xl border border-pebble-border/30 bg-pebble-overlay/[0.08] px-2.5 py-1.5 text-xs text-pebble-text-primary">
+          <div className="mr-auto max-w-[95%] rounded-2xl border border-pebble-border/24 bg-pebble-overlay/[0.08] px-3 py-2.5 text-xs text-pebble-text-primary">
             <p className="mb-1 inline-flex rounded-full border border-pebble-border/35 px-2 py-0.5 text-[10px] uppercase tracking-[0.04em] text-pebble-text-secondary">
               {t('chat.typing')}
             </p>
@@ -861,7 +880,7 @@ export function PebbleChatPanel({
         />
       ) : null}
 
-      <div className="shrink-0 space-y-1.5 border-t border-pebble-border/20 pt-1.5">
+      <div className="shrink-0 space-y-2 border-t border-pebble-border/20 pt-2">
         {(isGenerating || !!lastAsked) && (
           <div className="flex items-center justify-end gap-1.5">
             {isGenerating ? (
@@ -881,7 +900,7 @@ export function PebbleChatPanel({
           </div>
         )}
 
-        <div className="relative flex h-11 items-center">
+        <div className="relative flex h-12 items-center">
           <input
             type="text"
             value={input}
@@ -894,14 +913,14 @@ export function PebbleChatPanel({
             }}
             placeholder={t('chat.placeholder')}
             dir={isUrdu ? 'rtl' : 'ltr'}
-            className={`h-11 w-full rounded-xl border border-pebble-border/35 bg-pebble-overlay/[0.08] px-3 pr-12 text-sm leading-[1.25] text-pebble-text-primary outline-none placeholder:text-pebble-text-secondary focus:border-pebble-accent/55 ${isUrdu ? 'text-right' : 'text-left'
+            className={`h-12 w-full rounded-2xl border border-pebble-border/35 bg-pebble-overlay/[0.08] px-4 pr-14 text-sm leading-[1.25] text-pebble-text-primary outline-none placeholder:text-pebble-text-secondary focus:border-pebble-accent/55 ${isUrdu ? 'text-right' : 'text-left'
               }`}
           />
           <button
             type="button"
             onClick={sendCurrentInput}
             disabled={!canSend}
-            className="absolute right-1.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border border-pebble-accent/45 bg-pebble-accent/30 text-pebble-text-primary transition hover:bg-pebble-accent/40 disabled:cursor-not-allowed disabled:opacity-45"
+            className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-pebble-accent/45 bg-pebble-accent/30 text-pebble-text-primary transition hover:bg-pebble-accent/40 disabled:cursor-not-allowed disabled:opacity-45"
             title={t('actions.send')}
             aria-label={t('a11y.sendMessage')}
           >
@@ -925,7 +944,7 @@ function CardLayout({
   return (
     <div
       dir={dir}
-      className={`relative flex h-full min-h-0 flex-col gap-1.5 overflow-hidden rounded-2xl border border-pebble-border/30 bg-gradient-to-b from-pebble-overlay/[0.12] to-pebble-overlay/[0.04] p-2.5 ${className ?? ''}`}
+      className={`session-surface relative flex h-full min-h-0 flex-col gap-3 overflow-hidden rounded-[28px] p-3.5 ${className ?? ''}`}
     >
       {children}
     </div>

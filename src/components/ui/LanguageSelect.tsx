@@ -50,8 +50,8 @@ export function LanguageSelect({
   const selected = options[selectedIndex] ?? options[0]
   const menuSurfaceClass =
     theme === 'light'
-      ? 'border border-pebble-border/25 bg-pebble-panel/95 shadow-[0_8px_32px_rgba(55,72,110,0.14)]'
-      : 'border border-pebble-border/40 bg-pebble-panel/95 shadow-[0_16px_48px_rgba(2,8,23,0.6)]'
+      ? 'pebble-panel-float border-pebble-border/24'
+      : 'pebble-panel-float border-[rgba(160,177,212,0.22)]'
 
   useEffect(() => {
     setActiveIndex(selectedIndex)
@@ -148,14 +148,14 @@ export function LanguageSelect({
 
   return (
     <div ref={containerRef} className="space-y-2">
-      <p className="text-sm font-medium text-pebble-text-primary">{label}</p>
+      {label ? <p className="text-sm font-medium text-pebble-text-primary">{label}</p> : null}
 
       <div className={`relative ${open ? 'z-[80]' : 'z-10'}`}>
         <button
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
-          className="inline-flex h-11 w-full items-center justify-between gap-3 rounded-xl border border-pebble-border/38 bg-pebble-overlay/[0.08] px-3 text-left transition hover:bg-pebble-overlay/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+          className="pebble-control inline-flex h-11 w-full items-center justify-between gap-3 rounded-xl px-3 text-left"
           onClick={() => setOpen((current) => !current)}
           onKeyDown={handleTriggerKeyDown}
         >
@@ -180,7 +180,7 @@ export function LanguageSelect({
           aria-label={label}
           ref={listRef}
           onKeyDown={handleListKeyDown}
-          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[90] origin-top rounded-xl p-1.5 backdrop-blur-xl transition duration-150 ${menuSurfaceClass} ${open
+          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[90] origin-top rounded-xl p-1.5 transition duration-150 ${menuSurfaceClass} ${open
               ? 'pointer-events-auto scale-100 opacity-100'
               : 'pointer-events-none scale-[0.98] opacity-0'
             }`}
@@ -201,10 +201,10 @@ export function LanguageSelect({
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => selectAt(index)}
                   className={`flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${selectedOption
-                      ? 'border-pebble-accent/50 bg-pebble-accent/20'
+                      ? 'border-pebble-accent/46 bg-pebble-accent/16 shadow-[0_8px_18px_rgba(37,99,235,0.12)]'
                       : activeOption
-                        ? 'border-pebble-border/40 bg-pebble-overlay/[0.18]'
-                        : 'border-transparent bg-transparent hover:border-pebble-border/35 hover:bg-pebble-overlay/[0.12]'
+                        ? 'border-pebble-border/34 bg-pebble-overlay/[0.14]'
+                        : 'border-transparent bg-transparent hover:border-pebble-border/30 hover:bg-pebble-overlay/[0.10]'
                     }`}
                 >
                   <span className="inline-flex w-4 justify-center">

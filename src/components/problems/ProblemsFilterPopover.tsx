@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ProblemLanguage } from '../../data/problemsBank'
 import { Button } from '../ui/Button'
+import { useTheme } from '../../hooks/useTheme'
 
 export type ProblemsFilterState = {
   status: 'all' | 'solved' | 'unsolved'
@@ -63,6 +64,8 @@ export function ProblemsFilterPopover({
   topicOptions,
   labels,
 }: ProblemsFilterPopoverProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<ProblemsFilterState>(value)
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -131,7 +134,7 @@ export function ProblemsFilterPopover({
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex h-10 items-center gap-2 rounded-xl border border-pebble-border/32 bg-pebble-overlay/[0.08] px-3 text-sm text-pebble-text-primary transition hover:bg-pebble-overlay/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+        className="pebble-control inline-flex h-12 items-center gap-2 rounded-2xl px-4 text-sm"
       >
         <Filter className="h-4 w-4" aria-hidden="true" />
         {labels.filter}
@@ -140,13 +143,24 @@ export function ProblemsFilterPopover({
 
       <div
         className={classNames(
-          'absolute right-0 top-[calc(100%+8px)] z-30 w-[min(92vw,420px)] origin-top rounded-2xl border border-pebble-border/34 bg-pebble-panel/95 p-3 shadow-[0_20px_60px_rgba(2,8,23,0.35)] backdrop-blur-xl transition duration-150',
+          `absolute right-0 top-[calc(100%+10px)] z-30 w-[min(92vw,430px)] origin-top rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(2,8,23,0.35)] backdrop-blur-xl transition duration-150 ${
+            isDark
+              ? 'pebble-panel-float border-[rgba(150,168,205,0.22)] bg-transparent'
+              : 'pebble-panel-float border-pebble-border/20 bg-transparent'
+          }`,
           open ? 'pointer-events-auto scale-100 opacity-100' : 'pointer-events-none scale-[0.98] opacity-0',
         )}
         role="dialog"
         aria-label={labels.filter}
       >
-        <div className="max-h-[380px] space-y-3 overflow-y-auto pr-1">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">{labels.filter}</p>
+            <p className="mt-1 text-[13px] leading-[1.6] text-pebble-text-secondary">Refine by status, difficulty, language, and topics.</p>
+          </div>
+        </div>
+
+        <div className="max-h-[380px] space-y-4 overflow-y-auto pebble-scrollbar pr-1">
           <FilterSection title={labels.status}>
             <Segment
               options={[
@@ -207,7 +221,7 @@ export function ProblemsFilterPopover({
           </FilterSection>
 
           <FilterSection title={labels.topic}>
-            <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-pebble-border/25 bg-pebble-overlay/[0.04] p-2">
+            <div className="pebble-shell-subtle flex max-h-36 flex-wrap gap-1.5 overflow-y-auto rounded-xl p-2">
               {topicOptions.map((topic) => {
                 const selected = draft.topics.includes(topic.id)
                 return (
@@ -218,8 +232,8 @@ export function ProblemsFilterPopover({
                     className={classNames(
                       'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition',
                       selected
-                        ? 'border-pebble-accent/45 bg-pebble-accent/16 text-pebble-text-primary'
-                        : 'border-pebble-border/30 bg-pebble-overlay/[0.06] text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]',
+                        ? 'pebble-chip-strong'
+                        : 'pebble-chip hover:border-pebble-border/38 hover:text-pebble-text-primary',
                     )}
                   >
                     {selected ? <Check className="h-3 w-3" aria-hidden="true" /> : null}
@@ -231,7 +245,7 @@ export function ProblemsFilterPopover({
           </FilterSection>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-pebble-border/25 pt-3">
+        <div className="mt-4 flex items-center justify-between gap-2 border-t border-pebble-border/18 pt-4">
           <Button
             type="button"
             variant="secondary"
@@ -262,8 +276,8 @@ export function ProblemsFilterPopover({
 
 function FilterSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="space-y-1.5">
-      <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">{title}</h4>
+    <section className="space-y-2">
+      <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">{title}</h4>
       {children}
     </section>
   )
@@ -279,17 +293,17 @@ function Segment({
   onChange: (id: string) => void
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-2">
       {options.map((option) => (
         <button
           key={option.id}
           type="button"
           onClick={() => onChange(option.id)}
           className={classNames(
-            'rounded-lg border px-2.5 py-1 text-xs transition',
+            'rounded-xl border px-3 py-1.5 text-[12px] transition',
             value === option.id
               ? 'border-pebble-accent/45 bg-pebble-accent/16 text-pebble-text-primary'
-              : 'border-pebble-border/30 bg-pebble-overlay/[0.06] text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]',
+              : 'border-pebble-border/24 bg-pebble-overlay/[0.06] text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]',
           )}
         >
           {option.label}
@@ -313,10 +327,10 @@ function SmallChip({
       type="button"
       onClick={onClick}
       className={classNames(
-        'rounded-full border px-2.5 py-1 text-xs transition',
+        'rounded-full border px-3 py-1.5 text-[12px] transition',
         active
           ? 'border-pebble-accent/45 bg-pebble-accent/16 text-pebble-text-primary'
-          : 'border-pebble-border/30 bg-pebble-overlay/[0.06] text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]',
+          : 'border-pebble-border/24 bg-pebble-overlay/[0.06] text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]',
       )}
     >
       {children}
