@@ -1,17 +1,26 @@
-import { CognitoIdentityProviderClient, SignUpCommand } from '@aws-sdk/client-cognito-identity-provider'
+import {
+  AdminDeleteUserCommand,
+  CognitoIdentityProviderClient,
+  SignUpCommand,
+} from '@aws-sdk/client-cognito-identity-provider'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb'
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb'
 import {
   ADMIN_EMAILS,
+  COGNITO_USER_POOL_ID,
   COGNITO_CLIENT_ID,
   PROFILES_TABLE,
   createSecretHash,
-  isValidEmail,
-  normalizeEmail,
-  normalizeUsername,
   resolveCognitoRegion,
   usernameClaimKey,
 } from '../_shared/auth.js'
+import { lookupUsernameAvailability } from '../_shared/usernameAvailability.js'
+import {
+  getPasswordValidationError,
+  isValidEmailCandidate,
+  normalizeEmailCandidate,
+  normalizeUsernameCandidate,
+} from '../../shared/authValidation.js'
 
 export const config = {
   runtime: 'nodejs',
@@ -43,10 +52,18 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 
   const { email, password, username } = req.body ?? {}
-  const normalizedEmail = normalizeEmail(email)
-  const normalizedUsername = normalizeUsername(username)
+  const normalizedEmail = normalizeEmailCandidate(email)
+  const normalizedUsername = normalizeUsernameCandidate(username)
+  const usernameError = getUsernameValidationError(normalizedUsername)
+  const passwordError = typeof password === 'string' ? getPasswordValidationError(password) : 'Password is required'
 
-  if (!normalizedEmail || !isValidEmail(normalizedEmail) || typeof password !== 'string' || password.length < 8 || !normalizedUsername) {
+  if (
+    !normalizedEmail ||
+    !isValidEmailCandidate(normalizedEmail) ||
+    typeof password !== 'string' ||
+    passwordError ||
+    usernameError
+  ) {
     res.status(400).json({ error: 'Invalid signup payload' })
     return
   }
@@ -62,14 +79,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   const usernameLower = normalizedUsername.toLowerCase()
   const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: awsRegion }))
+  let createdCognitoUser = false
 
   try {
-    const existingClaim = await ddb.send(new GetCommand({
-      TableName: PROFILES_TABLE,
-      Key: { userId: usernameClaimKey(usernameLower) },
-    }))
-
-    if (existingClaim.Item) {
+    const availability = await lookupUsernameAvailability(normalizedUsername)
+    if (!availability.available) {
       res.status(409).json({ error: 'Username is already taken', reason: 'taken' })
       return
     }
@@ -89,6 +103,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         ],
       }),
     )
+    createdCognitoUser = true
 
     const userId = signUpResp.UserSub
     if (!userId) {
@@ -136,10 +151,33 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       }),
     )
 
-    res.status(200).json({ ok: true, userSub: userId })
+    res.status(200).json({
+      ok: true,
+      userSub: userId,
+      requiresConfirmation: !Boolean(signUpResp.UserConfirmed),
+      delivery: signUpResp.CodeDeliveryDetails
+        ? {
+            destination: signUpResp.CodeDeliveryDetails.Destination ?? null,
+            medium: signUpResp.CodeDeliveryDetails.DeliveryMedium ?? null,
+          }
+        : null,
+    })
   } catch (error) {
     const err = error as { name?: string; message?: string }
     const errorName = err?.name ?? ''
+
+    if (createdCognitoUser && COGNITO_USER_POOL_ID && normalizedEmail) {
+      try {
+        const cognito = new CognitoIdentityProviderClient({ region: awsRegion })
+        await cognito.send(new AdminDeleteUserCommand({
+          UserPoolId: COGNITO_USER_POOL_ID,
+          Username: normalizedEmail,
+        }))
+      } catch {
+        // Best effort cleanup only. If cleanup fails, the caller still receives a
+        // deterministic error instead of thinking signup completed cleanly.
+      }
+    }
 
     if (errorName === 'ConditionalCheckFailedException') {
       res.status(409).json({ error: 'Username is already taken', reason: 'taken' })

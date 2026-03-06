@@ -17,6 +17,7 @@ export function AuthLoginPage() {
     // Pre-fill email from ?email= query param (set by verify page on success)
     const emailFromParam = searchParams.get('email') ?? ''
     const justVerified = searchParams.get('verified') === '1'
+    const justCreated = searchParams.get('created') === '1'
 
     const [identifier, setIdentifier] = useState(emailFromParam)
     const [password, setPassword] = useState('')
@@ -57,7 +58,7 @@ export function AuthLoginPage() {
                     ? err.verificationEmail.trim()
                     : identifier.trim()
                 localStorage.setItem('pebble.auth.verifyEmail', verificationEmail)
-                navigate(`/auth/verify?email=${encodeURIComponent(verificationEmail)}`)
+                navigate(`/auth/verify-email?email=${encodeURIComponent(verificationEmail)}`)
                 return
             }
             setErrors({ form: err?.message ?? 'Invalid username/email or password' })
@@ -86,6 +87,11 @@ export function AuthLoginPage() {
                 {justVerified && (
                     <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-3 text-[12.5px] text-emerald-500">
                         Email verified! You can now sign in.
+                    </div>
+                )}
+                {!justVerified && justCreated && (
+                    <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-3 text-[12.5px] text-emerald-500">
+                        Account created. Sign in to continue.
                     </div>
                 )}
 

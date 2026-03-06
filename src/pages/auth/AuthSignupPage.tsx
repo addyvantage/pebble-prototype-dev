@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { AuthShell } from './AuthShell'
 import { PasswordInput } from '../../components/auth/PasswordInput'
 import { PasswordStrength } from '../../components/auth/PasswordStrength'
 import { PasswordMatch } from '../../components/auth/PasswordMatch'
 import { useAuth } from '../../hooks/useAuth'
+import {
+    checkUsernameAvailability,
+    validateSignupFields,
+} from '../../lib/auth'
 
 export function AuthSignupPage() {
     const { signUp, isAuthenticated, isLoading, isConfigured } = useAuth()
@@ -29,50 +33,15 @@ export function AuthSignupPage() {
     }>({})
     const [submitting, setSubmitting] = useState(false)
     const [usernameAvailability, setUsernameAvailability] = useState<{
-        status: 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'unavailable'
+        status: 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error'
         message: string
     }>({ status: 'idle', message: '' })
     const errorRef = useRef<HTMLDivElement>(null)
-
-    const normalizedEmail = email.trim().toLowerCase()
-    const normalizedUsername = username.trim()
-
-    function validate(input = {
-        email: normalizedEmail,
-        username: normalizedUsername,
-        password,
-        confirm,
-    }) {
-        const e: typeof errors = {}
-        if (!input.email)
-            e.email = 'Email is required'
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email))
-            e.email = 'Enter a valid email address'
-
-        if (!input.username)
-            e.username = 'Username is required'
-        else if (input.username.length < 3 || input.username.length > 20)
-            e.username = 'Username must be 3–20 characters'
-        else if (!/^[a-zA-Z0-9_]+$/.test(input.username))
-            e.username = 'Only letters, numbers, and underscores allowed'
-
-        if (!input.password)
-            e.password = 'Password is required'
-        else if (input.password.length < 8)
-            e.password = 'Password must be at least 8 characters'
-
-        if (!input.confirm)
-            e.confirm = 'Please confirm your password'
-        else if (input.password !== input.confirm)
-            e.confirm = 'Passwords do not match'
-
-        return e
-    }
-
-    const liveErrors = useMemo(
-        () => validate(),
-        [normalizedEmail, normalizedUsername, password, confirm],
+    const validation = useMemo(
+        () => validateSignupFields({ email, username, password, confirm }),
+        [email, username, password, confirm],
     )
+    const { errors: liveErrors, normalizedEmail, normalizedUsername } = validation
 
     useEffect(() => {
         const candidate = normalizedUsername
@@ -81,10 +50,7 @@ export function AuthSignupPage() {
             return
         }
         if (!/^[a-zA-Z0-9_]{3,20}$/.test(candidate)) {
-            setUsernameAvailability({
-                status: 'invalid',
-                message: '3–20 characters · letters, numbers, underscores',
-            })
+            setUsernameAvailability({ status: 'invalid', message: '3–20 characters · letters, numbers, underscores' })
             return
         }
 
@@ -92,37 +58,16 @@ export function AuthSignupPage() {
         const controller = new AbortController()
         const timer = window.setTimeout(async () => {
             try {
-                const res = await fetch(`/api/username/available?username=${encodeURIComponent(candidate)}`, {
-                    signal: controller.signal,
-                })
-                const data = await res.json() as { available?: boolean; reason?: string; error?: string; code?: string }
-                if (!res.ok) {
-                    if (import.meta.env.DEV) {
-                        console.debug('[auth] username availability unavailable', { status: res.status, data })
-                    }
-                    setUsernameAvailability({
-                        status: 'unavailable',
-                        message: 'Live username check unavailable. We will verify when you submit.',
-                    })
-                    return
-                }
-                if (data.available) {
-                    setUsernameAvailability({ status: 'available', message: 'Username is available' })
-                    return
-                }
-                if (data.reason === 'taken') {
-                    setUsernameAvailability({ status: 'taken', message: 'Username is already taken' })
-                    return
-                }
-                setUsernameAvailability({ status: 'invalid', message: 'Username is invalid' })
+                const nextState = await checkUsernameAvailability(candidate, controller.signal)
+                setUsernameAvailability(nextState)
             } catch (err) {
                 if ((err as Error).name !== 'AbortError') {
                     if (import.meta.env.DEV) {
                         console.debug('[auth] username availability request failed', err)
                     }
                     setUsernameAvailability({
-                        status: 'unavailable',
-                        message: 'Live username check unavailable. We will verify when you submit.',
+                        status: 'error',
+                        message: 'Could not verify username right now. You can still submit and we will check again securely.',
                     })
                 }
             }
@@ -148,7 +93,7 @@ export function AuthSignupPage() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
-        const errs = validate()
+        const errs: typeof errors = { ...liveErrors }
         if (!isConfigured) {
             errs.form = 'Auth configuration unavailable. Please try again after Cognito is configured.'
         }
@@ -166,12 +111,16 @@ export function AuthSignupPage() {
         setErrors({})
         setSubmitting(true)
         try {
-            await signUp(normalizedEmail, password, normalizedUsername)
-            // Store email for verify page (survives refresh)
+            const result = await signUp(normalizedEmail, password, normalizedUsername)
             localStorage.setItem('pebble.auth.verifyEmail', normalizedEmail)
-            // Start resend cooldown from signup moment
             localStorage.setItem('pebble.auth.resendAt', String(Date.now() + 120_000))
-            navigate(`/auth/verify?email=${encodeURIComponent(normalizedEmail)}`)
+
+            if (result.requiresConfirmation) {
+                navigate(`/auth/verify-email?email=${encodeURIComponent(normalizedEmail)}`)
+                return
+            }
+
+            navigate(`/auth/login?email=${encodeURIComponent(normalizedEmail)}&created=1`)
         } catch (err: any) {
             const code = err?.code ?? err?.name ?? ''
             const message = err?.message ?? 'Account creation failed. Please try again.'
@@ -182,6 +131,8 @@ export function AuthSignupPage() {
                 setErrors({ form: 'An account with this email already exists. Try signing in.' })
             } else if (code === 'InvalidPasswordException') {
                 setErrors({ password: message })
+            } else if (code === 'AuthNotConfigured' || code === 'MissingClientSecret') {
+                setErrors({ form: message })
             } else {
                 setErrors({ form: message })
             }
@@ -204,15 +155,12 @@ export function AuthSignupPage() {
 
     const helperMessage =
         submitBlocker
-            ?? (usernameAvailability.status === 'unavailable'
+            ?? (usernameAvailability.status === 'error'
                 ? usernameAvailability.message
                 : usernameAvailability.status === 'available'
                     ? 'All signup requirements are satisfied.'
                     : 'Enter your email, username, and password to continue.')
 
-    // The async username check is advisory only. Production must not silently
-    // deadlock the CTA if that endpoint is slow/unavailable; backend signup
-    // remains the source of truth for uniqueness and config errors.
     const canSubmit = !submitting && !submitBlocker
 
     return (
@@ -313,7 +261,7 @@ export function AuthSignupPage() {
                                         ? 'text-emerald-400'
                                         : usernameAvailability.status === 'checking'
                                             ? 'text-pebble-text-muted'
-                                            : usernameAvailability.status === 'unavailable'
+                                            : usernameAvailability.status === 'error'
                                                 ? 'text-amber-400'
                                             : 'text-red-400'
                                 }`}
@@ -368,13 +316,14 @@ export function AuthSignupPage() {
                         className={`mt-2 flex min-h-[1.1rem] items-center gap-1.5 text-[11.5px] ${
                             canSubmit
                                 ? 'text-emerald-500'
-                                : usernameAvailability.status === 'unavailable'
+                                : usernameAvailability.status === 'error'
                                     ? 'text-amber-400'
                                     : 'text-pebble-text-muted'
                         }`}
                     >
-                        {!canSubmit && <AlertCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />}
+                        {!canSubmit && !submitting && <AlertCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />}
                         {submitting && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" strokeWidth={2.2} />}
+                        {canSubmit && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />}
                         <span>{helperMessage}</span>
                     </p>
                 </form>

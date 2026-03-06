@@ -9,6 +9,13 @@ import {
     CognitoUser,
     CognitoUserSession,
 } from 'amazon-cognito-identity-js'
+import {
+    getPasswordValidationError,
+    getUsernameValidationError,
+    isValidEmailCandidate,
+    normalizeEmailCandidate,
+    normalizeUsernameCandidate,
+} from '../../shared/authValidation'
 
 const USER_POOL_ID = import.meta.env.VITE_COGNITO_USER_POOL_ID as string | undefined
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID as string | undefined
@@ -20,6 +27,28 @@ const RESOLVED_CLIENT_ID = CLIENT_ID ?? CLIENT_ID_FALLBACK
 
 const isConfigured = Boolean(RESOLVED_USER_POOL_ID && RESOLVED_CLIENT_ID)
 const TOKEN_STORAGE_KEY = 'pebble.auth.idToken'
+const PENDING_SIGNUP_STORAGE_KEY = 'pebble.auth.pendingSignup'
+
+export type UsernameAvailabilityState =
+    | { status: 'idle'; message: string }
+    | { status: 'checking'; message: string }
+    | { status: 'available'; message: string }
+    | { status: 'taken'; message: string }
+    | { status: 'invalid'; message: string }
+    | { status: 'error'; message: string }
+
+export type PendingSignupState = {
+    email: string
+    username: string
+    createdAt: number
+}
+
+export type SignUpResult = {
+    requiresConfirmation: boolean
+    email: string
+    deliveryDestination?: string | null
+    deliveryMedium?: string | null
+}
 
 function maskEnvValue(value?: string) {
     if (!value) {
@@ -117,6 +146,75 @@ function clearStoredToken() {
     }
 }
 
+function canUseStorage(storage: Storage | undefined) {
+    if (!storage) return false
+    try {
+        const key = '__pebble_auth_probe__'
+        storage.setItem(key, '1')
+        storage.removeItem(key)
+        return true
+    } catch {
+        return false
+    }
+}
+
+function getPendingSignupStorage() {
+    if (typeof window === 'undefined') {
+        return null
+    }
+    if (canUseStorage(window.sessionStorage)) {
+        return window.sessionStorage
+    }
+    if (canUseStorage(window.localStorage)) {
+        return window.localStorage
+    }
+    return null
+}
+
+export function savePendingSignup(state: PendingSignupState) {
+    const storage = getPendingSignupStorage()
+    if (!storage) return
+    try {
+        storage.setItem(PENDING_SIGNUP_STORAGE_KEY, JSON.stringify(state))
+    } catch {
+        // no-op
+    }
+}
+
+export function loadPendingSignup(): PendingSignupState | null {
+    const storage = getPendingSignupStorage()
+    if (!storage) return null
+    try {
+        const raw = storage.getItem(PENDING_SIGNUP_STORAGE_KEY)
+        if (!raw) return null
+        const parsed = JSON.parse(raw) as Partial<PendingSignupState>
+        if (
+            typeof parsed.email !== 'string'
+            || typeof parsed.username !== 'string'
+            || typeof parsed.createdAt !== 'number'
+        ) {
+            return null
+        }
+        return {
+            email: parsed.email,
+            username: parsed.username,
+            createdAt: parsed.createdAt,
+        }
+    } catch {
+        return null
+    }
+}
+
+export function clearPendingSignup() {
+    const storage = getPendingSignupStorage()
+    if (!storage) return
+    try {
+        storage.removeItem(PENDING_SIGNUP_STORAGE_KEY)
+    } catch {
+        // no-op
+    }
+}
+
 function isTokenExpired(idToken: string): boolean {
     const payload = parseJwtPayload(idToken)
     const exp = payload?.exp
@@ -189,13 +287,25 @@ export async function signIn(identifier: string, password: string): Promise<{ us
     return { user, idToken: data.idToken }
 }
 
-export async function signUp(email: string, password: string, username: string): Promise<void> {
+export async function signUp(email: string, password: string, username: string): Promise<SignUpResult> {
+    const normalizedEmail = normalizeEmailCandidate(email)
+    const normalizedUsername = normalizeUsernameCandidate(username)
     const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, username }),
+        body: JSON.stringify({ email: normalizedEmail, password, username: normalizedUsername }),
     })
-    const data = await res.json().catch(() => ({})) as { error?: string; code?: string; reason?: string }
+    const data = await res.json().catch(() => ({})) as {
+        ok?: boolean
+        error?: string
+        code?: string
+        reason?: string
+        requiresConfirmation?: boolean
+        delivery?: {
+            destination?: string | null
+            medium?: string | null
+        } | null
+    }
     if (!res.ok) {
         const error = new Error(data.error ?? 'Account creation failed. Please try again.') as Error & {
             code?: string
@@ -209,6 +319,21 @@ export async function signUp(email: string, password: string, username: string):
         }
         throw error
     }
+
+    const result: SignUpResult = {
+        requiresConfirmation: data.requiresConfirmation !== false,
+        email: normalizedEmail,
+        deliveryDestination: data.delivery?.destination ?? null,
+        deliveryMedium: data.delivery?.medium ?? null,
+    }
+
+    savePendingSignup({
+        email: normalizedEmail,
+        username: normalizedUsername,
+        createdAt: Date.now(),
+    })
+
+    return result
 }
 
 export function signOut(): void {
@@ -219,10 +344,12 @@ export function signOut(): void {
 }
 
 export function confirmSignUp(email: string, code: string): Promise<void> {
+    const normalizedEmail = normalizeEmailCandidate(email)
+    const normalizedCode = code.replace(/\D/g, '').slice(0, 6)
     return fetch('/api/auth/confirm-signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email: normalizedEmail, code: normalizedCode }),
     }).then(async (res) => {
         const data = await res.json().catch(() => ({})) as { error?: string; code?: string }
         if (!res.ok) {
@@ -230,14 +357,16 @@ export function confirmSignUp(email: string, code: string): Promise<void> {
             error.code = data.code
             throw error
         }
+        clearPendingSignup()
     })
 }
 
 export function resendSignUpCode(email: string): Promise<void> {
+    const normalizedEmail = normalizeEmailCandidate(email)
     return fetch('/api/auth/resend-signup-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
     }).then(async (res) => {
         const data = await res.json().catch(() => ({})) as { error?: string; code?: string }
         if (!res.ok) {
@@ -260,4 +389,88 @@ export function forgotPassword(email: string): Promise<void> {
             inputVerificationCode: () => resolve(),
         })
     })
+}
+
+export function validateSignupFields(input: {
+    email: string
+    username: string
+    password: string
+    confirm: string
+}) {
+    const email = normalizeEmailCandidate(input.email)
+    const username = normalizeUsernameCandidate(input.username)
+    const errors: {
+        email?: string
+        username?: string
+        password?: string
+        confirm?: string
+    } = {}
+
+    if (!email) {
+        errors.email = 'Email is required'
+    } else if (!isValidEmailCandidate(email)) {
+        errors.email = 'Enter a valid email address'
+    }
+
+    const usernameError = getUsernameValidationError(username)
+    if (usernameError) {
+        errors.username = usernameError
+    }
+
+    const passwordError = getPasswordValidationError(input.password)
+    if (passwordError) {
+        errors.password = passwordError
+    }
+
+    if (!input.confirm) {
+        errors.confirm = 'Please confirm your password'
+    } else if (input.password !== input.confirm) {
+        errors.confirm = 'Passwords do not match'
+    }
+
+    return {
+        errors,
+        normalizedEmail: email,
+        normalizedUsername: username,
+    }
+}
+
+export async function checkUsernameAvailability(username: string, signal?: AbortSignal): Promise<UsernameAvailabilityState> {
+    const normalizedUsername = normalizeUsernameCandidate(username)
+    const usernameError = getUsernameValidationError(normalizedUsername)
+    if (!normalizedUsername) {
+        return { status: 'idle', message: '' }
+    }
+    if (usernameError) {
+        return {
+            status: 'invalid',
+            message: '3–20 characters · letters, numbers, underscores',
+        }
+    }
+
+    const res = await fetch(`/api/auth/username-available?username=${encodeURIComponent(normalizedUsername)}`, {
+        signal,
+    })
+    const data = await res.json().catch(() => ({})) as {
+        available?: boolean
+        reason?: string
+        error?: string
+    }
+
+    if (!res.ok) {
+        throw new Error(data.error ?? 'Unable to check username availability right now.')
+    }
+
+    if (data.available) {
+        return { status: 'available', message: 'Username is available' }
+    }
+
+    if (data.reason === 'taken') {
+        return { status: 'taken', message: 'Username is already taken' }
+    }
+
+    return {
+        status: 'invalid',
+        message: '3–20 characters · letters, numbers, underscores',
+    }
 }

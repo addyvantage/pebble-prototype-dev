@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { MailCheck } from 'lucide-react'
+import { ArrowLeft, MailCheck } from 'lucide-react'
 import { AuthShell } from './AuthShell'
 import { OtpInput } from '../../components/auth/OtpInput'
 import { useAuth } from '../../hooks/useAuth'
+import { clearPendingSignup, loadPendingSignup } from '../../lib/auth'
 
 const VERIFY_EMAIL_KEY = 'pebble.auth.verifyEmail'
 const RESEND_AT_KEY = 'pebble.auth.resendAt'
@@ -38,27 +39,26 @@ function normalizeError(err: any): string {
 }
 
 export function AuthVerifyPage() {
-    const { confirmSignUp, resendSignUpCode } = useAuth()
+    const { confirmSignUp, resendSignUpCode, isConfigured } = useAuth()
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
 
-    // Resolve email: URL param → localStorage fallback
+    const pendingSignup = loadPendingSignup()
     const emailFromUrl = searchParams.get('email') ?? ''
     const emailFromStorage = localStorage.getItem(VERIFY_EMAIL_KEY) ?? ''
-    const email = emailFromUrl || emailFromStorage
+    const email = emailFromUrl || pendingSignup?.email || emailFromStorage
 
-    // If no email, send to signup
     useEffect(() => {
         if (!email) navigate('/auth/signup', { replace: true })
     }, [email, navigate])
 
-    // Persist email so page survives refresh
     useEffect(() => {
         if (email) localStorage.setItem(VERIFY_EMAIL_KEY, email)
     }, [email])
 
     const [code, setCode] = useState('')
     const [error, setError] = useState('')
+    const [info, setInfo] = useState('')
     const [verifying, setVerifying] = useState(false)
     const [resending, setResending] = useState(false)
     const [secondsLeft, setSecondsLeft] = useState(getSecondsLeft)
@@ -72,15 +72,20 @@ export function AuthVerifyPage() {
 
     async function handleVerify(e: React.FormEvent) {
         e.preventDefault()
+        if (!isConfigured) {
+            setError('Auth configuration unavailable. Verification cannot complete until Cognito is configured.')
+            return
+        }
         if (code.length < 6) return
         setError('')
+        setInfo('')
         setVerifying(true)
         try {
             await confirmSignUp(email, code)
-            // Clean up localStorage
             localStorage.removeItem(VERIFY_EMAIL_KEY)
             localStorage.removeItem(RESEND_AT_KEY)
-            navigate(`/auth/login?email=${encodeURIComponent(email)}&verified=1`)
+            clearPendingSignup()
+            navigate(`/auth/login?email=${encodeURIComponent(email)}&verified=1`, { replace: true })
         } catch (err: any) {
             setError(normalizeError(err))
             setCode('')
@@ -93,12 +98,13 @@ export function AuthVerifyPage() {
     async function handleResend() {
         if (secondsLeft > 0 || resending) return
         setError('')
+        setInfo('')
         setResending(true)
         try {
             await resendSignUpCode(email)
-            // Start cooldown
             localStorage.setItem(RESEND_AT_KEY, String(Date.now() + COOLDOWN_MS))
             setSecondsLeft(COOLDOWN_MS / 1000)
+            setInfo(`A new verification code was sent to ${email}.`)
         } catch (err: any) {
             setError(normalizeError(err))
             setTimeout(() => errorRef.current?.focus(), 0)
@@ -142,6 +148,18 @@ export function AuthVerifyPage() {
                     </div>
                 )}
 
+                {info && (
+                    <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-3 text-[12.5px] text-emerald-400">
+                        {info}
+                    </div>
+                )}
+
+                {!isConfigured && (
+                    <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3 text-[12.5px] text-amber-400">
+                        Verification is unavailable until Cognito is configured for this deployment.
+                    </div>
+                )}
+
                 {/* OTP form */}
                 <form onSubmit={handleVerify} className="space-y-5">
                     <OtpInput
@@ -154,7 +172,7 @@ export function AuthVerifyPage() {
 
                     <button
                         type="submit"
-                        disabled={!canSubmit}
+                        disabled={!canSubmit || !isConfigured}
                         className="auth-button w-full"
                     >
                         {verifying ? 'Verifying…' : 'Verify email'}
@@ -170,7 +188,7 @@ export function AuthVerifyPage() {
                         <button
                             type="button"
                             onClick={handleResend}
-                            disabled={resending}
+                            disabled={resending || !isConfigured}
                             className="text-[13px] font-medium text-pebble-accent hover:text-pebble-text-primary transition-colors disabled:opacity-50"
                         >
                             {resending ? 'Sending…' : 'Resend code'}
@@ -186,15 +204,21 @@ export function AuthVerifyPage() {
                 </div>
 
                 {/* Change email */}
-                <p className="text-center text-[12.5px] text-pebble-text-muted">
-                    Wrong email?{' '}
+                <div className="flex items-center justify-center gap-4 text-[12.5px] text-pebble-text-muted">
                     <Link
                         to="/auth/signup"
-                        className="text-pebble-accent hover:text-pebble-text-primary transition-colors"
+                        className="inline-flex items-center gap-1 text-pebble-accent hover:text-pebble-text-primary transition-colors"
                     >
-                        Change it
+                        <ArrowLeft className="h-3.5 w-3.5" />
+                        Change email
                     </Link>
-                </p>
+                    <Link
+                        to="/auth/login"
+                        className="text-pebble-text-muted hover:text-pebble-text-primary transition-colors"
+                    >
+                        Back to sign in
+                    </Link>
+                </div>
             </div>
         </AuthShell>
     )

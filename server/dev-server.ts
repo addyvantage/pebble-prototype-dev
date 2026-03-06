@@ -603,6 +603,34 @@ function normalizeUsername(username: unknown) {
   return trimmed
 }
 
+function normalizeEmail(email: unknown) {
+  if (typeof email !== 'string') return ''
+  return email.trim().toLowerCase()
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function getPasswordPolicyError(password: unknown) {
+  if (typeof password !== 'string' || !password) {
+    return 'Password is required'
+  }
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters'
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must include a lowercase letter'
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must include an uppercase letter'
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Password must include a number'
+  }
+  return undefined
+}
+
 function getNextUsernameChangeAt(profile: DevProfileRecord) {
   const base = (profile.lastUsernameChangeAt ?? profile.usernameSetAt) as string | null | undefined
   if (!base) return null
@@ -635,6 +663,63 @@ function findDevProfileByUsernameLower(usernameLower: string) {
     }
   }
   return null
+}
+
+async function lookupUsernameAvailabilityDev(normalized: string) {
+  const usernameLower = normalized.toLowerCase()
+  const awsRegion = process.env.AWS_REGION
+
+  if (!awsRegion) {
+    const exists = Boolean(findDevProfileByUsernameLower(usernameLower))
+    return { available: !exists, ...(exists ? { reason: 'taken' as const } : {}) }
+  }
+
+  let ddbError: unknown = null
+  try {
+    const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb')
+    const { DynamoDBDocumentClient, GetCommand } = await import('@aws-sdk/lib-dynamodb')
+    const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: awsRegion }))
+    const claim = await client.send(
+      new GetCommand({
+        TableName: PROFILES_TABLE,
+        Key: { userId: usernameClaimKey(usernameLower) },
+      }),
+    )
+    if (claim.Item) {
+      return { available: false, reason: 'taken' as const }
+    }
+  } catch (err) {
+    ddbError = err
+  }
+
+  if (COGNITO_USER_POOL_ID) {
+    try {
+      const { CognitoIdentityProviderClient, ListUsersCommand } = await import('@aws-sdk/client-cognito-identity-provider')
+      const cognito = new CognitoIdentityProviderClient({ region: awsRegion })
+      const filterValue = normalized.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+      const result = await cognito.send(new ListUsersCommand({
+        UserPoolId: COGNITO_USER_POOL_ID,
+        Limit: 1,
+        Filter: `preferred_username = "${filterValue}"`,
+      }))
+
+      if ((result.Users?.length ?? 0) > 0) {
+        return { available: false, reason: 'taken' as const }
+      }
+
+      return { available: true }
+    } catch (err) {
+      if (!ddbError) {
+        ddbError = err
+      }
+    }
+  }
+
+  if (ddbError) {
+    throw ddbError
+  }
+
+  return { available: true }
 }
 
 async function claimDevUsername(
@@ -743,36 +828,23 @@ const devProfiles = loadDevProfiles()
 
 app.use('/uploads', express.static(DEV_UPLOADS_ROOT, { fallthrough: true }))
 
-app.get('/api/username/available', async (req: Request, res: Response) => {
+app.get(['/api/username/available', '/api/auth/username-available'], async (req: Request, res: Response) => {
   const normalized = normalizeUsername(req.query.username)
   if (!normalized) {
     res.status(200).json({ available: false, reason: 'invalid' })
     return
   }
-  const usernameLower = normalized.toLowerCase()
-  const awsRegion = process.env.AWS_REGION
-
-  if (!awsRegion) {
-    const exists = Boolean(findDevProfileByUsernameLower(usernameLower))
-    res.status(200).json({ available: !exists, ...(exists ? { reason: 'taken' } : {}) })
-    return
-  }
 
   try {
-    const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb')
-    const { DynamoDBDocumentClient, GetCommand } = await import('@aws-sdk/lib-dynamodb')
-    const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: awsRegion }))
-    const claim = await client.send(
-      new GetCommand({
-        TableName: PROFILES_TABLE,
-        Key: { userId: usernameClaimKey(usernameLower) },
-      }),
-    )
-    const available = !claim.Item
-    res.status(200).json({ available, ...(available ? {} : { reason: 'taken' }) })
+    const result = await lookupUsernameAvailabilityDev(normalized)
+    res.status(200).json(result)
   } catch (err) {
     console.error('[dev-api] username availability lookup failed:', err)
-    res.status(500).json({ error: 'Failed to check username availability' })
+    res.status(500).json({
+      available: false,
+      reason: 'error',
+      error: 'Failed to check username availability',
+    })
   }
 })
 
@@ -803,7 +875,7 @@ app.get('/api/profile', async (req: Request, res: Response) => {
 
   try {
     const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb')
-    const { DynamoDBDocumentClient, GetCommand, PutCommand } = await import('@aws-sdk/lib-dynamodb')
+    const { DynamoDBDocumentClient, PutCommand } = await import('@aws-sdk/lib-dynamodb')
     const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: awsRegion }))
     const result = await client.send(
       new GetCommand({
@@ -1076,9 +1148,10 @@ app.post('/api/profile/username', async (req: Request, res: Response) => {
 
 app.post('/api/auth/signup', async (req: Request, res: Response) => {
   const { email, password, username } = req.body as { email?: unknown; password?: unknown; username?: unknown }
-  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+  const normalizedEmail = normalizeEmail(email)
   const normalizedUsername = normalizeUsername(username)
-  if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || typeof password !== 'string' || password.length < 8 || !normalizedUsername) {
+  const passwordError = getPasswordPolicyError(password)
+  if (!normalizedEmail || !isValidEmail(normalizedEmail) || passwordError || !normalizedUsername) {
     res.status(400).json({ error: 'Invalid signup payload' })
     return
   }
@@ -1098,8 +1171,8 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
     const { CognitoIdentityProviderClient, SignUpCommand } = await import('@aws-sdk/client-cognito-identity-provider')
     const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: awsRegion }))
 
-    const existingClaim = await ddb.send(new GetCommand({ TableName: PROFILES_TABLE, Key: { userId: usernameClaimKey(usernameLower) } }))
-    if (existingClaim.Item) {
+    const availability = await lookupUsernameAvailabilityDev(normalizedUsername)
+    if (!availability.available) {
       res.status(409).json({ error: 'Username is already taken', reason: 'taken' })
       return
     }
@@ -1161,8 +1234,30 @@ app.post('/api/auth/signup', async (req: Request, res: Response) => {
         ConditionExpression: 'attribute_not_exists(userId)',
       }),
     )
-    res.status(200).json({ ok: true, userSub: userId })
+    res.status(200).json({
+      ok: true,
+      userSub: userId,
+      requiresConfirmation: !Boolean(signUpResp.UserConfirmed),
+      delivery: signUpResp.CodeDeliveryDetails
+        ? {
+            destination: signUpResp.CodeDeliveryDetails.Destination ?? null,
+            medium: signUpResp.CodeDeliveryDetails.DeliveryMedium ?? null,
+          }
+        : null,
+    })
   } catch (err: any) {
+    if (COGNITO_USER_POOL_ID && normalizedEmail && err?.name !== 'UsernameExistsException') {
+      try {
+        const { CognitoIdentityProviderClient, AdminDeleteUserCommand } = await import('@aws-sdk/client-cognito-identity-provider')
+        const cognito = new CognitoIdentityProviderClient({ region: awsRegion })
+        await cognito.send(new AdminDeleteUserCommand({
+          UserPoolId: COGNITO_USER_POOL_ID,
+          Username: normalizedEmail,
+        }))
+      } catch {
+        // best-effort cleanup only
+      }
+    }
     if (err?.name === 'ConditionalCheckFailedException') {
       res.status(409).json({ error: 'Username is already taken', reason: 'taken' })
       return

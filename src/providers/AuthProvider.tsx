@@ -7,6 +7,7 @@ import {
     confirmSignUp as cognitoConfirmSignUp,
     resendSignUpCode as cognitoResendSignUpCode,
     isCognitoConfigured,
+    type SignUpResult,
     type AuthUser,
 } from '../lib/auth'
 import { pushNotification, setNotificationScope } from '../lib/notificationsStore'
@@ -36,7 +37,7 @@ export type AuthContextValue = {
     isConfigured: boolean
     idToken: string | null
     signIn: (identifier: string, password: string) => Promise<void>
-    signUp: (email: string, password: string, username: string) => Promise<void>
+    signUp: (email: string, password: string, username: string) => Promise<SignUpResult>
     confirmSignUp: (email: string, code: string) => Promise<void>
     resendSignUpCode: (email: string) => Promise<void>
     signOut: () => void
@@ -153,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // signUp only registers the user — Cognito sends a verification email.
     // Auto sign-in is NOT attempted here; the verify page handles confirmation.
     const handleSignUp = useCallback(async (email: string, password: string, username: string) => {
-        await cognitoSignUp(email, password, username)
+        return await cognitoSignUp(email, password, username)
     }, [])
 
     const handleConfirmSignUp = useCallback(async (email: string, code: string) => {

@@ -43,6 +43,7 @@ function App() {
         <Route path="/auth/signup" element={<AuthSignupPage />} />
         <Route path="/auth/forgot-password" element={<AuthForgotPasswordPage />} />
         <Route path="/auth/verify" element={<AuthVerifyPage />} />
+        <Route path="/auth/verify-email" element={<AuthVerifyPage />} />
         <Route path="/auth/thank-you" element={<AuthThankYouPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />

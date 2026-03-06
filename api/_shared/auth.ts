@@ -1,4 +1,9 @@
 import { createHmac } from 'node:crypto'
+import {
+  USERNAME_REGEX,
+  isValidEmailCandidate,
+  normalizeEmailCandidate,
+} from '../../shared/authValidation.js'
 
 export const PROFILES_TABLE = process.env.PROFILES_TABLE_NAME ?? 'pebble-profiles'
 export const COGNITO_CLIENT_ID =
@@ -15,7 +20,7 @@ const COGNITO_USER_POOL_ID =
   ''
 const COGNITO_CLIENT_SECRET = process.env.COGNITO_CLIENT_SECRET ?? ''
 const USERNAME_CLAIM_PREFIX = 'UNAME#'
-export const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/
+export { COGNITO_USER_POOL_ID, USERNAME_REGEX }
 
 export function usernameClaimKey(usernameLower: string) {
   return `${USERNAME_CLAIM_PREFIX}${usernameLower}`
@@ -29,12 +34,11 @@ export function normalizeUsername(username: unknown) {
 }
 
 export function normalizeEmail(email: unknown) {
-  if (typeof email !== 'string') return ''
-  return email.trim().toLowerCase()
+  return normalizeEmailCandidate(email)
 }
 
 export function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  return isValidEmailCandidate(email)
 }
 
 export function createSecretHash(username: string) {
