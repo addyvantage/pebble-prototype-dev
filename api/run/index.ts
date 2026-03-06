@@ -7,7 +7,7 @@ import {
   type RunRequestBody,
   type RunnerResponse,
 } from './runnerShared.js'
-import { toLegacyCodeLanguageId } from '../../shared/languageRegistry'
+import { toLegacyCodeLanguageId } from '../../shared/languageRegistry.js'
 
 export const config = {
   runtime: 'nodejs',
@@ -298,7 +298,7 @@ export default async function handler(
     }
 
     const normalized = normalizeRunRequest(body)
-    if (!normalized.ok) {
+    if (normalized.ok === false) {
       sendJson(res, normalized.status, buildErrorResponse(normalized.error, 'validation_error'))
       return
     }

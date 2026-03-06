@@ -3,7 +3,7 @@ import {
   isLanguageId,
   normalizeSessionLanguageId,
   type LanguageId,
-} from '../../shared/languageRegistry.ts'
+} from '../../shared/languageRegistry.js'
 
 export const SUPPORTED_LANGUAGES = LANGUAGE_IDS
 
@@ -165,14 +165,17 @@ export function normalizeRunnerResponse(payload: unknown): RunnerResponse | null
           ? 'ok'
           : 'runtime_error'
 
+  const normalizedExitCode: number | null = typeof exitCode === 'number' ? exitCode : null
+  const normalizedDurationMs: number = typeof durationMs === 'number' ? durationMs : 0
+
   return {
     ok,
     status: normalizedStatus,
-    exitCode,
+    exitCode: normalizedExitCode,
     stdout,
     stderr,
     timedOut,
-    durationMs,
+    durationMs: normalizedDurationMs,
   }
 }
 

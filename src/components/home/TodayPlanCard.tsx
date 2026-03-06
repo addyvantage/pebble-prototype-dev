@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { Card } from '../ui/Card'
 import { useI18n } from '../../i18n/useI18n'
-import { Check, Sparkles, Flame, X, RefreshCw, Target } from 'lucide-react'
+import { Check, Sparkles, Flame, X, RefreshCw, Gauge } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { loadDailyPlan, toggleTaskDone, computeStreak, computeEffortScore, type PlanState } from '../../lib/planStore'
+import { loadDailyPlan, saveDailyPlan, toggleTaskDone, computeStreak, type PlanState } from '../../lib/planStore'
 import { generatePlan, type PlannerContext } from '../../api/plan'
 import { loadSolvedProblems } from '../../lib/solvedProblemsStore'
 import { getRecentActivity } from '../../lib/recentStore'
@@ -16,14 +16,36 @@ function classNames(...values: Array<string | undefined>) {
     return values.filter(Boolean).join(' ')
 }
 
+const FOCUS_TARGET_MINUTES = 25
+
+type FocusLoadState = 'neutral' | 'balanced' | 'stretch' | 'heavy'
+
+function getPlannedMinutes(tasks: Array<{ estimatedMinutes: number }>) {
+    return tasks.reduce((sum, task) => sum + task.estimatedMinutes, 0)
+}
+
+function getFocusLoadState(plannedMinutes: number, targetMinutes: number): FocusLoadState {
+    if (plannedMinutes <= 0) return 'neutral'
+    if (plannedMinutes <= targetMinutes) return 'balanced'
+    if (plannedMinutes <= targetMinutes * 1.35) return 'stretch'
+    return 'heavy'
+}
+
+function getFocusLoadLabel(state: FocusLoadState) {
+    if (state === 'balanced') return 'Balanced'
+    if (state === 'stretch') return 'Stretch'
+    if (state === 'heavy') return 'Heavy'
+    return 'Neutral'
+}
+
 function buildExpectedOutcome(params: {
     tasks: Array<{ label: string; detail: string; estimatedMinutes: number }>
     streak: number
-    effortScore: number
+    plannedMinutes: number
+    loadState: FocusLoadState
 }) {
-    const { tasks, streak, effortScore } = params
+    const { tasks, streak, plannedMinutes, loadState } = params
     const labels = tasks.map((task) => `${task.label} ${task.detail}`.toLowerCase()).join(' ')
-    const totalMinutes = tasks.reduce((sum, task) => sum + task.estimatedMinutes, 0)
 
     const mentionsReview = /review|mistake|incorrect|rerun|recovery/.test(labels)
     const mentionsWarmup = /warm|win|start|fresh|first/.test(labels)
@@ -37,11 +59,15 @@ function buildExpectedOutcome(params: {
         return 'By the end of this session, you should have one clean win, one reviewed mistake, and better recovery flow.'
     }
 
-    if (mentionsDrill && effortScore >= 100) {
-        return 'You should finish today with focused reps completed and less friction on the exact patterns you are reinforcing.'
+    if (loadState === 'heavy') {
+        return 'A short focused session should rebuild momentum without letting the workload sprawl.'
     }
 
-    if (totalMinutes <= 20) {
+    if (mentionsDrill && plannedMinutes <= FOCUS_TARGET_MINUTES) {
+        return 'You should finish with one solved rep, one review insight, and a cleaner recovery loop.'
+    }
+
+    if (plannedMinutes <= 20) {
         return 'This session should help you leave with momentum restored, not mentally drained.'
     }
 
@@ -166,10 +192,8 @@ export function TodayPlanCard() {
                 plan: newPlan,
                 completedTasks: []
             }
-            // using exact same update pattern
             setState(nextState)
-            // also we can't completely avoid planStore's internal toggle so we just save it
-            localStorage.setItem('pebble.plan.v1', JSON.stringify(nextState))
+            saveDailyPlan(nextState)
             setStreak(computeStreak())
 
         } catch (err) {
@@ -180,7 +204,10 @@ export function TodayPlanCard() {
     }
 
     const plan = state.plan
-    const currentEffort = computeEffortScore(plan, state.completedTasks)
+    const plannedMinutes = plan ? getPlannedMinutes(plan.tasks.slice(0, 3)) : 0
+    const focusLoadState = getFocusLoadState(plannedMinutes, FOCUS_TARGET_MINUTES)
+    const loadRatio = plannedMinutes > 0 ? plannedMinutes / FOCUS_TARGET_MINUTES : 0
+    const pacingBarWidth = Math.max(12, Math.min(100, Math.round(loadRatio * 100)))
     const expandedTask = plan?.tasks.find(t => t.id === expandedTaskId)
     const portalHost = document.getElementById('pebble-portal') ?? document.body
     const planSurfaceClass = theme === 'dark'
@@ -204,20 +231,50 @@ export function TodayPlanCard() {
     const streakChipClass = theme === 'dark'
         ? 'border-orange-300/38 bg-orange-400/16 text-[hsl(33_100%_76%)]'
         : 'border-orange-500/20 bg-orange-500/10 text-orange-500'
-    const effortChipClass = theme === 'dark'
-        ? 'border-pebble-accent/34 bg-pebble-accent/16 text-[hsl(214_100%_76%)]'
-        : 'border-pebble-accent/20 bg-pebble-accent/10 text-pebble-accent'
+    const loadChipClass = focusLoadState === 'balanced'
+        ? theme === 'dark'
+            ? 'border-emerald-300/26 bg-emerald-400/14 text-[hsl(156_78%_76%)]'
+            : 'border-emerald-500/18 bg-emerald-500/10 text-emerald-700'
+        : focusLoadState === 'stretch'
+            ? theme === 'dark'
+                ? 'border-amber-300/30 bg-amber-400/14 text-[hsl(40_100%_78%)]'
+                : 'border-amber-500/18 bg-amber-500/10 text-amber-700'
+            : focusLoadState === 'heavy'
+                ? theme === 'dark'
+                    ? 'border-orange-300/30 bg-orange-400/15 text-[hsl(26_100%_79%)]'
+                    : 'border-orange-500/18 bg-orange-500/10 text-orange-700'
+                : theme === 'dark'
+                    ? 'border-pebble-border/26 bg-pebble-overlay/[0.08] text-[hsl(220_16%_82%)]'
+                    : 'border-pebble-border/18 bg-pebble-overlay/[0.06] text-pebble-text-secondary'
+    const loadStateDotClass = focusLoadState === 'balanced'
+        ? 'bg-emerald-500'
+        : focusLoadState === 'stretch'
+            ? 'bg-amber-500'
+            : focusLoadState === 'heavy'
+                ? 'bg-orange-500'
+                : 'bg-pebble-text-muted/65'
     const outcomeLabelClass = theme === 'dark'
         ? 'text-[hsl(220_12%_76%)]'
         : 'text-pebble-text-muted'
     const outcomeBodyClass = theme === 'dark'
         ? 'text-[hsl(220_18%_88%)]'
         : 'text-[hsl(223_28%_24%)]'
+    const outcomeStripClass = theme === 'dark'
+        ? 'border border-pebble-border/20 bg-pebble-overlay/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+        : 'border border-pebble-border/18 bg-white/62 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]'
+    const pacingBarClass = focusLoadState === 'balanced'
+        ? 'bg-emerald-500/80'
+        : focusLoadState === 'stretch'
+            ? 'bg-amber-500/80'
+            : focusLoadState === 'heavy'
+                ? 'bg-orange-500/80'
+                : 'bg-pebble-accent/58'
     const expectedOutcome = plan
         ? buildExpectedOutcome({
             tasks: plan.tasks.slice(0, 3),
             streak,
-            effortScore: currentEffort,
+            plannedMinutes,
+            loadState: focusLoadState,
         })
         : null
 
@@ -241,19 +298,23 @@ export function TodayPlanCard() {
                             {plan ? plan.subtitle : t('home.todayPlan.subtitle')}
                         </p>
                     </div>
-                    {plan && (
-                        <div className="flex items-center gap-2">
-                            {streak > 0 && (
+                    <div className="flex items-center gap-2">
+                        {plan && streak > 0 && (
                             <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium shadow-[0_8px_18px_rgba(55,72,110,0.08)] ${streakChipClass}`}>
-                                    <Flame className="h-3 w-3" />
-                                    {t('home.plan.streak', { count: String(streak) })}
-                                </span>
-                            )}
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium shadow-[0_8px_18px_rgba(55,72,110,0.08)] ${effortChipClass}`}>
-                                {t('home.plan.effortScore', { score: `${currentEffort}/${plan.scoring.targetEffortScore}` })}
+                                <Flame className="h-3 w-3" />
+                                {t('home.plan.streak', { count: String(streak) })}
                             </span>
-                        </div>
-                    )}
+                        )}
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-[0_8px_18px_rgba(55,72,110,0.08)] ${loadChipClass}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${loadStateDotClass}`} />
+                            <span>{`Focus load ${plannedMinutes}/${FOCUS_TARGET_MINUTES}m`}</span>
+                            {plan ? (
+                                <span className="text-[10px] font-semibold tracking-[0.02em] opacity-80">
+                                    {getFocusLoadLabel(focusLoadState)}
+                                </span>
+                            ) : null}
+                        </span>
+                    </div>
                 </div>
 
                 {!plan ? (
@@ -285,7 +346,7 @@ export function TodayPlanCard() {
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3.5">
                         <div className={`flex items-center justify-between rounded-[14px] px-3 py-2.5 ${insetPanelClass}`}>
                             <div className="min-w-0">
                                 <p className={`text-[11px] uppercase tracking-[0.08em] ${darkLabelClass} ${isRTL ? 'rtlText' : ''}`}>
@@ -296,10 +357,10 @@ export function TodayPlanCard() {
                                 </p>
                             </div>
                             <div className="ml-3 hidden min-w-[110px] sm:block">
-                                <div className="h-2 overflow-hidden rounded-full border border-pebble-border/24 bg-pebble-overlay/[0.06]">
+                                <div className="h-2.5 overflow-hidden rounded-full border border-pebble-border/24 bg-pebble-overlay/[0.06]">
                                     <div
-                                        className="h-full rounded-full bg-pebble-accent/70"
-                                        style={{ width: `${Math.max(10, (state.completedTasks.length / Math.max(plan.tasks.slice(0, 3).length, 1)) * 100)}%` }}
+                                        className={`h-full rounded-full ${pacingBarClass}`}
+                                        style={{ width: `${pacingBarWidth}%` }}
                                     />
                                 </div>
                             </div>
@@ -369,19 +430,17 @@ export function TodayPlanCard() {
                             </button>
                         </div>
                         {expectedOutcome ? (
-                            <div className="px-1 pt-2.5">
-                                <div className="flex items-start gap-2">
-                                    <span className="mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pebble-accent/10 text-pebble-accent">
-                                        <Target className="h-3 w-3" aria-hidden="true" />
-                                    </span>
-                                    <div className="min-w-0">
-                                        <p className={`text-[10.5px] font-semibold uppercase tracking-[0.08em] ${outcomeLabelClass} ${isRTL ? 'rtlText' : ''}`}>
-                                            Expected by end of session
-                                        </p>
-                                        <p className={`mt-1 text-[13px] leading-[1.65] ${outcomeBodyClass} ${isRTL ? 'rtlText' : ''}`}>
-                                            {expectedOutcome}
-                                        </p>
-                                    </div>
+                            <div className={`mx-1 flex items-start gap-2.5 rounded-[14px] px-3 py-2.5 ${outcomeStripClass}`}>
+                                <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-pebble-accent/12 text-pebble-accent">
+                                    <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
+                                </span>
+                                <div className="min-w-0">
+                                    <p className={`text-[10.5px] font-semibold uppercase tracking-[0.08em] ${outcomeLabelClass} ${isRTL ? 'rtlText' : ''}`}>
+                                        Expected by end of session
+                                    </p>
+                                    <p className={`mt-1 text-[12.75px] leading-[1.58] ${outcomeBodyClass} ${isRTL ? 'rtlText' : ''}`}>
+                                        {expectedOutcome}
+                                    </p>
                                 </div>
                             </div>
                         ) : null}

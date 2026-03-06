@@ -308,7 +308,11 @@ export function ProblemsPage() {
         isUrdu={isUrdu}
       />
 
-      <Card padding="sm" interactive className="problems-focus-shell rounded-[30px] px-4 py-4 md:px-5 md:py-5">
+      <Card
+        padding="sm"
+        interactive
+        className="problems-focus-shell relative z-20 overflow-visible rounded-[30px] px-4 py-4 md:px-5 md:py-5"
+      >
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div className="space-y-1">
@@ -429,7 +433,7 @@ export function ProblemsPage() {
 
       </Card>
 
-      <Card padding="sm" interactive className="problems-page-shell rounded-[32px] px-4 py-4 md:px-5 md:py-5">
+      <Card padding="sm" interactive className="problems-page-shell relative z-0 rounded-[32px] px-4 py-4 md:px-5 md:py-5">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">Results</p>

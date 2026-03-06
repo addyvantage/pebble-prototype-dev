@@ -2534,7 +2534,7 @@ export function SessionPage() {
           <div
             className="grid h-full min-h-0 min-w-0 gap-3 overflow-hidden"
             style={{
-              gridTemplateRows: 'minmax(360px,44vh) minmax(260px,1fr)',
+              gridTemplateRows: 'minmax(390px,47vh) minmax(220px,1fr)',
             }}
           >
             <section className="session-surface-strong flex min-h-0 flex-col overflow-hidden rounded-[28px]">
@@ -2651,13 +2651,13 @@ export function SessionPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-3 border-t border-pebble-border/20 px-4 py-3 text-xs text-pebble-text-secondary">
+              <div className="flex items-center justify-between gap-3 border-t border-pebble-border/20 px-4 py-2.5 text-xs text-pebble-text-secondary">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-[0.12em] text-pebble-text-muted">Session status</p>
-                  <p className="truncate text-sm text-pebble-text-secondary">{runMessage}</p>
+                  <p className="truncate text-[13.5px] text-pebble-text-secondary">{runMessage}</p>
                 </div>
                 {currentIsCompleted ? (
-                  <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-3 py-1 text-xs font-semibold text-pebble-success">
+                  <span className="rounded-full border border-pebble-success/35 bg-pebble-success/15 px-3 py-[0.325rem] text-[11px] font-semibold text-pebble-success">
                     {t('editor.completed')}
                   </span>
                 ) : null}

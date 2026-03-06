@@ -1,5 +1,5 @@
 import type { EventName, PebbleEvent } from '../shared/events'
-import { safeGetJSON, safeSetJSON } from './safeStorage'
+import { safeGetItem, safeGetJSON, safeSetItem, safeSetJSON } from './safeStorage'
 
 const STORAGE_KEY = 'pebble.telemetry.queue'
 const FLUSH_INTERVAL_MS = 10_000
@@ -20,10 +20,10 @@ class TelemetryEmitter {
 
     private getOrSetSessionId(): string {
         const key = 'pebble.sessionId'
-        let sid = localStorage.getItem(key)
+        let sid = safeGetItem(key)
         if (!sid) {
             sid = crypto.randomUUID()
-            localStorage.setItem(key, sid)
+            safeSetItem(key, sid, { maxBytes: 256, silent: true })
         }
         return sid
     }
@@ -107,9 +107,9 @@ class TelemetryEmitter {
                 keepalive: sync,
             })
 
-            if (response.status === 404) {
-                // Endpoint doesn't exist — stop retrying for this session
-                console.warn('[Telemetry] /api/telemetry returned 404, disabling telemetry for this session.')
+            if (response.status === 404 || response.status === 405) {
+                // Endpoint doesn't exist or does not support POST — stop retrying for this session.
+                console.warn(`[Telemetry] /api/telemetry returned ${response.status}, disabling telemetry for this session.`)
                 this.disabled = true
                 return
             }

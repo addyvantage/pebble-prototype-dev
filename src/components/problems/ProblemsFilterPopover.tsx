@@ -143,7 +143,7 @@ export function ProblemsFilterPopover({
 
       <div
         className={classNames(
-          `absolute right-0 top-[calc(100%+10px)] z-30 w-[min(92vw,430px)] origin-top rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(2,8,23,0.35)] backdrop-blur-xl transition duration-150 ${
+          `absolute right-0 top-[calc(100%+10px)] z-[90] w-[min(92vw,430px)] origin-top rounded-[24px] border p-4 shadow-[0_20px_60px_rgba(2,8,23,0.35)] backdrop-blur-xl transition duration-150 ${
             isDark
               ? 'pebble-panel-float border-[rgba(150,168,205,0.22)] bg-transparent'
               : 'pebble-panel-float border-pebble-border/20 bg-transparent'

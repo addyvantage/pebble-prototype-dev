@@ -266,7 +266,10 @@ async function ensureLanguageToolchain(language: RunLanguage): Promise<Toolchain
   return { ok: true, message: '' }
 }
 
-function inferInterpretedFailureStatus(language: 'python3' | 'javascript', stderr: string): RunnerStatus {
+function inferInterpretedFailureStatus(
+  language: 'python3' | 'javascript',
+  stderr: string,
+): 'compile_error' | 'runtime_error' {
   const normalized = stderr.toLowerCase()
   if (language === 'python3') {
     if (normalized.includes('syntaxerror') || normalized.includes('indentationerror')) {
