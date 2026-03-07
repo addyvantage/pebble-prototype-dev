@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import pebblecodeIconDark from '../../assets/brand/pebblecode-icon-dark.jpg'
+import { PebbleCoachLogo } from '../ui/PebbleCoachLogo'
 import { askPebble } from '../../utils/pebbleLLM'
 import { askPebbleAgent, type AgentResponse, type HelpTier } from '../../utils/pebbleAgentClient'
 import { ArrowUp, Check, Globe, Lightbulb, Search, Settings2, Wrench } from 'lucide-react'
@@ -665,14 +665,13 @@ export function PebbleChatPanel({
             onMouseEnter={() => setAvatarHovered(true)}
             onMouseLeave={() => setAvatarHovered(false)}
           >
-            <img
-              src={pebblecodeIconDark}
-              alt="PebbleCode"
-              draggable={false}
-              className={`h-10 w-10 select-none rounded-full object-cover pointer-events-none ${
-                dark ? 'brightness-[1.24] contrast-[1.06] saturate-110' : ''
-              }`}
-            />
+            <span className="inline-flex h-10 w-10 overflow-hidden rounded-full">
+              <PebbleCoachLogo
+                theme={theme}
+                alt="PebbleCode coach"
+                className="pointer-events-none"
+              />
+            </span>
           </div>
           <div>
             <p className={`text-base font-semibold text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>{t('chat.title')}</p>

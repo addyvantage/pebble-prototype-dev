@@ -10,6 +10,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { StatusPill } from '../ui/StatusPill'
+import { PebbleCoachLogo } from '../ui/PebbleCoachLogo'
 
 type AnimatedProductPreviewProps = {
   theme: 'light' | 'dark'
@@ -796,8 +797,8 @@ export function AnimatedProductPreview({
         <div className={`min-w-0 rounded-[16px] border p-4 md:px-4.5 md:pt-4.5 md:pb-3 ${panelOutlineClass} ${coachPanelClass} grid h-[372px] grid-rows-[auto_minmax(0,1.35fr)_auto_auto] gap-2.5`}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-pebble-accent/28 text-[11px] font-semibold text-pebble-text-primary shadow-[0_6px_12px_rgba(55,72,110,0.10)]">
-                P
+              <span className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.12] shadow-[0_6px_12px_rgba(55,72,110,0.10)]">
+                <PebbleCoachLogo theme={theme} alt="PebbleCode coach" />
               </span>
               <p className={classNames('text-[13px] font-semibold text-pebble-text-primary dark:text-[hsl(220_20%_94%)]', isUrdu && 'rtlText')}>
                 {previewCoach}
