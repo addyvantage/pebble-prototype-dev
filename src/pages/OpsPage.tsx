@@ -4,6 +4,7 @@ import { Activity, AlertTriangle, Clock, FileText, Route, Share2, Shield, Wifi }
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { useAuth } from '../hooks/useAuth'
+import { apiFetch } from '../lib/apiUrl'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface MetricSummary {
@@ -139,7 +140,7 @@ export function OpsPage() {
 
     const fetchMetrics = async () => {
         try {
-            const r = await fetch('/api/admin/ops-metrics', {
+            const r = await apiFetch('/api/admin/ops-metrics', {
                 headers: { 'X-Admin-Token': ADMIN_TOKEN },
             })
             if (!r.ok) throw new Error(`HTTP ${r.status}`)

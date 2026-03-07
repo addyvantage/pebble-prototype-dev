@@ -16,6 +16,7 @@ import {
   selectDailyCompletions,
 } from '../../lib/analyticsDerivers'
 import type { AnalyticsEvent, AssistAnalyticsEvent, RunAnalyticsEvent, SubmitAnalyticsEvent } from '../../lib/analyticsStore'
+import { apiFetch } from '../../lib/apiUrl'
 
 type RiskLabel = 'low' | 'medium' | 'high'
 
@@ -167,7 +168,7 @@ export function StreakRiskWidget() {
   useEffect(() => {
     mountedRef.current = true
     setLoading(true)
-    fetch('/api/risk/current', { headers: { 'x-user-id': userId } })
+    apiFetch('/api/risk/current', { headers: { 'x-user-id': userId } })
       .then((r) => r.json())
       .then((d: { ok: boolean; data: RiskData | null }) => {
         if (!mountedRef.current) return
@@ -179,7 +180,7 @@ export function StreakRiskWidget() {
           // Capture current features snapshot to avoid stale closure
           const currentFeatures = features
           setRecomputing(true)
-          fetch('/api/risk/recompute', {
+          apiFetch('/api/risk/recompute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
             body: JSON.stringify({ features: currentFeatures }),
@@ -208,7 +209,7 @@ export function StreakRiskWidget() {
     setRecomputing(true)
     setErrorMsg(null)
     try {
-      const res = await fetch('/api/risk/recompute', {
+      const res = await apiFetch('/api/risk/recompute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
         body: JSON.stringify({ features }),

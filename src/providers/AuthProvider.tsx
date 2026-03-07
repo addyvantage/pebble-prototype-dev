@@ -10,6 +10,7 @@ import {
     type SignUpResult,
     type AuthUser,
 } from '../lib/auth'
+import { apiFetch, apiUrl } from '../lib/apiUrl'
 import { pushNotification, setNotificationScope } from '../lib/notificationsStore'
 
 export type UserProfile = {
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const configured = isCognitoConfigured()
 
     const fetchAvatarUrl = useCallback(async (token: string, key: string) => {
-        const res = await fetch(`/api/avatar/url?key=${encodeURIComponent(key)}`, {
+        const res = await fetch(apiUrl(`/api/avatar/url?key=${encodeURIComponent(key)}`), {
             headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) return null
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const fetchProfile = useCallback(async (token: string): Promise<UserProfile | null> => {
         try {
-            const res = await fetch('/api/profile', {
+            const res = await apiFetch('/api/profile', {
                 headers: { Authorization: `Bearer ${token}` },
             })
             if (res.ok) {

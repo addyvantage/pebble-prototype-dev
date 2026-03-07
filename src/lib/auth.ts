@@ -16,6 +16,7 @@ import {
     normalizeEmailCandidate,
     normalizeUsernameCandidate,
 } from '../../shared/authValidation'
+import { apiFetch, apiUrl } from './apiUrl'
 
 const USER_POOL_ID = import.meta.env.VITE_COGNITO_USER_POOL_ID as string | undefined
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID as string | undefined
@@ -255,7 +256,7 @@ export async function getCurrentSession(): Promise<{ user: AuthUser; idToken: st
 }
 
 export async function signIn(identifier: string, password: string): Promise<{ user: AuthUser; idToken: string }> {
-    const res = await fetch('/api/auth/login', {
+    const res = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier, password }),
@@ -290,7 +291,7 @@ export async function signIn(identifier: string, password: string): Promise<{ us
 export async function signUp(email: string, password: string, username: string): Promise<SignUpResult> {
     const normalizedEmail = normalizeEmailCandidate(email)
     const normalizedUsername = normalizeUsernameCandidate(username)
-    const res = await fetch('/api/auth/signup', {
+    const res = await apiFetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: normalizedEmail, password, username: normalizedUsername }),
@@ -346,7 +347,7 @@ export function signOut(): void {
 export function confirmSignUp(email: string, code: string): Promise<void> {
     const normalizedEmail = normalizeEmailCandidate(email)
     const normalizedCode = code.replace(/\D/g, '').slice(0, 6)
-    return fetch('/api/auth/confirm-signup', {
+    return apiFetch('/api/auth/confirm-signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: normalizedEmail, code: normalizedCode }),
@@ -363,7 +364,7 @@ export function confirmSignUp(email: string, code: string): Promise<void> {
 
 export function resendSignUpCode(email: string): Promise<void> {
     const normalizedEmail = normalizeEmailCandidate(email)
-    return fetch('/api/auth/resend-signup-code', {
+    return apiFetch('/api/auth/resend-signup-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: normalizedEmail }),
@@ -448,7 +449,7 @@ export async function checkUsernameAvailability(username: string, signal?: Abort
         }
     }
 
-    const res = await fetch(`/api/auth/username-available?username=${encodeURIComponent(normalizedUsername)}`, {
+    const res = await fetch(apiUrl(`/api/auth/username-available?username=${encodeURIComponent(normalizedUsername)}`), {
         signal,
     })
     const data = await res.json().catch(() => ({})) as {

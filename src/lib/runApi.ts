@@ -1,4 +1,5 @@
 import type { LanguageId } from '../../shared/languageRegistry'
+import { apiFetch } from './apiUrl'
 
 type RunLanguage = LanguageId
 export type RunStatus =
@@ -161,7 +162,7 @@ export async function requestRunApi(
   )
 
   try {
-    const response = await fetch('/api/run', {
+    const response = await apiFetch('/api/run', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

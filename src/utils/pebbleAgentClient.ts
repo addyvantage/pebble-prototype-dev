@@ -4,6 +4,7 @@
  */
 
 import { askPebble } from './pebbleLLM'
+import { apiFetch } from '../lib/apiUrl'
 
 export type HelpTier = 1 | 2 | 3
 
@@ -198,7 +199,7 @@ export async function askPebbleAgent(input: AgentRequestInput): Promise<AgentRes
             struggleContext: input.struggleContext,
         }
 
-        const response = await fetch('/api/pebble-agent', {
+        const response = await apiFetch('/api/pebble-agent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),

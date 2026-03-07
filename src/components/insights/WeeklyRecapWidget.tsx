@@ -47,6 +47,7 @@ import {
   saveWeeklyRecapVoicePreferences,
   type WeeklyRecapVoicePreferences,
 } from '../../lib/weeklyRecapPreferences'
+import { apiFetch, resolveApiAssetUrl } from '../../lib/apiUrl'
 
 type RecapPlayback = {
   mode: RecapVoiceMode
@@ -208,7 +209,7 @@ function normalizeRecapData(raw: unknown, appLanguage: AppLanguageCode): RecapDa
 
   return {
     script,
-    audioUrl: typeof data.audioUrl === 'string' ? data.audioUrl : undefined,
+    audioUrl: typeof data.audioUrl === 'string' ? resolveApiAssetUrl(data.audioUrl) : undefined,
     generatedAt: typeof data.generatedAt === 'string' ? data.generatedAt : new Date().toISOString(),
     weekStart: typeof data.weekStart === 'string' ? data.weekStart : new Date().toISOString().slice(0, 10),
     tone,
@@ -424,7 +425,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
   const fetchLatestRecap = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/growth/weekly-recap/latest', {
+      const response = await apiFetch('/api/growth/weekly-recap/latest', {
         headers: { 'x-user-id': userScope },
       })
       if (!response.ok) {
@@ -460,7 +461,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
     stopPlayback()
 
     try {
-      const response = await fetch('/api/growth/weekly-recap', {
+      const response = await apiFetch('/api/growth/weekly-recap', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

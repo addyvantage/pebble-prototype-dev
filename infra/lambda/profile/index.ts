@@ -23,8 +23,11 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb'
 import {
+  AdminDeleteUserCommand,
+  ConfirmSignUpCommand,
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
+  ResendConfirmationCodeCommand,
   SignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
 import {
@@ -39,6 +42,7 @@ const REGION = process.env.AWS_REGION ?? 'ap-south-1'
 const PROFILES_TABLE = process.env.PROFILES_TABLE_NAME ?? 'pebble-profiles'
 const AVATARS_BUCKET = process.env.AVATARS_BUCKET_NAME ?? ''
 const COGNITO_CLIENT_ID = process.env.COGNITO_CLIENT_ID ?? process.env.VITE_COGNITO_CLIENT_ID ?? ''
+const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID ?? process.env.VITE_COGNITO_USER_POOL_ID ?? ''
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '')
   .split(',').map(e => e.trim()).filter(Boolean)
 
@@ -88,6 +92,15 @@ function normalizeUsername(value: unknown) {
   const trimmed = value.trim()
   if (!USERNAME_REGEX.test(trimmed)) return null
   return trimmed
+}
+
+function normalizeEmail(value: unknown) {
+  if (typeof value !== 'string') return ''
+  return value.trim().toLowerCase()
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 }
 
 function parseJsonBody(body: string | null): Record<string, unknown> {
@@ -187,6 +200,20 @@ async function handleUsernameAvailable(usernameRaw: string | undefined) {
   }
   const claim = await getUsernameClaim(normalized.toLowerCase())
   return respond(200, { available: !claim, ...(claim ? { reason: 'taken' } : {}) })
+}
+
+async function cleanupCreatedUser(email: string) {
+  if (!COGNITO_USER_POOL_ID || !email) {
+    return
+  }
+  try {
+    await cognito.send(new AdminDeleteUserCommand({
+      UserPoolId: COGNITO_USER_POOL_ID,
+      Username: email,
+    }))
+  } catch {
+    // best effort cleanup only
+  }
 }
 
 async function handleGetProfile(identity: Identity): Promise<APIGatewayProxyResultV2> {
@@ -308,11 +335,11 @@ async function handlePostUsername(identity: Identity, body: string | null): Prom
 
 async function handleAuthSignup(body: string | null): Promise<APIGatewayProxyResultV2> {
   const parsed = parseJsonBody(body)
-  const email = typeof parsed.email === 'string' ? parsed.email.trim().toLowerCase() : ''
+  const email = normalizeEmail(parsed.email)
   const password = parsed.password
   const username = normalizeUsername(parsed.username)
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password !== 'string' || password.length < 8 || !username) {
+  if (!email || !isValidEmail(email) || typeof password !== 'string' || password.length < 8 || !username) {
     return respond(400, { error: 'Invalid signup payload' })
   }
   if (!COGNITO_CLIENT_ID) {
@@ -325,56 +352,95 @@ async function handleAuthSignup(body: string | null): Promise<APIGatewayProxyRes
     return respond(409, { error: 'Username is already taken', reason: 'taken' })
   }
 
-  const signup = await cognito.send(new SignUpCommand({
-    ClientId: COGNITO_CLIENT_ID,
-    Username: email,
-    Password: password,
-    UserAttributes: [
-      { Name: 'email', Value: email },
-      { Name: 'preferred_username', Value: username },
-    ],
-  }))
+  let createdCognitoUser = false
+  try {
+    const signup = await cognito.send(new SignUpCommand({
+      ClientId: COGNITO_CLIENT_ID,
+      Username: email,
+      Password: password,
+      UserAttributes: [
+        { Name: 'email', Value: email },
+        { Name: 'preferred_username', Value: username },
+        { Name: 'name', Value: username },
+      ],
+    }))
+    createdCognitoUser = true
 
-  if (!signup.UserSub) {
-    return respond(500, { error: 'Signup failed' })
+    if (!signup.UserSub) {
+      return respond(500, { error: 'Signup failed', code: 'SignupFailed' })
+    }
+
+    const nowIso = new Date().toISOString()
+    const userId = signup.UserSub
+    await ddb.send(new PutCommand({
+      TableName: PROFILES_TABLE,
+      Item: {
+        userId: usernameClaimKey(usernameLower),
+        entityType: 'username_claim',
+        ownerUserId: userId,
+        ownerEmail: email,
+        username,
+        usernameLower,
+        updatedAt: nowIso,
+      },
+      ConditionExpression: 'attribute_not_exists(userId)',
+    }))
+
+    await ddb.send(new PutCommand({
+      TableName: PROFILES_TABLE,
+      Item: {
+        userId,
+        username,
+        usernameLower,
+        displayName: username,
+        usernameSetAt: nowIso,
+        lastUsernameChangeAt: nowIso,
+        email,
+        bio: '',
+        avatarKey: null,
+        avatarUpdatedAt: null,
+        role: ADMIN_EMAILS.includes(email) ? 'admin' : 'user',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      ConditionExpression: 'attribute_not_exists(userId)',
+    }))
+
+    return respond(200, {
+      ok: true,
+      userSub: userId,
+      requiresConfirmation: !Boolean(signup.UserConfirmed),
+      delivery: signup.CodeDeliveryDetails
+        ? {
+            destination: signup.CodeDeliveryDetails.Destination ?? null,
+            medium: signup.CodeDeliveryDetails.DeliveryMedium ?? null,
+          }
+        : null,
+    })
+  } catch (err: any) {
+    if (createdCognitoUser) {
+      await cleanupCreatedUser(email)
+    }
+    if (err?.name === 'ConditionalCheckFailedException') {
+      return respond(409, { error: 'Username is already taken', reason: 'taken' })
+    }
+    if (err?.name === 'UsernameExistsException') {
+      return respond(409, { error: 'An account with this email already exists. Try signing in.', code: 'UsernameExistsException' })
+    }
+    if (err?.name === 'InvalidPasswordException') {
+      return respond(400, {
+        error: 'Password does not meet Cognito policy. Use at least 8 characters with upper/lowercase and a number.',
+        code: 'InvalidPasswordException',
+      })
+    }
+    if (err?.name === 'NotAuthorizedException' && String(err?.message ?? '').toLowerCase().includes('secret hash')) {
+      return respond(500, {
+        error: 'Cognito app client requires a client secret. Set COGNITO_CLIENT_SECRET on the backend.',
+        code: 'MissingClientSecret',
+      })
+    }
+    throw err
   }
-
-  const nowIso = new Date().toISOString()
-  const userId = signup.UserSub
-  await ddb.send(new PutCommand({
-    TableName: PROFILES_TABLE,
-    Item: {
-      userId: usernameClaimKey(usernameLower),
-      entityType: 'username_claim',
-      ownerUserId: userId,
-      ownerEmail: email,
-      username,
-      usernameLower,
-      updatedAt: nowIso,
-    },
-    ConditionExpression: 'attribute_not_exists(userId)',
-  }))
-
-  await ddb.send(new PutCommand({
-    TableName: PROFILES_TABLE,
-    Item: {
-      userId,
-      username,
-      usernameLower,
-      usernameSetAt: nowIso,
-      lastUsernameChangeAt: nowIso,
-      email,
-      bio: '',
-      avatarKey: null,
-      avatarUpdatedAt: null,
-      role: ADMIN_EMAILS.includes(email) ? 'admin' : 'user',
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    },
-    ConditionExpression: 'attribute_not_exists(userId)',
-  }))
-
-  return respond(200, { ok: true, userSub: userId })
 }
 
 async function handleAuthLogin(body: string | null): Promise<APIGatewayProxyResultV2> {
@@ -439,8 +505,74 @@ async function handleAuthLogin(body: string | null): Promise<APIGatewayProxyResu
       expiresIn: auth.AuthenticationResult.ExpiresIn,
       tokenType: auth.AuthenticationResult.TokenType,
     })
-  } catch {
+  } catch (err: any) {
+    if (err?.name === 'UserNotConfirmedException') {
+      return respond(409, {
+        error: 'Your account still needs email verification.',
+        code: 'UserNotConfirmedException',
+        verificationEmail: email,
+      })
+    }
     return respond(401, { error: 'Invalid username/email or password' })
+  }
+}
+
+async function handleConfirmSignUp(body: string | null): Promise<APIGatewayProxyResultV2> {
+  const parsed = parseJsonBody(body)
+  const email = normalizeEmail(parsed.email)
+  const code = typeof parsed.code === 'string' ? parsed.code.trim() : ''
+
+  if (!email || !code) {
+    return respond(400, { error: 'Email and verification code are required' })
+  }
+  if (!COGNITO_CLIENT_ID) {
+    return respond(500, { error: 'Verification is not configured', code: 'AuthNotConfigured' })
+  }
+
+  try {
+    await cognito.send(new ConfirmSignUpCommand({
+      ClientId: COGNITO_CLIENT_ID,
+      Username: email,
+      ConfirmationCode: code,
+    }))
+    return respond(200, { ok: true })
+  } catch (err: any) {
+    if (err?.name === 'CodeMismatchException') {
+      return respond(400, { error: 'Incorrect code. Please try again.', code: err.name })
+    }
+    if (err?.name === 'ExpiredCodeException') {
+      return respond(400, { error: 'Verification code expired. Request a new code.', code: err.name })
+    }
+    if (err?.name === 'NotAuthorizedException' && String(err?.message ?? '').toLowerCase().includes('already confirmed')) {
+      return respond(200, { ok: true, alreadyConfirmed: true })
+    }
+    return respond(400, {
+      error: err?.message ?? 'Verification failed',
+      code: err?.name ?? 'ConfirmSignUpFailed',
+    })
+  }
+}
+
+async function handleResendConfirmation(body: string | null): Promise<APIGatewayProxyResultV2> {
+  const parsed = parseJsonBody(body)
+  const email = normalizeEmail(parsed.email)
+  if (!email) {
+    return respond(400, { error: 'Email is required' })
+  }
+  if (!COGNITO_CLIENT_ID) {
+    return respond(500, { error: 'Verification resend is not configured', code: 'AuthNotConfigured' })
+  }
+  try {
+    await cognito.send(new ResendConfirmationCodeCommand({
+      ClientId: COGNITO_CLIENT_ID,
+      Username: email,
+    }))
+    return respond(200, { ok: true })
+  } catch (err: any) {
+    return respond(400, {
+      error: err?.message ?? 'Failed to resend code',
+      code: err?.name ?? 'ResendFailed',
+    })
   }
 }
 
@@ -490,7 +622,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
   }
 
   try {
-    if (method === 'GET' && path === '/api/username/available') {
+    if (method === 'GET' && (path === '/api/username/available' || path === '/api/auth/username-available')) {
       return await handleUsernameAvailable(event.queryStringParameters?.username)
     }
     if (method === 'POST' && path === '/api/auth/signup') {
@@ -498,6 +630,12 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     }
     if (method === 'POST' && path === '/api/auth/login') {
       return await handleAuthLogin(event.body ?? null)
+    }
+    if (method === 'POST' && path === '/api/auth/confirm-signup') {
+      return await handleConfirmSignUp(event.body ?? null)
+    }
+    if (method === 'POST' && path === '/api/auth/resend-signup-code') {
+      return await handleResendConfirmation(event.body ?? null)
     }
 
     const identity = extractIdentity(event)

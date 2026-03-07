@@ -38,6 +38,7 @@ import {
   selectLongestStreak,
 } from '../lib/analyticsDerivers'
 import { loadUnitProgress } from '../lib/progressStore'
+import { apiFetch } from '../lib/apiUrl'
 import { loadSubmissions } from '../lib/submissionsStore'
 import { useLiveMentalState } from '../lib/useLiveMentalState'
 import type { PlacementLanguage } from '../data/onboardingData'
@@ -137,7 +138,7 @@ export function DashboardPage() {
   const [cohortData, setCohortData] = useState<CohortData | null>(null)
   useEffect(() => {
     let mounted = true
-    fetch('/api/analytics/cohort')
+    apiFetch('/api/analytics/cohort')
       .then(r => r.json())
       .then(d => {
         if (mounted && d.ok && d.data) setCohortData(d.data as CohortData)

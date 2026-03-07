@@ -137,6 +137,7 @@ npm run test:function-mode
 |---|---|---|
 | `AWS_REGION` | Optional (required for many AWS-backed flows) | AWS SDK region |
 | `FRONTEND_ORIGIN` | Recommended | Share/report links origin |
+| `VITE_API_BASE_URL` | Recommended for Amplify/Vite static hosting | Absolute backend origin, e.g. `https://<api-id>.execute-api.<region>.amazonaws.com` |
 | `VITE_COGNITO_USER_POOL_ID` | Auth | Cognito User Pool ID |
 | `VITE_COGNITO_CLIENT_ID` | Auth | Cognito App Client ID |
 | `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` | Optional fallback | Non-`VITE_` frontend fallback keys |
@@ -166,6 +167,15 @@ What it does:
 2. Resolves S3 bucket + CloudFront distribution from stack outputs
 3. Syncs `dist/` to S3 with cache headers
 4. Creates CloudFront invalidation
+
+## Deploy frontend on Amplify Hosting
+If you host the Vite frontend on Amplify instead of CloudFront, set these Amplify environment variables on the branch before building:
+
+- `VITE_API_BASE_URL=https://<api-id>.execute-api.<region>.amazonaws.com`
+- `VITE_COGNITO_USER_POOL_ID=<stack output UserPoolId>`
+- `VITE_COGNITO_CLIENT_ID=<stack output UserPoolClientId>`
+
+The app uses relative `/api/*` paths by default. `VITE_API_BASE_URL` is what lets a static Amplify-hosted frontend talk to the CDK-deployed API Gateway backend directly.
 
 ## Safety / Privacy / Boundaries
 - Safety policy layer is applied before final mentor output is returned.

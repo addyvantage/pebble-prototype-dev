@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiEventSource } from './apiUrl'
 
 export interface MentalStateUpdate {
     userId: string
@@ -27,7 +28,7 @@ export function useLiveMentalState(userId: string): UseLiveMentalStateReturn {
         // Fallback to local SSE Mock if no AWS AppSync config
         if (!appsyncUrl || !apiKey) {
             console.debug('[Live] Using offline SSE fallback for live updates')
-            const source = new EventSource('/api/live-events')
+            const source = apiEventSource('/api/live-events')
 
             source.onopen = () => setConnected(true)
             source.onmessage = (e) => {

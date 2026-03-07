@@ -117,6 +117,7 @@ import {
 import { getCurriculumUnitModeDescriptor, getProblemModeDescriptor } from '../lib/modeRegistry'
 import { telemetry } from '../lib/telemetry'
 import { pushNotification } from '../lib/notificationsStore'
+import { apiFetch } from '../lib/apiUrl'
 import {
   getDefaultLearningTrack,
   loadEditorLanguagePreference,
@@ -1842,7 +1843,7 @@ export function SessionPage() {
         })
 
         // ── Phase 6: Trigger learning journey update (fire-and-forget) ────────
-        fetch('/api/journey/update', {
+        apiFetch('/api/journey/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2391,7 +2392,7 @@ export function SessionPage() {
               // Open a blank tab synchronously (before await) so browsers don't block it
               const win = window.open('', '_blank')
               try {
-                const r = await fetch('/api/report/recovery', {
+                const r = await apiFetch('/api/report/recovery', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -2447,7 +2448,7 @@ export function SessionPage() {
               setShareLoading(true)
               setShareToast(null)
               try {
-                const r = await fetch('/api/session/snapshot', {
+                const r = await apiFetch('/api/session/snapshot', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({

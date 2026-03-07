@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { apiFetch } from '../lib/apiUrl'
 
 const CACHE_KEY = 'pebble.feature_flags'
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
@@ -53,7 +54,7 @@ export function useFeatureFlag(flagName: keyof FeatureFlags): boolean {
             if (memoryCache && Date.now() - memoryCache.ts < 10000) return
 
             try {
-                const res = await fetch('/api/flags')
+                const res = await apiFetch('/api/flags')
                 if (!res.ok) throw new Error('Failed to fetch flags')
 
                 const data = await res.json()

@@ -1,4 +1,5 @@
 import { PEBBLE_SYSTEM_PROMPT } from '../shared/pebblePromptRules'
+import { apiFetch } from '../lib/apiUrl'
 
 type PebbleLLMContext = {
   taskTitle: string
@@ -146,7 +147,7 @@ async function askServer(input: AskPebbleInput) {
   try {
     let response: Response
     try {
-      response = await fetch('/api/pebble', {
+      response = await apiFetch('/api/pebble', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

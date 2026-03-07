@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../components/modals/ConfirmDialog'
 import { useI18n } from '../i18n/useI18n'
 import { LANGUAGES, type LanguageCode } from '../i18n/languages'
 import { clearLocalUserData } from '../utils/storageKeys'
+import { apiFetch, apiUrl } from '../lib/apiUrl'
 import { pushNotification } from '../lib/notificationsStore'
 
 export function ProfilePage() {
@@ -36,7 +37,7 @@ export function ProfilePage() {
 
     const fetchAvatarUrl = useCallback(async (key: string) => {
         if (!idToken) return null
-        const res = await fetch(`/api/avatar/url?key=${encodeURIComponent(key)}`, {
+        const res = await fetch(apiUrl(`/api/avatar/url?key=${encodeURIComponent(key)}`), {
             headers: { Authorization: `Bearer ${idToken}` },
         })
         if (!res.ok) return null
@@ -81,7 +82,7 @@ export function ProfilePage() {
 
         try {
             // 1. Get presigned URL
-            const presignRes = await fetch('/api/avatar/presign', {
+            const presignRes = await apiFetch('/api/avatar/presign', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -122,7 +123,7 @@ export function ProfilePage() {
             if (!uploadRes.ok) throw new Error(`S3 upload failed (HTTP ${uploadRes.status})`)
 
             // 3. Update profile with new avatar key
-            const profileRes = await fetch('/api/profile', {
+            const profileRes = await apiFetch('/api/profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -175,7 +176,7 @@ export function ProfilePage() {
         }
 
         try {
-            const res = await fetch('/api/profile', {
+            const res = await apiFetch('/api/profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -238,7 +239,7 @@ export function ProfilePage() {
         const controller = new AbortController()
         const timer = window.setTimeout(async () => {
             try {
-                const res = await fetch(`/api/username/available?username=${encodeURIComponent(candidate)}`, { signal: controller.signal })
+                const res = await fetch(apiUrl(`/api/username/available?username=${encodeURIComponent(candidate)}`), { signal: controller.signal })
                 const data = await res.json() as { available?: boolean; reason?: string }
                 if (!res.ok) {
                     setUsernameAvailability({ status: 'idle', message: '' })
@@ -275,7 +276,7 @@ export function ProfilePage() {
         setSavingUsername(true)
         setShowUsernameConfirm(false)
         try {
-            const res = await fetch('/api/profile/username', {
+            const res = await apiFetch('/api/profile/username', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

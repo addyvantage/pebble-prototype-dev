@@ -1,4 +1,5 @@
 import type { EventName, PebbleEvent } from '../shared/events'
+import { apiFetch } from './apiUrl'
 import { safeGetItem, safeGetJSON, safeSetItem, safeSetJSON } from './safeStorage'
 
 const STORAGE_KEY = 'pebble.telemetry.queue'
@@ -99,7 +100,7 @@ class TelemetryEmitter {
         this.saveToStorage()
 
         try {
-            const response = await fetch('/api/telemetry', {
+            const response = await apiFetch('/api/telemetry', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ events: batch }),

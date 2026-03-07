@@ -242,6 +242,7 @@ export class BackendStack extends cdk.Stack {
     profileFn.addEnvironment('PROFILES_TABLE_NAME', profilesTable.tableName)
     profileFn.addEnvironment('AVATARS_BUCKET_NAME', avatarsBucket.bucketName)
     profileFn.addEnvironment('COGNITO_CLIENT_ID', userPoolClient.userPoolClientId)
+    profileFn.addEnvironment('COGNITO_USER_POOL_ID', userPool.userPoolId)
     if (process.env.ADMIN_EMAILS) {
       profileFn.addEnvironment('ADMIN_EMAILS', process.env.ADMIN_EMAILS)
     }
@@ -268,12 +269,27 @@ export class BackendStack extends cdk.Stack {
       integration: profileIntegration,
     })
     api.addRoutes({
+      path: '/api/auth/username-available',
+      methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.OPTIONS],
+      integration: profileIntegration,
+    })
+    api.addRoutes({
       path: '/api/auth/login',
       methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.OPTIONS],
       integration: profileIntegration,
     })
     api.addRoutes({
       path: '/api/auth/signup',
+      methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.OPTIONS],
+      integration: profileIntegration,
+    })
+    api.addRoutes({
+      path: '/api/auth/confirm-signup',
+      methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.OPTIONS],
+      integration: profileIntegration,
+    })
+    api.addRoutes({
+      path: '/api/auth/resend-signup-code',
       methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.OPTIONS],
       integration: profileIntegration,
     })
