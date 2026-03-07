@@ -72,7 +72,7 @@ export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
                     </div>
                     <Link
                         to="/problems"
-                        className={buttonClass('secondary') + " w-full justify-center"}
+                        className={buttonClass('secondary') + " h-10 w-full justify-center rounded-2xl text-[13.5px]"}
                     >
                         {t('home.continue.openProblems')}
                     </Link>
@@ -159,7 +159,7 @@ export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
                 <button
                     disabled={isExpanded}
                     onClick={() => setIsExpanded(true)}
-                    className={buttonClass('primary') + " w-full justify-center"}
+                    className={buttonClass('primary') + " h-11 w-full justify-center rounded-2xl text-[13.5px]"}
                 >
                     {t('home.recommended.ctaStart')}
                 </button>
@@ -207,7 +207,7 @@ export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
                         <div className="border-t border-pebble-border/10 px-5 py-4 bg-pebble-overlay/[0.02]">
                             <Link
                                 to={`/session/1?problem=${problemId}`}
-                                className={buttonClass('primary') + " w-full justify-center py-2.5"}
+                                className={buttonClass('primary') + " h-11 w-full justify-center rounded-2xl text-[13.5px]"}
                             >
                                 {t('home.recommended.ctaStart')}
                             </Link>

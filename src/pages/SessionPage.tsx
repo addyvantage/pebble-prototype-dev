@@ -2593,7 +2593,7 @@ export function SessionPage() {
                     size="sm"
                     onClick={() => void runAllTests('run')}
                     disabled={isRunningAll}
-                    className="h-10 rounded-2xl gap-2 px-4 text-sm font-semibold"
+                    className="h-10 rounded-2xl gap-2 px-4.5 text-sm font-semibold shadow-[0_12px_28px_rgba(8,15,35,0.18)]"
                   >
                     <Play className="h-3.5 w-3.5" aria-hidden="true" />
                     {isRunningAll && activeAction === 'run' ? t('actions.running') : t('actions.run')}

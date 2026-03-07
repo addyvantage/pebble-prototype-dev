@@ -259,13 +259,13 @@ export function AppLayout() {
                     containerClassName="hidden rounded-full lg:flex flex-shrink-0"
                     className="bg-transparent px-0 py-0 text-inherit"
                   >
-                    <nav className="flex items-center justify-center gap-0.5 overflow-hidden rounded-full p-0.5">
+                    <nav className="flex items-center justify-center gap-1 overflow-hidden rounded-full p-1">
                       {navItems.map(({ to, label }) => (
                         <NavLink
                           key={to}
                           to={to}
                           className={({ isActive }) =>
-                            `relative z-10 whitespace-nowrap rounded-full px-2.5 py-1 md:px-3 md:py-1.5 text-[12px] md:text-[13px] font-medium tracking-[0.01em] transition ${isActive
+                            `relative z-10 whitespace-nowrap rounded-full px-3 py-1.5 md:px-3.5 md:py-1.5 text-[12.5px] md:text-[13.5px] font-medium tracking-[0.01em] transition ${isActive
                               ? 'border border-[var(--navActiveBorder)] bg-[var(--navActiveBg)] text-[var(--navActiveFg)] ring-0 shadow-none hover:bg-[var(--navActiveBg)] hover:shadow-none'
                               : 'border border-transparent text-pebble-text-secondary hover:bg-white/5 dark:hover:bg-white/6 hover:text-pebble-text-primary focus-visible:bg-white/6'
                             }`
@@ -386,13 +386,13 @@ export function AppLayout() {
                   containerClassName="mt-0.5 rounded-full lg:hidden"
                   className="bg-transparent px-0 py-0 text-inherit"
                 >
-                  <nav className="flex items-center gap-0.5 overflow-hidden rounded-full p-0.5">
+                  <nav className="flex items-center gap-1 overflow-hidden rounded-full p-1">
                     {navItems.map(({ to, label }) => (
                       <NavLink
                         key={to}
                         to={to}
                         className={({ isActive }) =>
-                          `relative z-10 whitespace-nowrap rounded-full px-2.5 py-1.5 md:py-1.5 text-[13px] font-medium tracking-[0.01em] transition ${isActive
+                          `relative z-10 whitespace-nowrap rounded-full px-3 py-1.5 text-[13.25px] font-medium tracking-[0.01em] transition ${isActive
                             ? 'border border-[var(--navActiveBorder)] bg-[var(--navActiveBg)] text-[var(--navActiveFg)] ring-0 shadow-none hover:bg-[var(--navActiveBg)] hover:shadow-none'
                             : 'border border-transparent text-pebble-text-secondary hover:bg-white/5 dark:hover:bg-white/6 hover:text-pebble-text-primary focus-visible:bg-white/6'
                           }`

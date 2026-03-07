@@ -698,7 +698,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
               <Button
                 onClick={handleGenerate}
                 disabled={generating}
-                className="h-11 rounded-2xl px-4 text-sm font-semibold"
+                className="h-11 rounded-2xl px-4.5 text-sm font-semibold shadow-[0_12px_30px_rgba(8,15,35,0.14)]"
               >
                 <RefreshCw className={`mr-2 h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
                 {generating ? 'Generating…' : recapData ? 'Regenerate' : 'Generate recap'}
@@ -710,7 +710,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
                 className={`inline-flex h-11 items-center gap-2 rounded-2xl border px-4 text-sm font-medium transition ${
                   playing
                     ? 'border-pebble-accent/55 bg-pebble-accent/16 text-pebble-accent'
-                    : 'border-pebble-border/36 bg-pebble-chip-surface/54 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-chip-surface/66'
+                    : 'border-pebble-border/32 bg-[linear-gradient(180deg,rgba(var(--pebble-overlay),0.10)_0%,rgba(var(--pebble-overlay),0.06)_100%)] text-pebble-text-primary shadow-[0_8px_22px_rgba(8,15,35,0.08)] hover:-translate-y-[1px] hover:border-pebble-border/46 hover:bg-[linear-gradient(180deg,rgba(var(--pebble-overlay),0.14)_0%,rgba(var(--pebble-overlay),0.09)_100%)]'
                 } disabled:opacity-40`}
               >
                 {playing ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}

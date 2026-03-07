@@ -152,7 +152,11 @@ export function ProblemPreviewPanel({
       </div>
 
       <footer className="border-t border-pebble-border/25 p-4">
-        <Button type="button" onClick={onStart} className="w-full justify-center gap-2">
+        <Button
+          type="button"
+          onClick={onStart}
+          className="h-11 w-full justify-center gap-2 rounded-2xl text-[13.5px] shadow-[0_12px_30px_rgba(8,15,35,0.16)]"
+        >
           {labels.start}
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>
