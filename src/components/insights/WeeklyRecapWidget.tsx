@@ -20,6 +20,7 @@ import { Button } from '../ui/Button'
 import { useAuth } from '../../hooks/useAuth'
 import { getLanguageOption, type LanguageCode } from '../../i18n/languages'
 import { useI18n } from '../../i18n/useI18n'
+import { getProductCopy } from '../../i18n/productCopy'
 import {
   dateKeyForTimeZone,
   selectCurrentStreak,
@@ -312,9 +313,9 @@ function extractRecapSummary(
   }
 }
 
-function friendlyPlaybackStatus(recap: RecapData | null) {
+function friendlyPlaybackStatus(recap: RecapData | null, copy: Record<string, string>) {
   if (!recap) {
-    return 'Generate a mentor-style summary to hear how your practice, recovery, and momentum evolved this week.'
+    return copy.friendlyEmpty ?? 'Generate a mentor-style summary to hear how your practice, recovery, and momentum evolved this week.'
   }
   if (recap.playback.provider === 'polly' && recap.audioUrl) {
     return 'Your recap audio is ready to play.'
@@ -362,6 +363,7 @@ function buildLocalRecap(summary: RecapSummaryPayload): RecapData {
 
 export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?: string }) {
   const { lang } = useI18n()
+  const recapCopy = getProductCopy(lang).insights?.weeklyRecap ?? {}
   const auth = useAuth()
   const analyticsState = useSyncExternalStore(subscribeAnalytics, getAnalyticsState, getAnalyticsState)
 
@@ -588,7 +590,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
           if (mountedRef.current) {
             setPlaying(false)
             setPlayingProvider(null)
-            setErrorMsg('Cloud audio was unavailable, but the recap script is ready.')
+            setErrorMsg(recapCopy.cloudUnavailable ?? 'Cloud audio was unavailable, but the recap script is ready.')
           }
         })
         await audio.play()
@@ -606,7 +608,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
     }
 
     if (!isBrowserSpeechSynthesisAvailable()) {
-      setErrorMsg('Audio voice unavailable right now — script is ready.')
+      setErrorMsg(recapCopy.audioUnavailable ?? 'Audio voice unavailable right now — script is ready.')
       return
     }
 
@@ -631,7 +633,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
       if (mountedRef.current) {
         setPlaying(false)
         setPlayingProvider(null)
-        setErrorMsg('Audio voice unavailable right now — script is ready.')
+        setErrorMsg(recapCopy.audioUnavailable ?? 'Audio voice unavailable right now — script is ready.')
       }
     }
   }, [playing, recapData, stopPlayback, voicePrefs.preferredBrowserVoiceURI])
@@ -651,21 +653,21 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
   const currentLanguageLabel = languageOption.romanizedName
   const recapMeta = recapData
     ? [
-        'Last 7 days',
-        'Mentor summary',
-        canPlay ? 'Audio ready' : 'Script ready',
+        recapCopy.metaLast7 ?? 'Last 7 days',
+        recapCopy.metaMentor ?? 'Mentor summary',
+        canPlay ? (recapCopy.metaAudio ?? 'Audio ready') : (recapCopy.metaScript ?? 'Script ready'),
       ]
-    : ['Last 7 days', 'Mentor summary']
+    : [recapCopy.metaLast7 ?? 'Last 7 days', recapCopy.metaMentor ?? 'Mentor summary']
 
   return (
     <Card padding="sm" interactive className="space-y-5 rounded-[26px] border-pebble-border/28 bg-gradient-to-b from-pebble-overlay/[0.11] to-pebble-overlay/[0.04] p-5 shadow-[0_18px_44px_rgba(2,8,23,0.14)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
           <p className="text-base font-semibold tracking-tight text-pebble-text-primary">
-            Weekly Pebble Recap
+            {recapCopy.title ?? 'Weekly Pebble Recap'}
           </p>
           <p className="text-sm leading-6 text-pebble-text-secondary">
-            A mentor-style summary of your last 7 days
+            {recapCopy.subtitle ?? 'A mentor-style summary of your last 7 days'}
             {formattedWeek ? ` · week of ${formattedWeek}` : ''}
           </p>
         </div>
@@ -689,11 +691,11 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
 
         <div className="space-y-2">
           <p className="text-sm leading-6 text-pebble-text-secondary">
-            {friendlyPlaybackStatus(recapData)}
+            {friendlyPlaybackStatus(recapData, recapCopy)}
           </p>
           {playing && playingProvider === 'device' && lastDeviceVoiceName ? (
             <p className="text-[12px] text-pebble-text-muted">
-              Playing with the best available voice for this language.
+              {recapCopy.bestVoice ?? 'Playing with the best available voice for this language.'}
             </p>
           ) : null}
         </div>
@@ -703,7 +705,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
         <div className="space-y-3 rounded-[22px] border border-pebble-border/24 bg-pebble-canvas/40 px-4 py-4">
           <div className="flex items-center gap-2 text-sm font-medium text-pebble-text-primary">
             <RefreshCw className="h-4 w-4 animate-spin text-pebble-accent" />
-            Loading recap…
+            {recapCopy.loading ?? 'Loading recap…'}
           </div>
           <div className="space-y-2.5">
             <div className="h-3 w-2/3 animate-pulse rounded-full bg-pebble-overlay/[0.12]" />
@@ -720,10 +722,10 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
                   <Sparkles className="mt-0.5 h-4.5 w-4.5 shrink-0 text-pebble-accent" />
                   <div className="space-y-1.5">
                     <p className="text-sm font-medium text-pebble-text-primary">
-                      No recap generated yet for this week.
+                      {recapCopy.emptyTitle ?? 'No recap generated yet for this week.'}
                     </p>
                     <p className="text-sm leading-6 text-pebble-text-secondary">
-                      Generate a mentor summary to hear how your practice, recovery, and momentum evolved.
+                      {recapCopy.emptyBody ?? 'Generate a mentor summary to hear how your practice, recovery, and momentum evolved.'}
                     </p>
                   </div>
                 </div>
@@ -734,10 +736,10 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
                   <Waves className="mt-0.5 h-4.5 w-4.5 shrink-0 text-pebble-accent" />
                   <div className="space-y-1.5">
                     <p className="text-sm font-medium text-pebble-text-primary">
-                      This week’s recap is ready.
+                      {recapCopy.readyTitle ?? "This week\u0027s recap is ready."}
                     </p>
                     <p className="text-sm leading-6 text-pebble-text-secondary">
-                      Press play to hear Pebble summarize your progress, setbacks, and recovery pattern.
+                      {recapCopy.readyBody ?? 'Press play to hear Pebble summarize your progress, setbacks, and recovery pattern.'}
                     </p>
                   </div>
                 </div>
@@ -757,7 +759,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
                 className="min-w-[196px] h-11 justify-center gap-2.5 rounded-2xl px-5 text-[15px] font-semibold leading-none shadow-[0_12px_30px_rgba(8,15,35,0.14)]"
               >
                 <RefreshCw className={`h-[17px] w-[17px] shrink-0 ${generating ? 'animate-spin' : ''}`} />
-                <span>{generating ? 'Generating…' : recapData ? 'Regenerate' : 'Generate recap'}</span>
+                <span>{generating ? (recapCopy.generating ?? 'Generating…') : recapData ? (recapCopy.regenerate ?? 'Regenerate') : (recapCopy.generate ?? 'Generate recap')}</span>
               </Button>
 
               <button
@@ -770,7 +772,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
                 } disabled:opacity-40`}
               >
                 {playing ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                {playing ? 'Stop' : 'Play recap'}
+                {playing ? (recapCopy.stop ?? 'Stop') : (recapCopy.play ?? 'Play recap')}
               </button>
 
               <button
@@ -779,7 +781,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
                 className="inline-flex h-10 items-center gap-1.5 rounded-2xl border border-transparent px-3 text-sm font-medium text-pebble-text-secondary transition hover:border-pebble-border/26 hover:bg-pebble-overlay/[0.05] hover:text-pebble-text-primary disabled:opacity-40"
               >
                 <FileText className="h-3.5 w-3.5" />
-                {scriptExpanded ? 'Hide script' : 'Show script'}
+                {scriptExpanded ? (recapCopy.hideScript ?? 'Hide script') : (recapCopy.showScript ?? 'Show script')}
                 {scriptExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
               </button>
             </div>
@@ -790,7 +792,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
               <div className="mb-2 flex items-center gap-2">
                 <FileText className="h-3.5 w-3.5 text-pebble-accent" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
-                  Transcript
+                  {recapCopy.transcript ?? 'Transcript'}
                 </p>
               </div>
               <p className="text-sm leading-7 text-pebble-text-secondary">
@@ -802,7 +804,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
           {recapData && (
             <div className="flex items-center gap-2 text-[11px] font-medium text-pebble-text-muted">
               <Volume2 className="h-3.5 w-3.5" />
-              {canPlay ? 'Playback ready' : 'Script ready'}
+              {canPlay ? (recapCopy.playbackReady ?? 'Playback ready') : (recapCopy.scriptReady ?? 'Script ready')}
             </div>
           )}
         </>

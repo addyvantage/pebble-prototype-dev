@@ -18,6 +18,8 @@ import {
 import type { AnalyticsEvent, AssistAnalyticsEvent, RunAnalyticsEvent, SubmitAnalyticsEvent } from '../../lib/analyticsStore'
 import { apiFetch, optionalApiRoutesAvailable } from '../../lib/apiUrl'
 import { localHeuristicRisk, type RiskFeatures, type RiskLabel, type RiskResult } from '../../lib/riskModel'
+import { useI18n } from '../../i18n/useI18n'
+import { getProductCopy } from '../../i18n/productCopy'
 
 type RiskData = RiskResult & {
   computedAt: string
@@ -132,17 +134,19 @@ function extractRiskFeatures(events: AnalyticsEvent[]): RiskFeatures {
   }
 }
 
-// ── Risk score pill ───────────────────────────────────────────────────────────
+// ── Risk score pill (styles only — labels are localized inside the component) ──
 
-const LABEL_CONFIG: Record<RiskLabel, { bg: string; text: string; label: string }> = {
-  low: { bg: 'bg-emerald-500/15 border-emerald-500/30', text: 'text-emerald-700 dark:text-emerald-400', label: 'Low Risk' },
-  medium: { bg: 'bg-amber-500/15 border-amber-500/30', text: 'text-amber-700 dark:text-amber-400', label: 'Medium Risk' },
-  high: { bg: 'bg-red-500/15 border-red-500/30', text: 'text-red-700 dark:text-red-400', label: 'High Risk' },
+const LABEL_STYLES: Record<RiskLabel, { bg: string; text: string }> = {
+  low: { bg: 'bg-emerald-500/15 border-emerald-500/30', text: 'text-emerald-700 dark:text-emerald-400' },
+  medium: { bg: 'bg-amber-500/15 border-amber-500/30', text: 'text-amber-700 dark:text-amber-400' },
+  high: { bg: 'bg-red-500/15 border-red-500/30', text: 'text-red-700 dark:text-red-400' },
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function StreakRiskWidget() {
+  const { lang } = useI18n()
+  const riskCopy = getProductCopy(lang).insights?.streakRisk ?? {}
   const analyticsState = useSyncExternalStore(subscribeAnalytics, getAnalyticsState, getAnalyticsState)
   const [riskData, setRiskData] = useState<RiskData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -250,6 +254,12 @@ export function StreakRiskWidget() {
     }
   }, [features, optionalRoutesEnabled, userId])
 
+  const LABEL_CONFIG: Record<RiskLabel, { bg: string; text: string; label: string }> = {
+    low: { ...LABEL_STYLES.low, label: riskCopy.low ?? 'Low Risk' },
+    medium: { ...LABEL_STYLES.medium, label: riskCopy.medium ?? 'Medium Risk' },
+    high: { ...LABEL_STYLES.high, label: riskCopy.high ?? 'High Risk' },
+  }
+
   const cfg = riskData ? LABEL_CONFIG[riskData.label] : null
 
   const LabelIcon =
@@ -264,26 +274,26 @@ export function StreakRiskWidget() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-base font-semibold text-pebble-text-primary">Streak Risk</p>
+          <p className="text-base font-semibold text-pebble-text-primary">{riskCopy.title ?? 'Streak Risk'}</p>
           <p className="text-sm text-pebble-text-secondary">
-            {riskData?.model === 'sagemaker' ? 'SageMaker · 7-day forecast' : '7-day forecast'}
+            {riskData?.model === 'sagemaker' ? (riskCopy.subtitleCloud ?? 'SageMaker · 7-day forecast') : (riskCopy.subtitleLocal ?? '7-day forecast')}
           </p>
         </div>
         <button
           onClick={handleRecompute}
           disabled={recomputing || loading}
           className="flex items-center gap-1.5 rounded-lg border border-pebble-border/40 bg-pebble-chip-surface/60 px-2.5 py-1 text-xs font-medium text-pebble-text-secondary transition hover:border-pebble-border hover:text-pebble-text-primary disabled:opacity-40"
-          title="Recompute risk score"
+          title={riskCopy.recomputeTitle ?? 'Recompute risk score'}
         >
           <RefreshCw className={`h-3 w-3 ${recomputing ? 'animate-spin' : ''}`} />
-          {recomputing ? 'Computing…' : 'Recompute'}
+          {recomputing ? (riskCopy.computing ?? 'Computing…') : (riskCopy.recompute ?? 'Recompute')}
         </button>
       </div>
 
       {loading && !riskData ? (
         <div className="flex items-center gap-2 text-sm text-pebble-text-secondary">
           <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-          Computing risk score…
+          {riskCopy.computingBody ?? 'Computing risk score…'}
         </div>
       ) : riskData && cfg ? (
         <>
@@ -296,7 +306,7 @@ export function StreakRiskWidget() {
               {riskData.score}/100 · {cfg.label}
             </span>
             <span className="text-xs text-pebble-text-muted">
-              {riskData.model === 'sagemaker' ? '⚡ SageMaker' : '🔧 Local model'}
+              {riskData.model === 'sagemaker' ? (riskCopy.sagemaker ?? '⚡ SageMaker') : (riskCopy.local ?? '🔧 Local model')}
             </span>
           </div>
 
@@ -309,7 +319,7 @@ export function StreakRiskWidget() {
           {riskData.actions.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-[0.06em] text-pebble-text-muted">
-                Recommended actions
+                {riskCopy.actions ?? 'Recommended actions'}
               </p>
               <ul className="space-y-1">
                 {riskData.actions.slice(0, 3).map((action, i) => (
@@ -331,7 +341,7 @@ export function StreakRiskWidget() {
         <p className="text-sm text-red-400">{errorMsg}</p>
       ) : (
         <p className="text-sm text-pebble-text-secondary">
-          No risk data yet — click Recompute to generate.
+          {riskCopy.empty ?? 'No risk data yet — click Recompute to generate.'}
         </p>
       )}
     </Card>

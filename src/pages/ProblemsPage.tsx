@@ -270,7 +270,7 @@ export function ProblemsPage() {
           <div className="max-w-[48rem] space-y-1">
             <div className={`pebble-section-label ${eyebrowPillClass}`}>
               <Sparkles className={eyebrowIconClass} aria-hidden="true" />
-              Practice intelligence
+              {t('problems.eyebrow.practice')}
             </div>
             <div className="space-y-0.5">
               <h1 className={`text-[1.52rem] font-semibold tracking-[-0.02em] text-pebble-text-primary md:text-[1.82rem] ${isUrdu ? 'rtlText' : ''}`}>
@@ -284,15 +284,15 @@ export function ProblemsPage() {
 
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3 lg:min-w-[390px]">
             <div className="problems-subsection-shell rounded-[16px] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-pebble-text-muted">Library</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-pebble-text-muted">{t('problems.stats.library')}</p>
               <p className="mt-0.5 text-[0.98rem] font-semibold tracking-[-0.01em] text-pebble-text-primary">{localizedProblems.length}</p>
             </div>
             <div className="problems-subsection-shell rounded-[16px] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-pebble-text-muted">Solved</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-pebble-text-muted">{t('problems.filters.solved')}</p>
               <p className="mt-0.5 text-[0.98rem] font-semibold tracking-[-0.01em] text-pebble-text-primary">{solvedCount}</p>
             </div>
             <div className="problems-subsection-shell rounded-[16px] px-2.5 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-pebble-text-muted">Filtered</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-pebble-text-muted">{t('problems.stats.filtered')}</p>
               <p className="mt-0.5 text-[0.98rem] font-semibold tracking-[-0.01em] text-pebble-text-primary">{filteredProblems.length}</p>
             </div>
           </div>
@@ -318,10 +318,10 @@ export function ProblemsPage() {
             <div className="space-y-0.5">
               <div className={`pebble-section-label ${eyebrowPillClass}`}>
                 <SlidersHorizontal className={eyebrowIconClass} aria-hidden="true" />
-                Command rail
+                {t('problems.eyebrow.command')}
               </div>
               <p className={`text-[12.5px] leading-[1.5] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-                Search first, then refine by difficulty, language, and topic without losing context.
+                {t('problems.eyebrow.searchHint')}
               </p>
             </div>
             <div className={`pebble-chip inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${isUrdu ? 'rtlText' : ''}`}>
@@ -436,13 +436,13 @@ export function ProblemsPage() {
       <Card padding="sm" interactive className="problems-page-shell relative z-0 rounded-[30px] px-4 py-3 md:px-5 md:py-3">
         <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-pebble-text-muted">Results</p>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-pebble-text-muted">{t('problems.results.label')}</p>
             <h2 className={`mt-0.5 text-[1.02rem] font-semibold tracking-tight text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
-              Curated problem list
+              {t('problems.results.title')}
             </h2>
           </div>
           <p className={`max-w-[42rem] text-[13px] leading-[1.55] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-            Scan titles first, then difficulty and acceptance. Open any row for a deeper preview before starting.
+            {t('problems.results.hint')}
           </p>
         </div>
 

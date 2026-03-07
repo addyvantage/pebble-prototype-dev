@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Card } from '../ui/Card'
 import { useI18n } from '../../i18n/useI18n'
+import { getProductCopy } from '../../i18n/productCopy'
 import { getRecommendedNext, loadSkippedProblems, saveSkippedProblems } from '../../lib/homeCacheStore'
 import { getRecentActivity } from '../../lib/recentStore'
 import { isProblemSolved } from '../../lib/solvedStore'
@@ -20,6 +21,7 @@ interface RecommendedNextCardProps {
 export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
     const { t, lang, isRTL } = useI18n()
     const { theme } = useTheme()
+    const recCopy = getProductCopy(lang).home?.recommended ?? {}
     const [problemId, setProblemId] = useState<string>('')
     const [isExpanded, setIsExpanded] = useState(false)
     const recent = getRecentActivity()
@@ -67,7 +69,7 @@ export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
                     <div className={`mb-3 flex-1 rounded-[18px] p-5 text-center ${quietInsetClass}`}>
                         <p className="text-sm font-medium text-pebble-text-primary">{t('home.recommended.emptyQueue')}</p>
                         <p className="mt-2 text-[12.5px] leading-[1.7] text-pebble-text-secondary">
-                            Open the browser to pick a fresh concept or revisit a topic you want to sharpen next.
+                            {recCopy.emptyDescription ?? 'Open the browser to pick a fresh concept or revisit a topic you want to sharpen next.'}
                         </p>
                     </div>
                     <Link
@@ -90,13 +92,13 @@ export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
         ? baseProblem.topics.find((topic) => recentProblem.topics.includes(topic))
         : null
     const recommendationReason = topicMatch
-        ? `Keeps your ${topicMatch} momentum going from the last session.`
-        : `Balanced next step to keep your practice streak moving without spiking difficulty.`
+        ? (recCopy.reasonMomentum ?? 'Keeps your {topic} momentum going from the last session.').replace('{topic}', topicMatch)
+        : (recCopy.reasonBalanced ?? 'Balanced next step to keep your practice streak moving without spiking difficulty.')
     const recoveryCue = baseProblem.difficulty === 'Easy'
-        ? 'Low-friction warm-up'
+        ? (recCopy.cueWarmup ?? 'Low-friction warm-up')
         : baseProblem.difficulty === 'Medium'
-            ? 'Momentum-building challenge'
-            : 'Stretch rep for confidence'
+            ? (recCopy.cueMomentum ?? 'Momentum-building challenge')
+            : (recCopy.cueStretch ?? 'Stretch rep for confidence')
 
     return (
         <>
@@ -120,7 +122,7 @@ export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
                 <div className={`mb-3 flex-1 rounded-[18px] p-5 ${primaryInsetClass}`}>
                     <div className="mb-4 flex items-center justify-between gap-2">
                         <span className="pebble-chip-strong rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-pebble-accent">
-                            Best next move
+                            {recCopy.bestNextMove ?? 'Best next move'}
                         </span>
                         <span className={`landing-chip-muted rounded-full px-2 py-0.5 text-[10px] font-medium ${darkMetaChipClass}`}>
                             {baseProblem.estimatedMinutes} min
@@ -148,7 +150,7 @@ export function RecommendedNextCard({ className }: RecommendedNextCardProps) {
 
                     <div className={`mt-4 rounded-[14px] px-3 py-3 ${quietInsetClass}`}>
                         <p className={`text-[11px] uppercase tracking-[0.08em] ${darkReasonLabelClass} ${isRTL ? 'rtlText' : ''}`}>
-                            Why Pebble picked this
+                            {recCopy.whyPicked ?? 'Why Pebble picked this'}
                         </p>
                         <p className={`mt-1.5 text-[12.5px] leading-[1.68] ${darkBodyClass} ${isRTL ? 'rtlText' : ''}`}>
                             {recommendationReason}

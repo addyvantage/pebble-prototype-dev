@@ -510,6 +510,31 @@ export const EN_STRINGS = {
   'a11y.prevUnit': 'Go to previous question',
   'a11y.nextUnit': 'Go to next question',
   'a11y.sendMessage': 'Send message',
+
+  // Footer navigation
+  'footer.nav.about': 'About',
+  'footer.nav.howToUse': 'How to Use',
+  'footer.nav.faq': 'FAQ',
+  'footer.nav.login': 'Login',
+  'footer.nav.signUp': 'Sign Up',
+  'footer.nav.forgotPassword': 'Forgot Password',
+  'footer.nav.privacy': 'Privacy Policy',
+  'footer.nav.terms': 'Terms of Service',
+  'footer.nav.cookies': 'Cookie Policy',
+
+  // Problems page
+  'problems.eyebrow.practice': 'Practice intelligence',
+  'problems.eyebrow.command': 'Command rail',
+  'problems.eyebrow.searchHint': 'Search first, then refine by difficulty, language, and topic without losing context.',
+  'problems.stats.library': 'Library',
+  'problems.stats.filtered': 'Filtered',
+  'problems.results.label': 'Results',
+  'problems.results.title': 'Curated problem list',
+  'problems.results.hint': 'Scan titles first, then difficulty and acceptance. Open any row for a deeper preview before starting.',
+
+  // Insights live feed
+  'insights.live.dataSource': 'Live Cohort Analytics',
+  'insights.live.label': 'Live',
 } as const
 
 export type I18nKey = keyof typeof EN_STRINGS

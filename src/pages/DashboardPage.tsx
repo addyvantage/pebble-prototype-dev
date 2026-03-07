@@ -220,14 +220,14 @@ export function DashboardPage() {
             {cohortData && (
               <Badge className="animate-pulse bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
                 <Sparkles className="mr-1 inline-block h-3 w-3" />
-                Data Source: Live Cohort Analytics
+                {t('insights.live.dataSource')}
               </Badge>
             )}
             <Badge variant="neutral">{t('insights.hero.chipLast7')}</Badge>
             {liveConnected ? (
               <Badge className="animate-pulse bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
                 <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400" />
-                Live
+                {t('insights.live.label')}
               </Badge>
             ) : (
               <Badge variant={hasLiveData ? 'success' : 'neutral'}>{t('insights.hero.chipLive')}</Badge>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { buttonClass } from '../components/ui/buttonStyles'
 import { useI18n } from '../i18n/useI18n'
+import { getProductCopy } from '../i18n/productCopy'
 import { useTheme } from '../hooks/useTheme'
 import { getRecentActivity } from '../lib/recentStore'
 import { getProblemById } from '../data/problemsBank'
@@ -22,6 +23,7 @@ export function LandingPage() {
   const { t, lang } = useI18n()
   const { theme } = useTheme()
   const isUrdu = lang === 'ur'
+  const homeCopy = getProductCopy(lang).home?.continue ?? {}
 
   const continueSurfaceClass = theme === 'dark'
     ? 'landing-secondary-card'
@@ -92,7 +94,7 @@ export function LandingPage() {
                         {localizedRecent.title}
                       </p>
                       <p className={`text-[12.5px] leading-[1.68] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-                        Resume the thread, rerun the last failing case, and close the loop while context is still warm.
+                        {homeCopy.resumeDescription ?? 'Resume the thread, rerun the last failing case, and close the loop while context is still warm.'}
                       </p>
                     </div>
                   ) : (
@@ -104,7 +106,7 @@ export function LandingPage() {
                         {t('home.continue.empty.title')}
                       </p>
                       <p className={`text-[12.5px] leading-[1.68] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-                        Pick a first problem and Pebble will keep your runtime context ready to continue next time.
+                        {homeCopy.emptyDescription ?? 'Pick a first problem and Pebble will keep your runtime context ready to continue next time.'}
                       </p>
                     </div>
                   )}
@@ -129,7 +131,7 @@ export function LandingPage() {
                 </div>
               ) : (
                 <div className="mb-4 flex flex-wrap items-center gap-2">
-                  {['Guided warm-up', 'Real runtime checks', 'Coach in context'].map((label) => (
+                  {(homeCopy.emptyChips ?? ['Guided warm-up', 'Real runtime checks', 'Coach in context']).map((label: string) => (
                     <span key={label} className="landing-chip-muted rounded-full px-2 py-0.5 text-[10.5px] font-medium">
                       {label}
                     </span>
@@ -139,7 +141,9 @@ export function LandingPage() {
 
               <div className="landing-inset mt-auto flex items-center justify-between gap-3 rounded-[16px] px-3 py-3">
                 <p className={`text-[12px] leading-[1.6] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
-                  {localizedRecent ? 'Jump straight back into the same unit and keep your recovery loop short.' : 'Start a first session and Pebble will build your continuation context automatically.'}
+                  {localizedRecent
+                    ? (homeCopy.resumeRail ?? 'Jump straight back into the same unit and keep your recovery loop short.')
+                    : (homeCopy.emptyRail ?? 'Start a first session and Pebble will build your continuation context automatically.')}
                 </p>
                 <div className="shrink-0">
                   {localizedRecent ? (

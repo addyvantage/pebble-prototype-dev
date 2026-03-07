@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Card } from '../ui/Card'
 import { useI18n } from '../../i18n/useI18n'
+import { getProductCopy } from '../../i18n/productCopy'
 import { Check, Sparkles, Flame, X, RefreshCw, Gauge } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { loadDailyPlan, saveDailyPlan, toggleTaskDone, computeStreak, type PlanState } from '../../lib/planStore'
@@ -31,11 +32,11 @@ function getFocusLoadState(plannedMinutes: number, targetMinutes: number): Focus
     return 'heavy'
 }
 
-function getFocusLoadLabel(state: FocusLoadState) {
-    if (state === 'balanced') return 'Balanced'
-    if (state === 'stretch') return 'Stretch'
-    if (state === 'heavy') return 'Heavy'
-    return 'Neutral'
+function getFocusLoadLabel(state: FocusLoadState, stateCopy: Record<string, string>) {
+    if (state === 'balanced') return stateCopy.stateBalanced ?? 'Balanced'
+    if (state === 'stretch') return stateCopy.stateStretch ?? 'Stretch'
+    if (state === 'heavy') return stateCopy.stateHeavy ?? 'Heavy'
+    return stateCopy.stateNeutral ?? 'Neutral'
 }
 
 function buildExpectedOutcome(params: {
@@ -43,8 +44,9 @@ function buildExpectedOutcome(params: {
     streak: number
     plannedMinutes: number
     loadState: FocusLoadState
+    outcomes: Record<string, string>
 }) {
-    const { tasks, streak, plannedMinutes, loadState } = params
+    const { tasks, streak, plannedMinutes, loadState, outcomes } = params
     const labels = tasks.map((task) => `${task.label} ${task.detail}`.toLowerCase()).join(' ')
 
     const mentionsReview = /review|mistake|incorrect|rerun|recovery/.test(labels)
@@ -52,31 +54,32 @@ function buildExpectedOutcome(params: {
     const mentionsDrill = /drill|specific|syntax|api|focus|practice/.test(labels)
 
     if (streak === 0 && mentionsWarmup) {
-        return 'Today should leave you back in rhythm with one clean win and a clearer next step.'
+        return outcomes.backInRhythm ?? 'Today should leave you back in rhythm with one clean win and a clearer next step.'
     }
 
     if (mentionsReview && mentionsWarmup) {
-        return 'By the end of this session, you should have one clean win, one reviewed mistake, and better recovery flow.'
+        return outcomes.reviewAndWin ?? 'By the end of this session, you should have one clean win, one reviewed mistake, and better recovery flow.'
     }
 
     if (loadState === 'heavy') {
-        return 'A short focused session should rebuild momentum without letting the workload sprawl.'
+        return outcomes.heavy ?? 'A short focused session should rebuild momentum without letting the workload sprawl.'
     }
 
     if (mentionsDrill && plannedMinutes <= FOCUS_TARGET_MINUTES) {
-        return 'You should finish with one solved rep, one review insight, and a cleaner recovery loop.'
+        return outcomes.drill ?? 'You should finish with one solved rep, one review insight, and a cleaner recovery loop.'
     }
 
     if (plannedMinutes <= 20) {
-        return 'This session should help you leave with momentum restored, not mentally drained.'
+        return outcomes.light ?? 'This session should help you leave with momentum restored, not mentally drained.'
     }
 
-    return 'You should finish today with steady momentum, one completed focus loop, and stronger confidence for the next session.'
+    return outcomes.default ?? 'You should finish today with steady momentum, one completed focus loop, and stronger confidence for the next session.'
 }
 
 export function TodayPlanCard() {
     const { t, lang, isRTL } = useI18n()
     const { theme } = useTheme()
+    const planCopy = getProductCopy(lang).home?.todayPlan ?? {}
     const [state, setState] = useState<PlanState>(loadDailyPlan)
     const [streak, setStreak] = useState(0)
     const [isGenerating, setIsGenerating] = useState(false)
@@ -271,6 +274,7 @@ export function TodayPlanCard() {
             streak,
             plannedMinutes,
             loadState: focusLoadState,
+            outcomes: planCopy.outcomes ?? {},
         })
         : null
 
@@ -281,10 +285,10 @@ export function TodayPlanCard() {
                     <div className="space-y-0.5">
                         <div className="mb-3 flex flex-wrap items-center gap-2">
                             <span className="pebble-chip-strong rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-pebble-accent">
-                                Daily loop
+                                {planCopy.dailyLoop ?? 'Daily loop'}
                             </span>
                             <span className={`landing-chip-muted rounded-full px-2 py-0.5 text-[10px] ${darkMetaChipClass}`}>
-                                25 min focus
+                                {planCopy.focusChip ?? '25 min focus'}
                             </span>
                         </div>
                         <h2 className={`text-[15px] font-semibold text-pebble-text-primary tracking-tight ${isRTL ? 'rtlText' : ''}`}>
@@ -303,10 +307,10 @@ export function TodayPlanCard() {
                         )}
                         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${loadChipClass}`}>
                             <span className={`h-1.5 w-1.5 rounded-full ${loadStateDotClass}`} />
-                            <span>{`Focus load ${plannedMinutes}/${FOCUS_TARGET_MINUTES}m`}</span>
+                            <span>{`${planCopy.focusLoad ?? 'Focus load'} ${plannedMinutes}/${FOCUS_TARGET_MINUTES}m`}</span>
                             {plan ? (
                                 <span className="text-[10px] font-semibold tracking-[0.02em] opacity-80">
-                                    {getFocusLoadLabel(focusLoadState)}
+                                    {getFocusLoadLabel(focusLoadState, planCopy)}
                                 </span>
                             ) : null}
                         </span>
@@ -317,10 +321,10 @@ export function TodayPlanCard() {
                     <div className={`rounded-[18px] border border-dashed px-4 py-6 ${insetPanelClass}`}>
                         <div className="mx-auto max-w-[36rem] text-center">
                             <p className={`text-[13px] font-medium text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
-                                Generate a focused set of small wins from your recent momentum.
+                                {planCopy.emptyTitle ?? 'Generate a focused set of small wins from your recent momentum.'}
                             </p>
                             <p className={`mt-2 text-[12.5px] leading-[1.7] text-pebble-text-secondary ${isRTL ? 'rtlText' : ''}`}>
-                                Pebble will shape one warm-up, one recovery task, and one review step so the session starts with clear intent.
+                                {planCopy.emptyBody ?? 'Pebble will shape one warm-up, one recovery task, and one review step so the session starts with clear intent.'}
                             </p>
                         </div>
                         <button
@@ -346,10 +350,10 @@ export function TodayPlanCard() {
                         <div className={`flex items-center justify-between rounded-[14px] px-3.5 py-3 ${insetPanelClass}`}>
                             <div className="min-w-0">
                                 <p className={`text-[11px] uppercase tracking-[0.08em] ${darkLabelClass} ${isRTL ? 'rtlText' : ''}`}>
-                                    Session pacing
+                                    {planCopy.sessionPacing ?? 'Session pacing'}
                                 </p>
                                 <p className={`text-[12.5px] ${darkSubtitleClass} ${isRTL ? 'rtlText' : ''}`}>
-                                    Three deliberate tasks tuned for consistency over thrash.
+                                    {planCopy.sessionPacingBody ?? 'Three deliberate tasks tuned for consistency over thrash.'}
                                 </p>
                             </div>
                             <div className="ml-3 hidden min-w-[110px] sm:block">
@@ -432,7 +436,7 @@ export function TodayPlanCard() {
                                 </span>
                                 <div className="min-w-0">
                                     <p className={`text-[10.5px] font-semibold uppercase tracking-[0.08em] ${outcomeLabelClass} ${isRTL ? 'rtlText' : ''}`}>
-                                        Expected by end of session
+                                        {planCopy.expectedLabel ?? 'Expected by end of session'}
                                     </p>
                                     <p className={`mt-1 text-[12.75px] leading-[1.58] ${outcomeBodyClass} ${isRTL ? 'rtlText' : ''}`}>
                                         {expectedOutcome}
@@ -474,7 +478,7 @@ export function TodayPlanCard() {
                             <button
                                 onClick={closeModal}
                                 className="ml-4 shrink-0 rounded-full p-1.5 text-pebble-text-muted hover:bg-pebble-overlay/[0.08] hover:text-pebble-text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/50"
-                                aria-label="Close dialog"
+                                aria-label={planCopy.closeDialog ?? 'Close dialog'}
                             >
                                 <X className="h-4 w-4" />
                             </button>

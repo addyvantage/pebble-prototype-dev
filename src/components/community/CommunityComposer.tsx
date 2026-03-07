@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link2, Sparkles, UsersRound, Wrench } from 'lucide-react'
+import { Link2, MessageSquarePlus, Sparkles, UsersRound, Wrench } from 'lucide-react'
 import { Button } from '../ui/Button'
 import type { CommunityGroup } from '../../data/communitySeed'
 import type { ComposerPrefill } from './communityTypes'
