@@ -62,6 +62,7 @@ export function AppLayout() {
       const items = [
         { to: '/', label: t('nav.home') },
         { to: '/problems', label: t('nav.problems') },
+        { to: '/community', label: t('nav.community') },
         { to: '/session/1', label: t('nav.session') },
         { to: '/dashboard', label: t('nav.insights') },
       ]

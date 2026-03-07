@@ -6,6 +6,7 @@ import { LandingPage } from './pages/LandingPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { PlacementPage } from './pages/PlacementPage'
 import { ProblemsPage } from './pages/ProblemsPage'
+import { CommunityPage } from './pages/CommunityPage'
 import { SessionPage } from './pages/SessionPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { OpsPage } from './pages/OpsPage'
@@ -29,6 +30,7 @@ function App() {
           <Route path="/placement" element={<PlacementPage />} />
           <Route path="/session/:sessionId" element={<SessionPage />} />
           <Route path="/problems" element={<ProblemsPage />} />
+          <Route path="/community" element={<CommunityPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/ops" element={<OpsPage />} />

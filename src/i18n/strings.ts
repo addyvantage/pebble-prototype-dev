@@ -4,6 +4,7 @@ import { GENERATED_STRINGS } from './generatedStrings'
 export const EN_STRINGS = {
   'nav.home': 'Home',
   'nav.problems': 'Problems',
+  'nav.community': 'Community',
   'nav.session': 'Session',
   'nav.insights': 'Insights',
   'app.tagline': 'Cognitive recovery companion',
