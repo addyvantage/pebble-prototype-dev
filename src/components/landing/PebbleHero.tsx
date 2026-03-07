@@ -51,7 +51,7 @@ export function PebbleHero({
 }: PebbleHeroProps) {
   const etherealColor = theme === 'dark'
     ? 'rgba(114, 149, 220, 0.16)'
-    : 'rgba(89, 128, 204, 0.16)'
+    : 'rgba(86, 138, 232, 0.24)'
   const heroGridLineClass = theme === 'dark'
     ? 'bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)]'
     : 'bg-[linear-gradient(to_right,rgba(61,85,126,0.09)_1px,transparent_1px),linear-gradient(to_bottom,rgba(61,85,126,0.08)_1px,transparent_1px)]'
@@ -108,14 +108,15 @@ export function PebbleHero({
           animation={{ scale: 62, speed: 78 }}
           noise={theme === 'dark'
             ? { opacity: 0.24, scale: 1.34 }
-            : { opacity: 0.09, scale: 1.12 }}
+            : { opacity: 0.14, scale: 1.16 }}
           sizing="fill"
           showTitle={false}
         />
         <div className={`absolute inset-0 ${heroGridLineClass} bg-[size:84px_84px] opacity-20 [mask-image:radial-gradient(circle_at_center,black,transparent_88%)]`} />
         <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-pebble-bg/68 via-pebble-bg/28 to-transparent" />
-        <div className="absolute left-[14%] top-[8%] h-[18rem] w-[18rem] rounded-full bg-pebble-accent/10 blur-[110px]" />
-        <div className="absolute right-[10%] top-[18%] h-[20rem] w-[20rem] rounded-full bg-pebble-accent/12 blur-[128px]" />
+        <div className="absolute left-[14%] top-[8%] h-[18rem] w-[18rem] rounded-full bg-pebble-accent/10 blur-[110px] dark:bg-pebble-accent/10" />
+        <div className="absolute right-[10%] top-[18%] h-[20rem] w-[20rem] rounded-full bg-pebble-accent/14 blur-[128px] dark:bg-pebble-accent/12" />
+        <div className="absolute inset-x-[18%] top-[16%] h-[15rem] rounded-full bg-[rgba(96,165,250,0.15)] blur-[95px] dark:hidden" />
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-[1280px]">
