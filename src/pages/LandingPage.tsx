@@ -64,10 +64,7 @@ export function LandingPage() {
           previewLabel={t('landing.previewLabel')}
           previewUsingRun={t('landing.previewUsingRun')}
           previewUnit={t('landing.previewUnit')}
-          previewTests={t('landing.previewTests')}
-          previewFail={t('landing.previewFail')}
           previewCoach={t('landing.previewCoach')}
-          previewCoachHint={t('landing.previewCoachHint')}
           tryPebbleCtaClass={tryPebbleCtaClass}
           openSessionCtaClass={openSessionCtaClass}
         />
