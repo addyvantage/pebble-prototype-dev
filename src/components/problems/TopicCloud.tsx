@@ -43,24 +43,24 @@ export function TopicCloud({
   const eyebrowIconClass = isDark ? 'h-3.5 w-3.5 text-[hsl(216_92%_74%)]' : 'h-3.5 w-3.5 text-[hsl(220_82%_56%)]'
 
   return (
-    <Card padding="sm" interactive className="problems-subsection-shell space-y-4 rounded-[28px] p-5 md:p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-1.5">
+    <Card padding="sm" interactive className="problems-subsection-shell space-y-3 rounded-[28px] p-4 md:p-5">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-1">
           <div className={`pebble-section-label ${eyebrowPillClass}`}>
             <Sparkles className={eyebrowIconClass} aria-hidden="true" />
             Topic intelligence
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <h2 className={`text-[1.02rem] font-semibold tracking-tight text-pebble-text-primary md:text-[1.1rem] ${isUrdu ? 'rtlText' : ''}`}>{title}</h2>
-            <p className={`max-w-[58ch] text-[13.5px] leading-[1.7] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>{subtitle}</p>
+            <p className={`max-w-[58ch] text-[13px] leading-[1.6] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>{subtitle}</p>
           </div>
         </div>
-        <div className="pebble-chip rounded-full px-3 py-1 text-[11px] font-medium">
+        <div className="pebble-chip rounded-full px-2.5 py-0.5 text-[10.5px] font-medium">
           {selectedTopics.length}/{topics.length}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {visibleTopics.map((entry) => {
           const selected = selectedTopics.includes(entry.id)
           return (
@@ -68,7 +68,7 @@ export function TopicCloud({
               key={entry.id}
               type="button"
               onClick={() => onToggleTopic(entry.id)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-all duration-150 ease-out hover:-translate-y-[0.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${selected
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11.5px] font-medium transition-all duration-150 ease-out hover:-translate-y-[0.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${selected
                   ? isDark
                     ? 'border-pebble-accent/52 bg-pebble-accent/18 text-[hsl(220_20%_94%)] shadow-[0_12px_24px_rgba(15,23,42,0.24)]'
                     : 'border-pebble-accent/46 bg-pebble-accent/14 text-[hsl(223_34%_22%)] shadow-[0_12px_24px_rgba(55,72,110,0.10)]'
@@ -97,7 +97,7 @@ export function TopicCloud({
           <button
             type="button"
             onClick={() => setExpanded((current) => !current)}
-            className={`pebble-control inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
+            className={`pebble-control inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45 ${
               isDark
                 ? 'text-[hsl(220_16%_84%)]'
                 : 'text-[hsl(221_24%_36%)]'

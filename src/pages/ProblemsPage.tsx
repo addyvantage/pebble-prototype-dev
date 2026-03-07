@@ -262,38 +262,38 @@ export function ProblemsPage() {
   const eyebrowIconClass = isDark ? 'h-3.5 w-3.5 text-[hsl(216_92%_74%)]' : 'h-3.5 w-3.5 text-[hsl(220_82%_56%)]'
 
   return (
-    <section className="page-enter space-y-4 pb-4">
-      <Card padding="sm" interactive className="problems-page-shell overflow-hidden rounded-[32px] px-4 py-5 md:px-6 md:py-6">
+    <section className="page-enter space-y-3 pb-3">
+      <Card padding="sm" interactive className="problems-page-shell overflow-hidden rounded-[32px] px-4 py-4 md:px-6 md:py-5">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pebble-overlay/72 to-transparent" />
         <div className="pointer-events-none absolute -right-10 top-0 h-40 w-40 rounded-full bg-pebble-accent/10 blur-3xl" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-[56rem] space-y-2">
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-[56rem] space-y-1.5">
             <div className={`pebble-section-label ${eyebrowPillClass}`}>
               <Sparkles className={eyebrowIconClass} aria-hidden="true" />
               Practice intelligence
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <h1 className={`text-[2rem] font-semibold tracking-[-0.03em] text-pebble-text-primary md:text-[2.35rem] ${isUrdu ? 'rtlText' : ''}`}>
                 {t('problems.title')}
               </h1>
-              <p className={`max-w-[54rem] text-[14px] leading-[1.75] text-pebble-text-secondary md:text-[15px] ${isUrdu ? 'rtlText' : ''}`}>
+              <p className={`max-w-[54rem] text-[14px] leading-[1.65] text-pebble-text-secondary md:text-[15px] ${isUrdu ? 'rtlText' : ''}`}>
                 {t('problems.subtitle')}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 lg:min-w-[440px]">
-            <div className="problems-subsection-shell rounded-[20px] px-3.5 py-3.5">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:min-w-[420px]">
+            <div className="problems-subsection-shell rounded-[20px] px-3 py-2.5">
               <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Library</p>
-              <p className="mt-1.5 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{localizedProblems.length}</p>
+              <p className="mt-1 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{localizedProblems.length}</p>
             </div>
-            <div className="problems-subsection-shell rounded-[20px] px-3.5 py-3.5">
+            <div className="problems-subsection-shell rounded-[20px] px-3 py-2.5">
               <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Solved</p>
-              <p className="mt-1.5 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{solvedCount}</p>
+              <p className="mt-1 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{solvedCount}</p>
             </div>
-            <div className="problems-subsection-shell rounded-[20px] px-3.5 py-3.5">
+            <div className="problems-subsection-shell rounded-[20px] px-3 py-2.5">
               <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">Filtered</p>
-              <p className="mt-1.5 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{filteredProblems.length}</p>
+              <p className="mt-1 text-[1.05rem] font-semibold tracking-[-0.02em] text-pebble-text-primary">{filteredProblems.length}</p>
             </div>
           </div>
         </div>
@@ -311,137 +311,137 @@ export function ProblemsPage() {
       <Card
         padding="sm"
         interactive
-        className="problems-focus-shell relative z-20 overflow-visible rounded-[30px] px-4 py-4 md:px-5 md:py-5"
+        className="problems-focus-shell relative z-20 overflow-visible rounded-[30px] px-4 py-3.5 md:px-5 md:py-4"
       >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-1">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-0.5">
               <div className={`pebble-section-label ${eyebrowPillClass}`}>
                 <SlidersHorizontal className={eyebrowIconClass} aria-hidden="true" />
                 Command rail
               </div>
-              <p className={`text-[13.5px] leading-[1.7] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+              <p className={`text-[13px] leading-[1.6] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
                 Search first, then refine by difficulty, language, and topic without losing context.
               </p>
             </div>
-            <div className={`pebble-chip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-medium ${isUrdu ? 'rtlText' : ''}`}>
+            <div className={`pebble-chip inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11.5px] font-medium ${isUrdu ? 'rtlText' : ''}`}>
               <Target className="h-3.5 w-3.5 text-pebble-accent" aria-hidden="true" />
               {t('problems.solvedCounter', { solved: solvedCount, total: localizedProblems.length })}
               <span className="ltrSafe text-pebble-text-muted">({filteredSolved}/{filteredProblems.length})</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-          <label className="relative min-w-[320px] flex-[1.35]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble-text-muted" aria-hidden="true" />
-            <input
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              placeholder={t('problems.searchPlaceholder')}
-              className={`pebble-control h-12 w-full rounded-2xl pl-10 pr-4 text-[14px] placeholder:text-pebble-text-muted ${isUrdu ? 'rtlText text-right' : ''
-                }`}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="relative min-w-[320px] flex-[1.35]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pebble-text-muted" aria-hidden="true" />
+              <input
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                placeholder={t('problems.searchPlaceholder')}
+                className={`pebble-control h-11 w-full rounded-2xl pl-10 pr-4 text-[14px] placeholder:text-pebble-text-muted ${isUrdu ? 'rtlText text-right' : ''
+                  }`}
+              />
+            </label>
+
+            <ProblemsFilterPopover
+              value={filters}
+              onApply={setFilters}
+              onReset={() => setFilters(INITIAL_FILTERS)}
+              topicOptions={topicOptions.map((entry): ProblemTopicOption => ({ id: entry.id, label: entry.label }))}
+              labels={{
+                filter: t('problems.filters.button'),
+                status: t('problems.filters.status'),
+                difficulty: t('problems.filters.difficulty'),
+                topic: t('problems.filters.topics'),
+                language: t('problems.filters.language'),
+                matchMode: t('problems.filters.matchMode'),
+                all: t('problems.filters.all'),
+                solved: t('problems.filters.solved'),
+                unsolved: t('problems.filters.unsolved'),
+                anyDifficulty: t('problems.filters.anyDifficulty'),
+                easy: t('difficulty.easy'),
+                medium: t('difficulty.medium'),
+                hard: t('difficulty.hard'),
+                anyLanguage: t('problems.filters.anyLanguage'),
+                apply: t('problems.filters.apply'),
+                reset: t('problems.filters.reset'),
+                anyMatch: t('problems.filters.matchAny'),
+                allMatch: t('problems.filters.matchAll'),
+                languagePython: t('problems.languagePython'),
+                languageJavaScript: t('problems.languageJavaScript'),
+                languageJava: t('problems.languageJava'),
+                languageCpp: t('problems.languageCpp'),
+                languageC: t('problems.languageC'),
+                languageSql: t('problems.languageSql'),
+              }}
             />
-          </label>
 
-          <ProblemsFilterPopover
-            value={filters}
-            onApply={setFilters}
-            onReset={() => setFilters(INITIAL_FILTERS)}
-            topicOptions={topicOptions.map((entry): ProblemTopicOption => ({ id: entry.id, label: entry.label }))}
-            labels={{
-              filter: t('problems.filters.button'),
-              status: t('problems.filters.status'),
-              difficulty: t('problems.filters.difficulty'),
-              topic: t('problems.filters.topics'),
-              language: t('problems.filters.language'),
-              matchMode: t('problems.filters.matchMode'),
-              all: t('problems.filters.all'),
-              solved: t('problems.filters.solved'),
-              unsolved: t('problems.filters.unsolved'),
-              anyDifficulty: t('problems.filters.anyDifficulty'),
-              easy: t('difficulty.easy'),
-              medium: t('difficulty.medium'),
-              hard: t('difficulty.hard'),
-              anyLanguage: t('problems.filters.anyLanguage'),
-              apply: t('problems.filters.apply'),
-              reset: t('problems.filters.reset'),
-              anyMatch: t('problems.filters.matchAny'),
-              allMatch: t('problems.filters.matchAll'),
-              languagePython: t('problems.languagePython'),
-              languageJavaScript: t('problems.languageJavaScript'),
-              languageJava: t('problems.languageJava'),
-              languageCpp: t('problems.languageCpp'),
-              languageC: t('problems.languageC'),
-              languageSql: t('problems.languageSql'),
-            }}
-          />
+            <label className="relative inline-flex h-11 min-w-[170px] items-center">
+              <select
+                value={filters.difficulty}
+                onChange={(event) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    difficulty: event.target.value as ProblemsFilterState['difficulty'],
+                  }))
+                }
+                className="h-full w-full appearance-none rounded-2xl border border-pebble-border/28 bg-pebble-chip-surface/82 pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+                aria-label={t('problems.filters.difficulty')}
+              >
+                <option value="any">{t('problems.filters.anyDifficulty')}</option>
+                <option value="easy">{t('difficulty.easy')}</option>
+                <option value="medium">{t('difficulty.medium')}</option>
+                <option value="hard">{t('difficulty.hard')}</option>
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center justify-center text-pebble-text-secondary">
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              </span>
+            </label>
 
-          <label className="relative inline-flex h-12 min-w-[170px] items-center">
-            <select
-              value={filters.difficulty}
-              onChange={(event) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  difficulty: event.target.value as ProblemsFilterState['difficulty'],
-                }))
-              }
-              className="h-full w-full appearance-none rounded-2xl border border-pebble-border/28 bg-pebble-chip-surface/82 pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
-              aria-label={t('problems.filters.difficulty')}
-            >
-              <option value="any">{t('problems.filters.anyDifficulty')}</option>
-              <option value="easy">{t('difficulty.easy')}</option>
-              <option value="medium">{t('difficulty.medium')}</option>
-              <option value="hard">{t('difficulty.hard')}</option>
-            </select>
-            <span className="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center justify-center text-pebble-text-secondary">
-              <ChevronDown className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </label>
+            <label className="relative inline-flex h-11 min-w-[170px] items-center">
+              <select
+                value={sortMode}
+                onChange={(event) => setSortMode(event.target.value as SortMode)}
+                className="h-full w-full appearance-none rounded-2xl border border-pebble-border/28 bg-pebble-chip-surface/82 pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
+                aria-label={t('problems.sort.label')}
+              >
+                <option value="newest">{t('problems.sort.newest')}</option>
+                <option value="difficulty">{t('problems.sort.difficulty')}</option>
+                <option value="acceptance">{t('problems.sort.acceptance')}</option>
+                <option value="topic">{t('problems.sort.topic')}</option>
+                <option value="lastSolved">{t('problems.sort.lastSolved')}</option>
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center justify-center text-pebble-text-secondary">
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              </span>
+            </label>
 
-          <label className="relative inline-flex h-12 min-w-[170px] items-center">
-            <select
-              value={sortMode}
-              onChange={(event) => setSortMode(event.target.value as SortMode)}
-              className="h-full w-full appearance-none rounded-2xl border border-pebble-border/28 bg-pebble-chip-surface/82 pl-3 pr-10 text-sm text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/45"
-              aria-label={t('problems.sort.label')}
-            >
-              <option value="newest">{t('problems.sort.newest')}</option>
-              <option value="difficulty">{t('problems.sort.difficulty')}</option>
-              <option value="acceptance">{t('problems.sort.acceptance')}</option>
-              <option value="topic">{t('problems.sort.topic')}</option>
-              <option value="lastSolved">{t('problems.sort.lastSolved')}</option>
-            </select>
-            <span className="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center justify-center text-pebble-text-secondary">
-              <ChevronDown className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </label>
-
-          <div className="ml-auto flex items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={pickRandomProblem}
-              disabled={filteredProblems.length === 0}
-              className="h-12 rounded-2xl gap-1.5 border-pebble-accent/22 bg-pebble-accent/10 text-pebble-text-primary hover:bg-pebble-accent/14"
-            >
-              <Shuffle className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('problems.random')}
-            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={pickRandomProblem}
+                disabled={filteredProblems.length === 0}
+                className="h-11 rounded-2xl gap-1.5 border-pebble-accent/22 bg-pebble-accent/10 text-pebble-text-primary hover:bg-pebble-accent/14"
+              >
+                <Shuffle className="h-3.5 w-3.5" aria-hidden="true" />
+                {t('problems.random')}
+              </Button>
+            </div>
           </div>
-        </div>
         </div>
 
       </Card>
 
-      <Card padding="sm" interactive className="problems-page-shell relative z-0 rounded-[32px] px-4 py-4 md:px-5 md:py-5">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <Card padding="sm" interactive className="problems-page-shell relative z-0 rounded-[32px] px-4 py-3.5 md:px-5 md:py-4">
+        <div className="mb-3 flex flex-col gap-1.5 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">Results</p>
-            <h2 className={`mt-1 text-[1.1rem] font-semibold tracking-tight text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
+            <h2 className={`mt-0.5 text-[1.1rem] font-semibold tracking-tight text-pebble-text-primary ${isUrdu ? 'rtlText' : ''}`}>
               Curated problem list
             </h2>
           </div>
-          <p className={`max-w-[42rem] text-[13.5px] leading-[1.7] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
+          <p className={`max-w-[42rem] text-[13.5px] leading-[1.6] text-pebble-text-secondary ${isUrdu ? 'rtlText' : ''}`}>
             Scan titles first, then difficulty and acceptance. Open any row for a deeper preview before starting.
           </p>
         </div>

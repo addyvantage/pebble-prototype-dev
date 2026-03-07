@@ -27,6 +27,19 @@ export class BackendStack extends cdk.Stack {
       (this.node.tryGetContext('bedrockModelId') as string | undefined) ??
       'anthropic.claude-haiku-4-5-20251001-v1:0'
 
+    const configuredFrontendOrigins = [
+      process.env.FRONTEND_ORIGIN,
+      this.node.tryGetContext('frontendOrigin') as string | undefined,
+      'http://localhost:5173',
+      'https://*.cloudfront.net',
+      'https://main.d2c2alvh2q833h.amplifyapp.com',
+      'https://*.amplifyapp.com',
+    ]
+      .filter((origin): origin is string => typeof origin === 'string' && origin.trim().length > 0)
+      .map((origin) => origin.trim().replace(/\/+$/, ''))
+
+    const avatarCorsAllowedOrigins = [...new Set(configuredFrontendOrigins)]
+
     // ── LLM Lambda (TypeScript / Node 20) ─────────────────────────────────────
     //
     // NodejsFunction uses esbuild to bundle the TypeScript handler into a single
@@ -226,7 +239,7 @@ export class BackendStack extends cdk.Stack {
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.HEAD],
-          allowedOrigins: ['http://localhost:5173', 'https://*.cloudfront.net'],
+          allowedOrigins: avatarCorsAllowedOrigins,
           allowedHeaders: ['*'],
           exposedHeaders: ['ETag'],
           maxAge: 3000,
