@@ -74,11 +74,11 @@ export function SiteFooter() {
                   Built with
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2.5 sm:gap-3">
-                  <div className="inline-flex min-w-[156px] items-center justify-center rounded-[15px] border border-pebble-border/16 bg-pebble-overlay/[0.14] px-3.5 py-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.10)] dark:bg-white/[0.05] dark:shadow-[0_10px_22px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] sm:min-w-[176px] sm:px-4 sm:py-3">
+                  <div className="inline-flex min-w-[168px] items-center justify-center rounded-[10px] border border-pebble-border/16 bg-pebble-overlay/[0.14] px-3 py-2 shadow-[0_8px_18px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.10)] dark:bg-white/[0.05] dark:shadow-[0_10px_22px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] sm:min-w-[196px] sm:px-3.5 sm:py-2.5">
                     <img
                       src={awsWordmark}
                       alt="Amazon Web Services"
-                      className="h-[28px] w-auto max-w-[132px] object-contain sm:h-[32px] sm:max-w-[146px]"
+                      className="h-[34px] w-auto max-w-[154px] object-contain sm:h-[40px] sm:max-w-[178px]"
                     />
                   </div>
                   <div className="inline-flex items-center gap-2.5 rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3 py-2.5 text-[12px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:px-3.5">
