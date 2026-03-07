@@ -19,7 +19,6 @@ import type { AnalyticsEvent, AssistAnalyticsEvent, RunAnalyticsEvent, SubmitAna
 import { apiFetch, optionalApiRoutesAvailable } from '../../lib/apiUrl'
 import { localHeuristicRisk, type RiskFeatures, type RiskLabel, type RiskResult } from '../../lib/riskModel'
 import { useI18n } from '../../i18n/useI18n'
-import { getProductCopy } from '../../i18n/productCopy'
 
 type RiskData = RiskResult & {
   computedAt: string
@@ -145,8 +144,7 @@ const LABEL_STYLES: Record<RiskLabel, { bg: string; text: string }> = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function StreakRiskWidget() {
-  const { lang } = useI18n()
-  const riskCopy = getProductCopy(lang).insights?.streakRisk ?? {}
+  const { t } = useI18n()
   const analyticsState = useSyncExternalStore(subscribeAnalytics, getAnalyticsState, getAnalyticsState)
   const [riskData, setRiskData] = useState<RiskData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -255,9 +253,9 @@ export function StreakRiskWidget() {
   }, [features, optionalRoutesEnabled, userId])
 
   const LABEL_CONFIG: Record<RiskLabel, { bg: string; text: string; label: string }> = {
-    low: { ...LABEL_STYLES.low, label: riskCopy.low ?? 'Low Risk' },
-    medium: { ...LABEL_STYLES.medium, label: riskCopy.medium ?? 'Medium Risk' },
-    high: { ...LABEL_STYLES.high, label: riskCopy.high ?? 'High Risk' },
+    low: { ...LABEL_STYLES.low, label: t('insights.streakRisk.low') },
+    medium: { ...LABEL_STYLES.medium, label: t('insights.streakRisk.medium') },
+    high: { ...LABEL_STYLES.high, label: t('insights.streakRisk.high') },
   }
 
   const cfg = riskData ? LABEL_CONFIG[riskData.label] : null
@@ -274,26 +272,26 @@ export function StreakRiskWidget() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-base font-semibold text-pebble-text-primary">{riskCopy.title ?? 'Streak Risk'}</p>
+          <p className="text-base font-semibold text-pebble-text-primary">{t('insights.streakRisk.title')}</p>
           <p className="text-sm text-pebble-text-secondary">
-            {riskData?.model === 'sagemaker' ? (riskCopy.subtitleCloud ?? 'SageMaker · 7-day forecast') : (riskCopy.subtitleLocal ?? '7-day forecast')}
+            {riskData?.model === 'sagemaker' ? (t('insights.streakRisk.subtitleCloud')) : (t('insights.streakRisk.subtitleLocal'))}
           </p>
         </div>
         <button
           onClick={handleRecompute}
           disabled={recomputing || loading}
           className="flex items-center gap-1.5 rounded-lg border border-pebble-border/40 bg-pebble-chip-surface/60 px-2.5 py-1 text-xs font-medium text-pebble-text-secondary transition hover:border-pebble-border hover:text-pebble-text-primary disabled:opacity-40"
-          title={riskCopy.recomputeTitle ?? 'Recompute risk score'}
+          title={t('insights.streakRisk.recomputeTitle')}
         >
           <RefreshCw className={`h-3 w-3 ${recomputing ? 'animate-spin' : ''}`} />
-          {recomputing ? (riskCopy.computing ?? 'Computing…') : (riskCopy.recompute ?? 'Recompute')}
+          {recomputing ? (t('insights.streakRisk.computing')) : (t('insights.streakRisk.recompute'))}
         </button>
       </div>
 
       {loading && !riskData ? (
         <div className="flex items-center gap-2 text-sm text-pebble-text-secondary">
           <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-          {riskCopy.computingBody ?? 'Computing risk score…'}
+          {t('insights.streakRisk.computingBody')}
         </div>
       ) : riskData && cfg ? (
         <>
@@ -306,7 +304,7 @@ export function StreakRiskWidget() {
               {riskData.score}/100 · {cfg.label}
             </span>
             <span className="text-xs text-pebble-text-muted">
-              {riskData.model === 'sagemaker' ? (riskCopy.sagemaker ?? '⚡ SageMaker') : (riskCopy.local ?? '🔧 Local model')}
+              {riskData.model === 'sagemaker' ? t('insights.streakRisk.sagemaker') : t('insights.streakRisk.local')}
             </span>
           </div>
 
@@ -319,7 +317,7 @@ export function StreakRiskWidget() {
           {riskData.actions.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-[0.06em] text-pebble-text-muted">
-                {riskCopy.actions ?? 'Recommended actions'}
+                {t('insights.streakRisk.actions')}
               </p>
               <ul className="space-y-1">
                 {riskData.actions.slice(0, 3).map((action, i) => (
@@ -341,7 +339,7 @@ export function StreakRiskWidget() {
         <p className="text-sm text-red-400">{errorMsg}</p>
       ) : (
         <p className="text-sm text-pebble-text-secondary">
-          {riskCopy.empty ?? 'No risk data yet — click Recompute to generate.'}
+          {t('insights.streakRisk.empty')}
         </p>
       )}
     </Card>
