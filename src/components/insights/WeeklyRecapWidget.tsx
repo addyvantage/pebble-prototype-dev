@@ -47,7 +47,7 @@ import {
   saveWeeklyRecapVoicePreferences,
   type WeeklyRecapVoicePreferences,
 } from '../../lib/weeklyRecapPreferences'
-import { apiFetch, optionalApiRoutesAvailable, resolveApiAssetUrl } from '../../lib/apiUrl'
+import { apiFetch, getApiBaseUrl, optionalApiRoutesAvailable, resolveApiAssetUrl } from '../../lib/apiUrl'
 
 type RecapPlayback = {
   mode: RecapVoiceMode
@@ -401,6 +401,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
     [analyticsState.updatedAt, analyticsState.events, appLanguage, recapUserName, trackLanguage],
   )
   const optionalRoutesEnabled = optionalApiRoutesAvailable()
+  const recapCloudEnabled = optionalRoutesEnabled || Boolean(getApiBaseUrl())
 
   const refreshBrowserVoices = useCallback(async () => {
     if (!isBrowserSpeechSynthesisAvailable()) {
@@ -463,7 +464,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
 
   const fetchLatestRecap = useCallback(async () => {
     setLoading(true)
-    if (!optionalRoutesEnabled) {
+    if (!recapCloudEnabled) {
       setRecapData(null)
       setLoading(false)
       return
@@ -493,7 +494,7 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
         setLoading(false)
       }
     }
-  }, [appLanguage, optionalRoutesEnabled, userScope])
+  }, [appLanguage, recapCloudEnabled, userScope])
 
   useEffect(() => {
     void fetchLatestRecap()
@@ -505,55 +506,58 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
     stopPlayback()
 
     try {
-      if (!optionalRoutesEnabled) {
-        const localRecap = buildLocalRecap(summary)
-        if (mountedRef.current) {
-          setRecapData(localRecap)
-          setScriptExpanded(false)
+      if (recapCloudEnabled) {
+        const response = await apiFetch('/api/growth/weekly-recap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': userScope,
+          },
+          body: JSON.stringify({
+            summary,
+            voice: voicePrefs,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('recap_generation_failed')
         }
+
+        const payload = await response.json() as { ok: boolean; data: unknown }
+        if (!payload.ok) {
+          throw new Error('recap_generation_failed')
+        }
+
+        const normalized = normalizeRecapData(payload.data, appLanguage)
+        if (!normalized) {
+          throw new Error('recap_payload_invalid')
+        }
+
+        if (!mountedRef.current) {
+          return
+        }
+        setRecapData(normalized)
+        setScriptExpanded(false)
         return
       }
-      const response = await apiFetch('/api/growth/weekly-recap', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userScope,
-        },
-        body: JSON.stringify({
-          summary,
-          voice: voicePrefs,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('recap_generation_failed')
+      const localRecap = buildLocalRecap(summary)
+      if (mountedRef.current) {
+        setRecapData(localRecap)
+        setScriptExpanded(false)
       }
-
-      const payload = await response.json() as { ok: boolean; data: unknown }
-      if (!payload.ok) {
-        throw new Error('recap_generation_failed')
-      }
-
-      const normalized = normalizeRecapData(payload.data, appLanguage)
-      if (!normalized) {
-        throw new Error('recap_payload_invalid')
-      }
-
-      if (!mountedRef.current) {
-        return
-      }
-      setRecapData(normalized)
-      setScriptExpanded(false)
     } catch {
       if (mountedRef.current) {
-        setErrorMsg('Could not generate this week’s recap right now. Please try again in a moment.')
+        const localRecap = buildLocalRecap(summary)
+        setRecapData(localRecap)
+        setScriptExpanded(false)
+        setErrorMsg(null)
       }
     } finally {
       if (mountedRef.current) {
         setGenerating(false)
       }
     }
-  }, [appLanguage, optionalRoutesEnabled, stopPlayback, summary, userScope, voicePrefs])
+  }, [appLanguage, recapCloudEnabled, stopPlayback, summary, userScope, voicePrefs])
 
   const handlePlay = useCallback(async () => {
     if (!recapData) {
@@ -750,10 +754,10 @@ export function WeeklyRecapWidget({ trackLanguage = 'python' }: { trackLanguage?
               <Button
                 onClick={handleGenerate}
                 disabled={generating}
-                className="h-11 rounded-2xl px-4.5 text-sm font-semibold shadow-[0_12px_30px_rgba(8,15,35,0.14)]"
+                className="min-w-[196px] h-11 justify-center gap-2.5 rounded-2xl px-5 text-[15px] font-semibold leading-none shadow-[0_12px_30px_rgba(8,15,35,0.14)]"
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
-                {generating ? 'Generating…' : recapData ? 'Regenerate' : 'Generate recap'}
+                <RefreshCw className={`h-[17px] w-[17px] shrink-0 ${generating ? 'animate-spin' : ''}`} />
+                <span>{generating ? 'Generating…' : recapData ? 'Regenerate' : 'Generate recap'}</span>
               </Button>
 
               <button

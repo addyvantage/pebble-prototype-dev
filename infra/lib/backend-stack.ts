@@ -136,6 +136,19 @@ export class BackendStack extends cdk.Stack {
       },
     })
 
+    const premiumFn = new NodejsFunction(this, 'PebblePremiumFunction', {
+      functionName: 'PebblePremiumFunction',
+      description: 'Pebble premium routes — telemetry and weekly recap',
+      entry: path.join(__dirname, '../lambda/premium/index.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      memorySize: 1024,
+      timeout: cdk.Duration.seconds(25),
+      bundling: {
+        externalModules: ['@aws-sdk/*'],
+      },
+    })
+
     // ── HTTP API (API Gateway v2) ──────────────────────────────────────────────
     //
     // Routes are exposed at the $default stage (no stage prefix in the URL).
@@ -152,7 +165,7 @@ export class BackendStack extends cdk.Stack {
           apigwv2.CorsHttpMethod.OPTIONS,
           apigwv2.CorsHttpMethod.HEAD,
         ],
-        allowHeaders: ['Content-Type', 'Authorization'],
+        allowHeaders: ['Content-Type', 'Authorization', 'x-user-id'],
       },
     })
 
@@ -249,6 +262,31 @@ export class BackendStack extends cdk.Stack {
       autoDeleteObjects: true,
     })
 
+    const weeklyRecapsTable = new dynamodb.Table(this, 'PebbleWeeklyRecapsTable', {
+      tableName: 'pebble-weekly-recaps',
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'weekStart', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'ttl',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    })
+
+    const recapAudioBucket = new s3.Bucket(this, 'PebbleRecapAudioBucket', {
+      bucketName: `pebble-weekly-recaps-${this.account}-${this.region}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.HEAD],
+          allowedOrigins: avatarCorsAllowedOrigins,
+          allowedHeaders: ['*'],
+          exposedHeaders: ['ETag'],
+          maxAge: 3000,
+        },
+      ],
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    })
+
     // ── Profile Lambda: API Gateway routes + IAM grants ───────────────────────
 
     // Environment variables the Lambda needs at runtime
@@ -263,6 +301,20 @@ export class BackendStack extends cdk.Stack {
     // Least-privilege grants
     profilesTable.grantReadWriteData(profileFn)
     avatarsBucket.grantReadWrite(profileFn)
+
+    premiumFn.addEnvironment('WEEKLY_RECAPS_TABLE_NAME', weeklyRecapsTable.tableName)
+    premiumFn.addEnvironment('RECAP_AUDIO_BUCKET_NAME', recapAudioBucket.bucketName)
+    premiumFn.addEnvironment('RECAP_MODE', 'aws')
+    weeklyRecapsTable.grantReadWriteData(premiumFn)
+    recapAudioBucket.grantReadWrite(premiumFn)
+    premiumFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: 'PollySynthesizeSpeech',
+        effect: iam.Effect.ALLOW,
+        actions: ['polly:SynthesizeSpeech'],
+        resources: ['*'],
+      }),
+    )
 
     // Register routes with API Gateway
     const profileIntegration = new HttpLambdaIntegration('ProfileIntegration', profileFn)
@@ -317,6 +369,23 @@ export class BackendStack extends cdk.Stack {
       integration: profileIntegration,
     })
 
+    const premiumIntegration = new HttpLambdaIntegration('PremiumIntegration', premiumFn)
+    api.addRoutes({
+      path: '/api/telemetry',
+      methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.OPTIONS],
+      integration: premiumIntegration,
+    })
+    api.addRoutes({
+      path: '/api/growth/weekly-recap',
+      methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.OPTIONS],
+      integration: premiumIntegration,
+    })
+    api.addRoutes({
+      path: '/api/growth/weekly-recap/latest',
+      methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.OPTIONS],
+      integration: premiumIntegration,
+    })
+
     // ── Outputs ───────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: api.url ?? `https://${this.apiDomain}/`,
@@ -342,6 +411,14 @@ export class BackendStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'AvatarsBucketName', {
       value: avatarsBucket.bucketName,
+    })
+
+    new cdk.CfnOutput(this, 'WeeklyRecapsTableName', {
+      value: weeklyRecapsTable.tableName,
+    })
+
+    new cdk.CfnOutput(this, 'RecapAudioBucketName', {
+      value: recapAudioBucket.bucketName,
     })
   }
 }
