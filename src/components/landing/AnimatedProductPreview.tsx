@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -29,7 +29,9 @@ type PreviewPhase =
   | 'running'
   | 'failure'
   | 'move_coach_input'
+  | 'focus_input'
   | 'type_question'
+  | 'move_send'
   | 'send_question'
   | 'coach_thinking'
   | 'coach_reply'
@@ -52,40 +54,48 @@ type TimelineFrame = {
   phaseProgress: number
 }
 
-type CursorWaypoint = {
-  x: number
-  y: number
-  moveMs: number
-  click?: boolean
-}
-
 type CodeDraftState = {
   logicLines: [string, string, string]
   caretLine: number | null
   mode: 'blank' | 'typing_wrong' | 'wrong' | 'fixing' | 'fixed'
 }
 
+type CursorTarget = 'idle' | 'editor' | 'run' | 'failure' | 'coachInput' | 'send' | 'coachReply' | 'success'
+
+type CursorMeta = {
+  target: CursorTarget
+  moveMs: number
+  click?: boolean
+}
+
+type CursorPoint = {
+  x: number
+  y: number
+}
+
 const TIMELINE: TimelineStep[] = [
-  { phase: 'idle', durationMs: 1100 },
-  { phase: 'move_editor', durationMs: 800 },
-  { phase: 'type_wrong', durationMs: 2300 },
-  { phase: 'move_run', durationMs: 750 },
+  { phase: 'idle', durationMs: 1300 },
+  { phase: 'move_editor', durationMs: 900 },
+  { phase: 'type_wrong', durationMs: 3100 },
+  { phase: 'move_run', durationMs: 850 },
   { phase: 'click_run', durationMs: 300 },
-  { phase: 'running', durationMs: 950 },
-  { phase: 'failure', durationMs: 1600 },
-  { phase: 'move_coach_input', durationMs: 800 },
-  { phase: 'type_question', durationMs: 1750 },
+  { phase: 'running', durationMs: 1100 },
+  { phase: 'failure', durationMs: 1900 },
+  { phase: 'move_coach_input', durationMs: 900 },
+  { phase: 'focus_input', durationMs: 250 },
+  { phase: 'type_question', durationMs: 2600 },
+  { phase: 'move_send', durationMs: 500 },
   { phase: 'send_question', durationMs: 300 },
-  { phase: 'coach_thinking', durationMs: 1150 },
-  { phase: 'coach_reply', durationMs: 1900 },
-  { phase: 'read_reply', durationMs: 1100 },
-  { phase: 'move_back_editor', durationMs: 800 },
-  { phase: 'apply_fix', durationMs: 1950 },
-  { phase: 'move_run_again', durationMs: 750 },
+  { phase: 'coach_thinking', durationMs: 1400 },
+  { phase: 'coach_reply', durationMs: 2100 },
+  { phase: 'read_reply', durationMs: 1400 },
+  { phase: 'move_back_editor', durationMs: 900 },
+  { phase: 'apply_fix', durationMs: 2500 },
+  { phase: 'move_run_again', durationMs: 850 },
   { phase: 'click_run_again', durationMs: 300 },
-  { phase: 'running_again', durationMs: 900 },
-  { phase: 'success', durationMs: 2200 },
-  { phase: 'reset', durationMs: 950 },
+  { phase: 'running_again', durationMs: 1100 },
+  { phase: 'success', durationMs: 2400 },
+  { phase: 'reset', durationMs: 1000 },
 ]
 
 const PHASE_RANK: Record<PreviewPhase, number> = TIMELINE.reduce((acc, step, index) => {
@@ -104,27 +114,40 @@ const STORY_STEPS = [
   { id: 'pass', label: 'Pass', detail: 'Accepted', icon: CheckCircle2 },
 ] as const
 
-const CURSOR_WAYPOINTS: Record<PreviewPhase, CursorWaypoint> = {
-  idle: { x: 17, y: 24, moveMs: 0 },
-  move_editor: { x: 26, y: 56, moveMs: 760 },
-  type_wrong: { x: 33, y: 64, moveMs: 240 },
-  move_run: { x: 58, y: 40, moveMs: 720 },
-  click_run: { x: 58, y: 40, moveMs: 220, click: true },
-  running: { x: 54, y: 46, moveMs: 480 },
-  failure: { x: 34, y: 73, moveMs: 620 },
-  move_coach_input: { x: 78, y: 83, moveMs: 760 },
-  type_question: { x: 78, y: 83, moveMs: 260 },
-  send_question: { x: 90, y: 83, moveMs: 340, click: true },
-  coach_thinking: { x: 80, y: 63, moveMs: 560 },
-  coach_reply: { x: 76, y: 60, moveMs: 600 },
-  read_reply: { x: 80, y: 60, moveMs: 340 },
-  move_back_editor: { x: 35, y: 64, moveMs: 780 },
-  apply_fix: { x: 35, y: 64, moveMs: 280 },
-  move_run_again: { x: 58, y: 40, moveMs: 720 },
-  click_run_again: { x: 58, y: 40, moveMs: 220, click: true },
-  running_again: { x: 54, y: 46, moveMs: 500 },
-  success: { x: 55, y: 76, moveMs: 660 },
-  reset: { x: 17, y: 24, moveMs: 900 },
+const CURSOR_PHASES: Record<PreviewPhase, CursorMeta> = {
+  idle: { target: 'idle', moveMs: 0 },
+  move_editor: { target: 'editor', moveMs: 900 },
+  type_wrong: { target: 'editor', moveMs: 220 },
+  move_run: { target: 'run', moveMs: 820 },
+  click_run: { target: 'run', moveMs: 220, click: true },
+  running: { target: 'run', moveMs: 360 },
+  failure: { target: 'failure', moveMs: 640 },
+  move_coach_input: { target: 'coachInput', moveMs: 860 },
+  focus_input: { target: 'coachInput', moveMs: 220, click: true },
+  type_question: { target: 'coachInput', moveMs: 220 },
+  move_send: { target: 'send', moveMs: 500 },
+  send_question: { target: 'send', moveMs: 200, click: true },
+  coach_thinking: { target: 'coachReply', moveMs: 500 },
+  coach_reply: { target: 'coachReply', moveMs: 360 },
+  read_reply: { target: 'coachReply', moveMs: 260 },
+  move_back_editor: { target: 'editor', moveMs: 900 },
+  apply_fix: { target: 'editor', moveMs: 220 },
+  move_run_again: { target: 'run', moveMs: 820 },
+  click_run_again: { target: 'run', moveMs: 220, click: true },
+  running_again: { target: 'run', moveMs: 360 },
+  success: { target: 'success', moveMs: 680 },
+  reset: { target: 'idle', moveMs: 1000 },
+}
+
+const DEFAULT_CURSOR_POINTS: Record<CursorTarget, CursorPoint> = {
+  idle: { x: 16, y: 20 },
+  editor: { x: 31, y: 62 },
+  run: { x: 56, y: 40 },
+  failure: { x: 34, y: 74 },
+  coachInput: { x: 79, y: 80 },
+  send: { x: 90, y: 80 },
+  coachReply: { x: 78, y: 60 },
+  success: { x: 56, y: 76 },
 }
 
 const LOGIC_WRONG: [string, string, string] = [
@@ -153,6 +176,10 @@ function classNames(...values: Array<string | false | undefined>) {
 
 function clamp01(value: number) {
   return Math.max(0, Math.min(1, value))
+}
+
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, value))
 }
 
 function easeInOut(value: number) {
@@ -192,6 +219,52 @@ function getLastTypedLine(lines: readonly string[]) {
   }
 
   return 0
+}
+
+function typingWeight(char: string) {
+  if (char === ' ') return 0.55
+  if (char === ',') return 1.7
+  if (char === '.' || char === '?' || char === '!') return 2.8
+  if (char === '#') return 1.2
+  return 1
+}
+
+function getWeightedTypedChars(text: string, progress: number) {
+  const chars = Array.from(text)
+  const total = chars.reduce((sum, char) => sum + typingWeight(char), 0)
+  let budget = total * clamp01(progress)
+  let visible = 0
+
+  for (const char of chars) {
+    const weight = typingWeight(char)
+
+    if (budget >= weight) {
+      budget -= weight
+      visible += 1
+      continue
+    }
+
+    break
+  }
+
+  return visible
+}
+
+function measurePoint(root: HTMLElement, element: HTMLElement | null, fallback: CursorPoint): CursorPoint {
+  if (!element) return fallback
+
+  const rootRect = root.getBoundingClientRect()
+
+  if (rootRect.width <= 0 || rootRect.height <= 0) {
+    return fallback
+  }
+
+  const rect = element.getBoundingClientRect()
+
+  return {
+    x: clampPercent(((rect.left + rect.width / 2 - rootRect.left) / rootRect.width) * 100),
+    y: clampPercent(((rect.top + rect.height / 2 - rootRect.top) / rootRect.height) * 100),
+  }
 }
 
 function usePrefersReducedMotion() {
@@ -297,7 +370,7 @@ function getCodeDraftState(phase: PreviewPhase, phaseProgress: number): CodeDraf
   }
 
   if (phase === 'apply_fix') {
-    if (phaseProgress < 0.2) {
+    if (phaseProgress < 0.18) {
       return {
         logicLines: LOGIC_WRONG,
         caretLine: 0,
@@ -305,7 +378,7 @@ function getCodeDraftState(phase: PreviewPhase, phaseProgress: number): CodeDraf
       }
     }
 
-    if (phaseProgress < 0.3) {
+    if (phaseProgress < 0.34) {
       return {
         logicLines: ['', '', ''],
         caretLine: 0,
@@ -313,7 +386,7 @@ function getCodeDraftState(phase: PreviewPhase, phaseProgress: number): CodeDraf
       }
     }
 
-    const fixProgress = (phaseProgress - 0.3) / 0.7
+    const fixProgress = (phaseProgress - 0.34) / 0.66
     const typed = Math.floor(totalChars(LOGIC_FIXED) * easeInOut(fixProgress))
     const logicLines = sliceLinesByChars(LOGIC_FIXED, typed) as [string, string, string]
 
@@ -387,10 +460,10 @@ function getStatusCopy(phase: PreviewPhase) {
 }
 
 function getCoachStateLabel(phase: PreviewPhase) {
-  if (phase === 'coach_thinking') return 'Analyzing'
+  if (phase === 'coach_thinking') return 'Thinking'
   if (isAtOrAfter(phase, 'coach_reply') && PHASE_RANK[phase] < PHASE_RANK.success) return 'Guidance'
   if (isAtOrAfter(phase, 'success')) return 'Resolved'
-  if (isAtOrAfter(phase, 'type_question')) return 'Question'
+  if (isAtOrAfter(phase, 'focus_input') && PHASE_RANK[phase] < PHASE_RANK.send_question) return 'Asking'
   return 'Idle'
 }
 
@@ -419,11 +492,16 @@ export function AnimatedProductPreview({
   const isFailRange = isAtOrAfter(phase, 'failure') && PHASE_RANK[phase] < PHASE_RANK.move_run_again
   const isSuccessTone = isAtOrAfter(phase, 'success')
   const isCodeTyping = phase === 'type_wrong' || phase === 'apply_fix'
+  const isInputFocused = phase === 'focus_input' || phase === 'type_question' || phase === 'move_send'
 
-  const typedQuestion = useMemo(() => {
+  const inputText = useMemo(() => {
     if (phase === 'type_question') {
-      const chars = Math.max(1, Math.floor(QUESTION_TEXT.length * easeInOut(phaseProgress)))
+      const chars = Math.max(1, getWeightedTypedChars(QUESTION_TEXT, easeInOut(phaseProgress)))
       return QUESTION_TEXT.slice(0, chars)
+    }
+
+    if (phase === 'move_send' || phase === 'send_question') {
+      return QUESTION_TEXT
     }
 
     return ''
@@ -444,7 +522,74 @@ export function AnimatedProductPreview({
     return ['', '', '']
   }, [phase, phaseProgress])
 
-  const cursor = CURSOR_WAYPOINTS[phase]
+  const previewRootRef = useRef<HTMLDivElement>(null)
+  const editorAnchorRef = useRef<HTMLSpanElement>(null)
+  const runButtonRef = useRef<HTMLSpanElement>(null)
+  const failureAnchorRef = useRef<HTMLSpanElement>(null)
+  const coachInputRef = useRef<HTMLDivElement>(null)
+  const sendButtonRef = useRef<HTMLSpanElement>(null)
+  const coachReplyAnchorRef = useRef<HTMLDivElement>(null)
+  const successAnchorRef = useRef<HTMLDivElement>(null)
+
+  const [cursorPoints, setCursorPoints] = useState<Record<CursorTarget, CursorPoint>>(DEFAULT_CURSOR_POINTS)
+
+  const syncCursorPoints = useCallback(() => {
+    const root = previewRootRef.current
+
+    if (!root) return
+
+    const nextPoints: Record<CursorTarget, CursorPoint> = {
+      idle: DEFAULT_CURSOR_POINTS.idle,
+      editor: measurePoint(root, editorAnchorRef.current, DEFAULT_CURSOR_POINTS.editor),
+      run: measurePoint(root, runButtonRef.current, DEFAULT_CURSOR_POINTS.run),
+      failure: measurePoint(root, failureAnchorRef.current, DEFAULT_CURSOR_POINTS.failure),
+      coachInput: measurePoint(root, coachInputRef.current, DEFAULT_CURSOR_POINTS.coachInput),
+      send: measurePoint(root, sendButtonRef.current, DEFAULT_CURSOR_POINTS.send),
+      coachReply: measurePoint(root, coachReplyAnchorRef.current, DEFAULT_CURSOR_POINTS.coachReply),
+      success: measurePoint(root, successAnchorRef.current, DEFAULT_CURSOR_POINTS.success),
+    }
+
+    setCursorPoints(nextPoints)
+  }, [])
+
+  useLayoutEffect(() => {
+    syncCursorPoints()
+  }, [syncCursorPoints, phase, hasSentQuestion])
+
+  useEffect(() => {
+    if (reducedMotion) return
+
+    const handleResize = () => {
+      syncCursorPoints()
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(handleResize)
+      : null
+
+    const observedElements = [
+      previewRootRef.current,
+      editorAnchorRef.current,
+      runButtonRef.current,
+      failureAnchorRef.current,
+      coachInputRef.current,
+      sendButtonRef.current,
+      coachReplyAnchorRef.current,
+      successAnchorRef.current,
+    ].filter(Boolean) as HTMLElement[]
+
+    observedElements.forEach((element) => resizeObserver?.observe(element))
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      resizeObserver?.disconnect()
+    }
+  }, [reducedMotion, syncCursorPoints])
+
+  const cursor = CURSOR_PHASES[phase]
+  const cursorPoint = cursorPoints[cursor.target]
 
   const panelOutlineClass = theme === 'dark'
     ? 'border-[rgba(255,255,255,0.09)]'
@@ -492,7 +637,7 @@ export function AnimatedProductPreview({
     : 'border-pebble-accent/40 bg-pebble-accent/12 text-[hsl(223_40%_22%)]'
 
   return (
-    <div className={classNames('landing-preview-stage relative', isResetting && 'landing-preview-stage-reset')}>
+    <div ref={previewRootRef} className={classNames('landing-preview-stage relative', isResetting && 'landing-preview-stage-reset')}>
       <div className="flex items-center justify-between gap-2">
         <p className={classNames('text-[13px] font-semibold uppercase tracking-[0.08em] text-pebble-text-secondary', isUrdu && 'rtlText')}>
           {previewLabel}
@@ -563,6 +708,7 @@ export function AnimatedProductPreview({
               python3
             </span>
             <span
+              ref={runButtonRef}
               className={classNames(
                 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all duration-300',
                 theme === 'dark'
@@ -595,13 +741,14 @@ export function AnimatedProductPreview({
                 <span>    for i, n in enumerate(nums):</span>
               </span>
               {[4, 5, 6].map((lineNo, logicIndex) => {
-                const isMistakeLine = logicIndex === 0 && (isFailRange || phase === 'coach_reply' || phase === 'read_reply') && codeDraft.mode !== 'fixed'
+                const isMistakeLine = logicIndex === 0 && isFailRange && codeDraft.mode !== 'fixed'
                 const isFixedLine = logicIndex === 0 && (codeDraft.mode === 'fixed' || codeDraft.mode === 'fixing' && codeDraft.logicLines[0].includes('if target - n'))
 
                 return (
                   <span key={lineNo} className="grid grid-cols-[1.4rem_minmax(0,1fr)] gap-2">
                     <span className="text-right text-pebble-text-muted/80">{lineNo}</span>
                     <span
+                      ref={lineNo === 4 ? editorAnchorRef : undefined}
                       className={classNames(
                         'rounded-md border px-1.5 transition-[color,background-color,border-color,opacity] duration-400',
                         codeDraft.logicLines[logicIndex] ? 'opacity-100' : 'opacity-45',
@@ -625,9 +772,11 @@ export function AnimatedProductPreview({
           </pre>
 
           <div className="mt-3 grid gap-2.5 md:grid-cols-[1fr_auto] md:items-center">
-            <StatusPill variant={status.statusVariant} showIcon className="max-w-full whitespace-normal break-words leading-tight transition-all duration-500">
-              {status.statusText}
-            </StatusPill>
+            <span ref={failureAnchorRef} className="inline-flex min-w-0">
+              <StatusPill variant={status.statusVariant} showIcon className="max-w-full whitespace-normal break-words leading-tight transition-all duration-500">
+                {status.statusText}
+              </StatusPill>
+            </span>
             <span
               className={classNames(
                 'rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors duration-500',
@@ -638,13 +787,13 @@ export function AnimatedProductPreview({
             </span>
           </div>
 
-          <div className={`mt-3 rounded-[12px] border px-3 py-2.5 text-[12px] leading-[1.6] transition-colors duration-500 ${runtimeToneClass}`}>
+          <div ref={successAnchorRef} className={`mt-3 rounded-[12px] border px-3 py-2.5 text-[12px] leading-[1.6] transition-colors duration-500 ${runtimeToneClass}`}>
             <p className="font-medium text-pebble-text-primary">{status.runtimeTitle}</p>
             <p className="mt-1 text-pebble-text-secondary">{status.runtimeBody}</p>
           </div>
         </div>
 
-        <div className={`min-w-0 rounded-[16px] border p-4 md:p-4.5 ${panelOutlineClass} ${coachPanelClass}`}>
+        <div className={`min-w-0 rounded-[16px] border p-4 md:p-4.5 ${panelOutlineClass} ${coachPanelClass} grid h-[364px] grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-3`}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-pebble-accent/28 text-[11px] font-semibold text-pebble-text-primary shadow-[0_6px_12px_rgba(55,72,110,0.10)]">
@@ -659,16 +808,25 @@ export function AnimatedProductPreview({
             </span>
           </div>
 
-          <div className={classNames(`mt-3 rounded-[12px] border ${panelOutlineClass} bg-pebble-overlay/[0.06] p-3`, isUrdu && 'rtlText')}>
-            <div className="space-y-2 text-[12.5px] leading-[1.65]">
-              {hasSentQuestion ? (
-                <div className="ml-auto max-w-[94%] rounded-[10px] border border-pebble-accent/28 bg-pebble-accent/10 px-2.5 py-2 text-pebble-text-primary">
+          <div className={classNames(`min-h-0 rounded-[12px] border ${panelOutlineClass} bg-pebble-overlay/[0.06] p-3`, isUrdu && 'rtlText')}>
+            <div className="grid h-full grid-rows-[56px_minmax(0,1fr)] gap-2">
+              <div className="min-h-0">
+                <div
+                  className={classNames(
+                    'ml-auto h-full max-w-[95%] rounded-[10px] border border-pebble-accent/28 bg-pebble-accent/10 px-2.5 py-2 text-[12.5px] leading-[1.62] text-pebble-text-primary transition-opacity duration-350',
+                    hasSentQuestion ? 'opacity-100' : 'opacity-0',
+                  )}
+                  aria-hidden={!hasSentQuestion}
+                >
                   {QUESTION_TEXT}
                 </div>
-              ) : null}
+              </div>
 
-              {phase === 'coach_thinking' ? (
-                <div className="max-w-[95%] rounded-[10px] border border-pebble-border/26 bg-pebble-overlay/[0.10] px-2.5 py-2 text-pebble-text-secondary">
+              <div
+                ref={coachReplyAnchorRef}
+                className="min-h-0 overflow-hidden rounded-[10px] border border-pebble-border/24 bg-pebble-overlay/[0.08] px-2.5 py-2 text-[12.5px] leading-[1.64] text-pebble-text-secondary"
+              >
+                {phase === 'coach_thinking' ? (
                   <div className="flex items-center gap-1.5">
                     <span>Analyzing run output</span>
                     <span className="landing-preview-thinking-dots" aria-hidden="true">
@@ -677,36 +835,41 @@ export function AnimatedProductPreview({
                       <span className="landing-preview-thinking-dot" />
                     </span>
                   </div>
-                </div>
-              ) : null}
-
-              {isAtOrAfter(phase, 'coach_reply') ? (
-                <div className="max-w-[95%] rounded-[10px] border border-pebble-accent/24 bg-pebble-accent/10 px-2.5 py-2 text-pebble-text-primary">
-                  <p className="font-medium text-pebble-text-primary">Grounded suggestion</p>
-                  <div className="mt-1.5 space-y-1 text-pebble-text-secondary">
-                    {coachResponseLines.map((line, index) => (
-                      <p key={`coach-line-${index}`} className="min-h-[1.2em]">{line || ' '}</p>
-                    ))}
+                ) : isAtOrAfter(phase, 'coach_reply') ? (
+                  <div className="space-y-1">
+                    <p className="font-medium text-pebble-text-primary">Grounded suggestion</p>
+                    <p className="min-h-[1.2em]">{coachResponseLines[0] || ' '}</p>
+                    <p className="min-h-[1.2em]">{coachResponseLines[1] || ' '}</p>
+                    <p className="min-h-[1.2em]">{coachResponseLines[2] || ' '}</p>
                   </div>
-                </div>
-              ) : (
-                <div className="max-w-[95%] rounded-[10px] border border-pebble-border/24 bg-pebble-overlay/[0.07] px-2.5 py-2 text-pebble-text-secondary">
-                  Run once, then ask Pebble why the case failed.
-                </div>
-              )}
+                ) : (
+                  <p>Run once, then ask Pebble why the case failed.</p>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-2 rounded-[10px] border border-pebble-border/24 bg-pebble-overlay/[0.08] px-2.5 py-2">
+          <div
+            ref={coachInputRef}
+            className={classNames(
+              'flex items-center gap-2 rounded-[10px] border px-2.5 py-2 transition-[border-color,background-color,box-shadow] duration-300',
+              isInputFocused
+                ? 'border-pebble-accent/38 bg-pebble-accent/10 shadow-[0_0_0_1px_rgba(59,130,246,0.16)_inset]'
+                : 'border-pebble-border/24 bg-pebble-overlay/[0.08]',
+            )}
+          >
             <div className="min-w-0 flex-1 text-[12px] text-pebble-text-secondary">
-              {phase === 'type_question' ? typedQuestion : <span className="opacity-70">Ask Pebble...</span>}
+              {inputText ? <span className="text-pebble-text-primary">{inputText}</span> : <span className="opacity-70">Ask Pebble...</span>}
             </div>
             <span
+              ref={sendButtonRef}
               className={classNames(
-                'inline-flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-300',
+                'inline-flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-220',
                 phase === 'send_question'
                   ? 'border-pebble-accent/42 bg-pebble-accent/18 text-pebble-text-primary landing-preview-run-click'
-                  : 'border-pebble-border/28 bg-pebble-overlay/[0.12] text-pebble-text-secondary',
+                  : phase === 'move_send'
+                    ? 'border-pebble-accent/34 bg-pebble-accent/12 text-pebble-text-primary'
+                    : 'border-pebble-border/28 bg-pebble-overlay/[0.12] text-pebble-text-secondary',
               )}
             >
               <SendHorizonal className="h-3.5 w-3.5" aria-hidden="true" />
@@ -714,7 +877,7 @@ export function AnimatedProductPreview({
           </div>
 
           <div className={classNames(
-            'mt-3 rounded-[10px] border px-3 py-2.5 text-[12px] leading-[1.6] transition-colors duration-500',
+            'rounded-[10px] border px-3 py-2.5 text-[12px] leading-[1.6] transition-colors duration-500',
             isSuccessTone
               ? 'border-emerald-400/30 bg-emerald-500/10 text-pebble-text-secondary'
               : 'border-pebble-accent/22 bg-pebble-accent/10 text-pebble-text-secondary',
@@ -730,8 +893,8 @@ export function AnimatedProductPreview({
           <div
             className={classNames('landing-preview-cursor', cursor.click && 'landing-preview-cursor-click')}
             style={{
-              left: `${cursor.x}%`,
-              top: `${cursor.y}%`,
+              left: `${cursorPoint.x}%`,
+              top: `${cursorPoint.y}%`,
               transitionDuration: `${cursor.moveMs}ms`,
             }}
           >
