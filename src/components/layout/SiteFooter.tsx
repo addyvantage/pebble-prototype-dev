@@ -81,21 +81,21 @@ export function SiteFooter() {
                       className="h-[34px] w-auto max-w-[154px] object-contain sm:h-[40px] sm:max-w-[178px]"
                     />
                   </div>
-                  <div className="inline-flex items-center gap-2.5 rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3 py-2.5 text-[12px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:px-3.5">
+                  <div className="inline-flex min-w-[144px] items-center gap-3 rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3.5 py-2.5 text-[13px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:min-w-[156px] sm:px-4 sm:py-3">
                     <img
                       src={awsBedrockIcon}
                       alt=""
                       aria-hidden="true"
-                      className="h-[18px] w-[18px] rounded-[6px] object-contain sm:h-[19px] sm:w-[19px]"
+                      className="h-[22px] w-[22px] rounded-[7px] object-contain sm:h-[24px] sm:w-[24px]"
                     />
                     <span>Bedrock</span>
                   </div>
-                  <div className="inline-flex items-center gap-2.5 rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3 py-2.5 text-[12px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:px-3.5">
+                  <div className="inline-flex min-w-[136px] items-center gap-3 rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3.5 py-2.5 text-[13px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:min-w-[148px] sm:px-4 sm:py-3">
                     <img
                       src={awsLambdaLogo}
                       alt=""
                       aria-hidden="true"
-                      className="h-[18px] w-auto object-contain sm:h-[19px]"
+                      className="h-[22px] w-auto object-contain sm:h-[24px]"
                     />
                     <span>Lambda</span>
                   </div>
