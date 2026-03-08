@@ -1,6 +1,8 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
 import { PEBBLE_CLARIFY_RULE, PEBBLE_OUTPUT_RULE, PEBBLE_SYSTEM_PROMPT } from '../../../shared/pebblePromptRules'
+import { runAgentLoop } from '../../../server/pebbleAgent/agent'
+import type { AgentRequest } from '../../../server/pebbleAgent/types'
 
 // Abort Bedrock at 22 s — Lambda timeout is 25 s so we return cleanly before it kills us.
 const REQUEST_TIMEOUT_MS = 22_000
@@ -9,7 +11,7 @@ const CODE_TEXT_MAX_CHARS = 1800
 
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json',
 }
@@ -158,10 +160,88 @@ function getBedrockText(payload: unknown): string {
   return lines.join('\n')
 }
 
+function normalizeRequestPath(path: string | undefined) {
+  if (!path) return '/'
+  const normalized = path.replace(/\/+$/, '')
+  return normalized || '/'
+}
+
+function pathMatches(path: string, expected: string) {
+  const normalizedPath = normalizeRequestPath(path)
+  const normalizedExpected = normalizeRequestPath(expected)
+  return (
+    normalizedPath === normalizedExpected
+    || normalizedPath.endsWith(normalizedExpected)
+  )
+}
+
+function toAgentRequest(input: unknown): AgentRequest | null {
+  if (!isRecord(input)) return null
+  const question = asOptionalString(input.question).trim()
+  if (!question) return null
+
+  const tierRaw = input.tier
+  const tier = tierRaw === 1 || tierRaw === 2 || tierRaw === 3 ? tierRaw : 1
+  const struggleContextRaw = isRecord(input.struggleContext) ? input.struggleContext : {}
+
+  return {
+    tier,
+    question,
+    codeExcerpt: asOptionalString(input.codeExcerpt).slice(0, 3000),
+    language: asOptionalString(input.language) || 'python',
+    executionMode: input.executionMode === 'function' ? 'function' : 'stdio',
+    requiredSignature: asOptionalString(input.requiredSignature) || undefined,
+    detectedSignature: asOptionalString(input.detectedSignature) || undefined,
+    runStatus: asOptionalString(input.runStatus),
+    runMessage: asOptionalString(input.runMessage).slice(0, 500),
+    failingSummary: asOptionalString(input.failingSummary).slice(0, 500),
+    unitTitle: asOptionalString(input.unitTitle),
+    unitConcept: asOptionalString(input.unitConcept),
+    struggleContext: {
+      runFailStreak: asOptionalNumber(struggleContextRaw.runFailStreak),
+      timeStuckSeconds: asOptionalNumber(struggleContextRaw.timeStuckSeconds),
+      lastErrorType: asOptionalString(struggleContextRaw.lastErrorType) || null,
+      level: asOptionalNumber(struggleContextRaw.level),
+    },
+  }
+}
+
+async function handlePebbleAgentRoute(rawBody: string | null) {
+  let parsed: unknown
+  try {
+    parsed = rawBody ? JSON.parse(rawBody) as unknown : null
+  } catch {
+    return respond(400, { error: 'Invalid JSON body.' })
+  }
+
+  const request = toAgentRequest(parsed)
+  if (!request) {
+    return respond(400, { error: 'Field "question" is required.' })
+  }
+
+  try {
+    const result = await runAgentLoop(request)
+    return respond(200, result)
+  } catch (error) {
+    console.error('[pebble-agent-lambda-error]', error)
+    // Return a shaped fallback so the client never has to fail hard.
+    return respond(200, {
+      tier: request.tier,
+      intent: 'Guidance',
+      reasoning_brief: 'Pebble is temporarily unavailable. Try again in a moment.',
+      steps: [],
+      hints: ['Retry after a short pause.'],
+      patch_suggestion: null,
+      safety_flags: ['lambda_error_fallback'],
+    })
+  }
+}
+
 // ── Lambda handler ─────────────────────────────────────────────────────────────
 
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   const method = event.requestContext.http.method.toUpperCase()
+  const path = event.requestContext.http.path ?? event.rawPath ?? '/'
 
   if (method === 'OPTIONS') {
     return { statusCode: 200, headers: CORS_HEADERS, body: '' }
@@ -169,6 +249,10 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
 
   if (method !== 'POST') {
     return respond(400, { error: 'Method not allowed. Use POST.' })
+  }
+
+  if (pathMatches(path, '/api/pebble-agent')) {
+    return handlePebbleAgentRoute(event.body ?? null)
   }
 
   const modelId = process.env.BEDROCK_MODEL_ID
@@ -247,6 +331,9 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     }
     const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('[pebble-lambda-error]', message)
+    if (/too many requests|throttl/i.test(message)) {
+      return respond(200, { text: 'Pebble is handling high load right now. Please retry in a few seconds.' })
+    }
     return respond(500, { error: 'Pebble server request failed.' })
   } finally {
     clearTimeout(timeout)

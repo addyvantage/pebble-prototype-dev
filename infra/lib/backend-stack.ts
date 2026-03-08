@@ -190,6 +190,12 @@ export class BackendStack extends cdk.Stack {
     })
 
     api.addRoutes({
+      path: '/api/pebble-agent',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: new HttpLambdaIntegration('LlmAgentIntegration', llmFn),
+    })
+
+    api.addRoutes({
       path: '/api/run',
       methods: [apigwv2.HttpMethod.POST],
       integration: new HttpLambdaIntegration('RunnerIntegration', runnerFn),
