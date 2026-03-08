@@ -2613,7 +2613,7 @@ export function SessionPage() {
           <div
             className="grid h-full min-h-0 min-w-0 gap-2 overflow-hidden"
             style={{
-              gridTemplateRows: 'minmax(490px,63vh) minmax(148px,0.75fr)',
+              gridTemplateRows: 'minmax(470px,62vh) minmax(220px,0.95fr)',
             }}
           >
             <section className="session-surface-strong flex min-h-0 flex-col overflow-hidden rounded-[24px]">
@@ -2750,7 +2750,7 @@ export function SessionPage() {
               resultsByIndex={testResultsByIndex}
               summaryLabel={summaryLabel}
               sqlPreview={sqlPreviewTable}
-              className="h-full min-h-0 min-w-0 overflow-hidden"
+              className="h-full min-h-[220px] min-w-0 overflow-hidden"
             />
           </div>
 
