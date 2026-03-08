@@ -177,15 +177,9 @@ export async function runAgentLoop(req: AgentRequest): Promise<AgentResponse> {
     }
 
     // Phase 3: Plan + Act + Respond — call Bedrock with structured prompt
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
-
-    const clientConfig: ConstructorParameters<typeof BedrockRuntimeClient>[0] = { region }
-    if (accessKeyId && secretAccessKey) {
-        clientConfig.credentials = { accessKeyId, secretAccessKey }
-    }
-
-    const client = new BedrockRuntimeClient(clientConfig)
+    // Use the default AWS credential provider chain (Lambda role, local profile, etc.).
+    // Do not partially override env credentials here; temporary creds require session token.
+    const client = new BedrockRuntimeClient({ region })
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), AGENT_TIMEOUT_MS)
 
