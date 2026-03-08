@@ -799,7 +799,7 @@ export function AnimatedProductPreview({
           </div>
         </div>
 
-        <div className={`min-w-0 rounded-[16px] border p-4 md:px-4.5 md:pt-4.5 md:pb-3 ${panelOutlineClass} ${coachPanelClass} grid h-full min-h-[392px] grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-2.5`}>
+        <div className={`min-w-0 rounded-[16px] border p-4 md:px-4.5 md:pt-4.5 md:pb-3 ${panelOutlineClass} ${coachPanelClass} grid h-full min-h-[404px] grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-2.5 overflow-hidden`}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <span className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.12] shadow-[0_6px_12px_rgba(55,72,110,0.10)]">
@@ -814,26 +814,23 @@ export function AnimatedProductPreview({
             </span>
           </div>
 
-          <div className={classNames(`min-h-0 rounded-[12px] border ${panelOutlineClass} bg-pebble-overlay/[0.06] p-3`, isUrdu && 'rtlText')}>
-            <div
-              className="grid h-full gap-2.5 transition-[grid-template-rows] duration-500 ease-out"
-              style={{ gridTemplateRows: hasSentQuestion ? '46px minmax(0,1fr)' : '0px minmax(0,1fr)' }}
-            >
-              <div className="min-h-0 overflow-hidden">
-                <div
-                  className={classNames(
-                    'ml-auto inline-flex h-[46px] max-w-[95%] items-center rounded-[10px] border border-pebble-accent/28 bg-pebble-accent/10 px-3 py-2 text-[12.5px] leading-[1.55] text-pebble-text-primary transition-[opacity,transform] duration-350',
-                    hasSentQuestion ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0',
-                  )}
-                  aria-hidden={!hasSentQuestion}
-                >
+          <div className={classNames(`min-h-0 rounded-[12px] border ${panelOutlineClass} bg-pebble-overlay/[0.06] p-2.5`, isUrdu && 'rtlText')}>
+            <div className="flex h-full min-h-0 flex-col">
+              <div
+                className={classNames(
+                  'ml-auto min-h-0 max-w-[96%] overflow-hidden transition-[max-height,opacity,margin,transform] duration-450 ease-out',
+                  hasSentQuestion ? 'mb-2 max-h-[54px] translate-y-0 opacity-100' : 'mb-0 max-h-0 -translate-y-1 opacity-0',
+                )}
+                aria-hidden={!hasSentQuestion}
+              >
+                <div className="inline-flex min-h-[46px] w-full items-center rounded-[10px] border border-pebble-accent/28 bg-pebble-accent/10 px-3 py-2 text-[12.5px] leading-[1.55] text-pebble-text-primary">
                   {questionText}
                 </div>
               </div>
 
               <div
                 ref={coachReplyAnchorRef}
-                className="flex min-h-0 h-full flex-col justify-start overflow-hidden rounded-[10px] border border-pebble-border/24 bg-pebble-overlay/[0.08] px-3.5 py-3 text-[12.5px] leading-[1.68] text-pebble-text-secondary"
+                className="flex min-h-0 flex-1 flex-col justify-start overflow-hidden rounded-[10px] border border-pebble-border/24 bg-pebble-overlay/[0.08] px-3.5 py-3 text-[12.5px] leading-[1.68] text-pebble-text-secondary"
               >
                 {phase === 'coach_thinking' ? (
                   <div className="flex items-center gap-1.5">
