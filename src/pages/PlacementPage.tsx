@@ -400,7 +400,7 @@ export function PlacementPage() {
 
         <div className={classNames(
           'pr-1',
-          isCodingQuestion ? 'min-h-0 flex-1 overflow-y-auto' : '',
+          isCodingQuestion ? 'min-h-0 flex-1' : '',
         )}>
           {currentQuestion ? (
             currentQuestion.kind === 'mcq' ? (
