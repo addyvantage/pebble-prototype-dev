@@ -73,11 +73,11 @@ export function SiteFooter() {
                 {copy.description}
               </p>
 
-              <div className="rounded-[20px] border border-pebble-border/12 bg-[linear-gradient(180deg,rgba(var(--pebble-overlay),0.11),rgba(var(--pebble-overlay),0.045))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:border-pebble-border/12 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.022))]">
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-pebble-text-muted">
+              <div className="inline-flex w-fit max-w-full flex-col rounded-[20px] border border-pebble-border/12 bg-[linear-gradient(180deg,rgba(var(--pebble-overlay),0.11),rgba(var(--pebble-overlay),0.045))] px-3.5 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:border-pebble-border/12 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.022))]">
+                <p className="text-[12px] font-extrabold uppercase tracking-[0.17em] text-[rgba(47,67,102,0.88)] dark:text-[rgba(228,237,255,0.93)]">
                   {copy.builtWith}
                 </p>
-                <div className="mt-3 inline-grid max-w-full grid-cols-1 justify-start gap-2.5 sm:grid-cols-[82px_auto] sm:grid-rows-2 sm:gap-3">
+                <div className="mt-2.5 inline-grid max-w-full grid-cols-1 justify-start gap-2 sm:grid-cols-[82px_auto] sm:grid-rows-2 sm:gap-2.5">
                   <div className="inline-flex h-[82px] w-[82px] items-center justify-center rounded-[14px] border border-pebble-border/16 bg-pebble-overlay/[0.14] p-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.10)] dark:bg-white/[0.05] dark:shadow-[0_10px_22px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] sm:row-span-2">
                     <img
                       src={awsWordmark}
@@ -86,8 +86,8 @@ export function SiteFooter() {
                     />
                   </div>
 
-                  <div className="inline-flex h-[82px] w-full max-w-full items-center rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3.5 text-[14px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:w-fit sm:min-w-[220px] sm:px-4">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[11px] border border-pebble-border/18 bg-pebble-overlay/[0.08]">
+                  <div className="inline-flex h-[82px] w-fit max-w-full items-center rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3.5 text-[14px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:min-w-[186px]">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-pebble-border/18 bg-pebble-overlay/[0.08]">
                       <img
                         src={awsBedrockIcon}
                         alt=""
@@ -95,11 +95,11 @@ export function SiteFooter() {
                         className="h-7 w-7 object-contain"
                       />
                     </span>
-                    <span className="ml-3.5">Bedrock</span>
+                    <span className="ml-2.5">Bedrock</span>
                   </div>
 
-                  <div className="inline-flex h-[82px] w-full max-w-full items-center rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3.5 text-[14px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:w-fit sm:min-w-[220px] sm:px-4">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[11px] border border-pebble-border/18 bg-pebble-overlay/[0.08]">
+                  <div className="inline-flex h-[82px] w-fit max-w-full items-center rounded-[14px] border border-pebble-border/14 bg-pebble-overlay/[0.10] px-3.5 text-[14px] font-semibold text-pebble-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] dark:bg-white/[0.04] sm:min-w-[186px]">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-pebble-border/18 bg-pebble-overlay/[0.08]">
                       <img
                         src={awsLambdaLogo}
                         alt=""
@@ -107,7 +107,7 @@ export function SiteFooter() {
                         className="h-7 w-7 object-contain"
                       />
                     </span>
-                    <span className="ml-3.5">Lambda</span>
+                    <span className="ml-2.5">Lambda</span>
                   </div>
                 </div>
               </div>
