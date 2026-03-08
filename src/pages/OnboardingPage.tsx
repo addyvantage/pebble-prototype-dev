@@ -80,12 +80,12 @@ export function OnboardingPage() {
   }
 
   return (
-    <section className="page-enter mx-auto w-full max-w-[1380px] px-3 pb-6 pt-3 lg:px-5">
-      <div className="onboarding-stage relative rounded-[32px] px-6 pb-5 pt-6 sm:px-8 sm:pt-7 lg:px-10 lg:pb-6">
+    <section className="page-enter mx-auto w-full max-w-[1500px] px-3 pb-5 pt-3 lg:px-4">
+      <div className="onboarding-stage relative rounded-[32px] px-6 pb-4.5 pt-5.5 sm:px-7 sm:pt-6.5 lg:px-9 lg:pb-5">
         <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-pebble-accent/16 blur-3xl" />
         <div className="pointer-events-none absolute -left-24 bottom-[-7rem] h-80 w-80 rounded-full bg-sky-400/10 blur-3xl" />
 
-        <div className="relative space-y-6 lg:space-y-7">
+        <div className="relative space-y-5 lg:space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-[760px] space-y-3">
               <Badge>Onboarding</Badge>
@@ -120,9 +120,9 @@ export function OnboardingPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.26fr)_minmax(360px,0.74fr)] lg:gap-5">
-            <div className="space-y-5">
-              <section className="space-y-2.5">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.34fr)_minmax(340px,0.66fr)] lg:gap-4.5">
+            <div className="space-y-4.5">
+              <section className="space-y-2">
                 <div className="flex items-end justify-between gap-3">
                   <div className="space-y-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
@@ -165,10 +165,10 @@ export function OnboardingPage() {
                             </span>
                           ) : null}
                         </div>
-                        <div className="relative mt-4 space-y-2">
+                        <div className="relative mt-3.5 space-y-1.5">
                           <p className="text-[1.02rem] font-semibold text-pebble-text-primary">{item.label}</p>
                           <p className="text-[13px] leading-5.5 text-pebble-text-secondary">{item.subtitle}</p>
-                          <p className="pt-0.5 text-[12px] leading-5.5 text-pebble-text-muted">{item.outcome}</p>
+                          {selected ? <p className="pt-0.5 text-[12px] leading-5 text-pebble-text-muted">{item.outcome}</p> : null}
                         </div>
                       </button>
                     )
@@ -176,7 +176,7 @@ export function OnboardingPage() {
                 </div>
               </section>
 
-              <section className="space-y-2.5">
+              <section className="space-y-2">
                 <div className="flex items-end justify-between gap-3">
                   <div className="space-y-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
@@ -193,7 +193,7 @@ export function OnboardingPage() {
                   ) : null}
                 </div>
 
-                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {visibleLanguages.map((item) => {
                     const selected = language === item.id
                     return (
@@ -218,9 +218,9 @@ export function OnboardingPage() {
                             </span>
                           ) : null}
                         </div>
-                        <div className="relative mt-4 space-y-2">
+                        <div className="relative mt-3.5 space-y-1.5">
                           <p className="text-[1.02rem] font-semibold text-pebble-text-primary">{item.label}</p>
-                          <p className="text-[13px] leading-5.5 text-pebble-text-secondary">{item.purpose}</p>
+                          <p className="text-[13px] leading-5 text-pebble-text-secondary">{item.purpose}</p>
                         </div>
                       </button>
                     )
@@ -240,7 +240,7 @@ export function OnboardingPage() {
               </section>
             </div>
 
-            <aside className="onboarding-stage-strong rounded-[28px] p-5 lg:p-5.5">
+            <aside className="onboarding-stage-strong rounded-[28px] p-4.5 lg:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
@@ -255,7 +255,7 @@ export function OnboardingPage() {
                 </span>
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-3.5 space-y-2.5">
                 <div className="onboarding-stage-muted rounded-[22px] p-4">
                   <div className="grid gap-3">
                     <div className="flex items-center justify-between gap-3 text-sm">
@@ -269,7 +269,7 @@ export function OnboardingPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
                     What you&apos;ll get
                   </p>
@@ -304,7 +304,7 @@ export function OnboardingPage() {
             </aside>
           </div>
 
-          <div className="sticky bottom-0 z-10 -mx-6 border-t border-pebble-border/20 bg-pebble-panel/92 px-6 py-3 backdrop-blur-md sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10">
+          <div className="sticky bottom-0 z-10 -mx-6 border-t border-pebble-border/20 bg-pebble-panel/92 px-6 py-2.5 backdrop-blur-md sm:-mx-7 sm:px-7 lg:-mx-9 lg:px-9">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-pebble-text-muted">
