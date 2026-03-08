@@ -691,8 +691,8 @@ export function AnimatedProductPreview({
         </div>
       </div>
 
-      <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)]">
-        <div className={`min-w-0 rounded-[16px] border p-4 md:p-4.5 ${panelOutlineClass} ${codePanelClass}`}>
+      <div className="mt-4 grid min-w-0 items-stretch gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)]">
+        <div className={`min-w-0 rounded-[16px] border p-4 md:p-4.5 ${panelOutlineClass} ${codePanelClass} h-full min-h-[392px]`}>
           <div className="mb-3 flex items-center justify-between text-[13px] text-pebble-text-primary">
             <span className="font-medium">{previewUnit}</span>
             <span
@@ -799,7 +799,7 @@ export function AnimatedProductPreview({
           </div>
         </div>
 
-        <div className={`min-w-0 rounded-[16px] border p-4 md:px-4.5 md:pt-4.5 md:pb-3 ${panelOutlineClass} ${coachPanelClass} grid h-[372px] grid-rows-[auto_minmax(0,1.35fr)_auto_auto] gap-2.5`}>
+        <div className={`min-w-0 rounded-[16px] border p-4 md:px-4.5 md:pt-4.5 md:pb-3 ${panelOutlineClass} ${coachPanelClass} grid h-full min-h-[392px] grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-2.5`}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <span className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-pebble-border/28 bg-pebble-overlay/[0.12] shadow-[0_6px_12px_rgba(55,72,110,0.10)]">
@@ -814,13 +814,16 @@ export function AnimatedProductPreview({
             </span>
           </div>
 
-          <div className={classNames(`min-h-0 rounded-[12px] border ${panelOutlineClass} bg-pebble-overlay/[0.06] p-3.5`, isUrdu && 'rtlText')}>
-            <div className="grid h-full grid-rows-[54px_minmax(136px,1fr)] gap-2.5">
-              <div className="min-h-0">
+          <div className={classNames(`min-h-0 rounded-[12px] border ${panelOutlineClass} bg-pebble-overlay/[0.06] p-3`, isUrdu && 'rtlText')}>
+            <div
+              className="grid h-full gap-2.5 transition-[grid-template-rows] duration-500 ease-out"
+              style={{ gridTemplateRows: hasSentQuestion ? '46px minmax(0,1fr)' : '0px minmax(0,1fr)' }}
+            >
+              <div className="min-h-0 overflow-hidden">
                 <div
                   className={classNames(
-                    'ml-auto h-full max-w-[95%] rounded-[10px] border border-pebble-accent/28 bg-pebble-accent/10 px-3 py-2.5 text-[12.5px] leading-[1.66] text-pebble-text-primary transition-opacity duration-350',
-                    hasSentQuestion ? 'opacity-100' : 'opacity-0',
+                    'ml-auto inline-flex h-[46px] max-w-[95%] items-center rounded-[10px] border border-pebble-accent/28 bg-pebble-accent/10 px-3 py-2 text-[12.5px] leading-[1.55] text-pebble-text-primary transition-[opacity,transform] duration-350',
+                    hasSentQuestion ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0',
                   )}
                   aria-hidden={!hasSentQuestion}
                 >
@@ -830,7 +833,7 @@ export function AnimatedProductPreview({
 
               <div
                 ref={coachReplyAnchorRef}
-                className="min-h-[136px] overflow-hidden rounded-[10px] border border-pebble-border/24 bg-pebble-overlay/[0.08] px-3 py-2.5 text-[12.5px] leading-[1.68] text-pebble-text-secondary"
+                className="flex min-h-0 h-full flex-col justify-start overflow-hidden rounded-[10px] border border-pebble-border/24 bg-pebble-overlay/[0.08] px-3.5 py-3 text-[12.5px] leading-[1.68] text-pebble-text-secondary"
               >
                 {phase === 'coach_thinking' ? (
                   <div className="flex items-center gap-1.5">
@@ -849,7 +852,7 @@ export function AnimatedProductPreview({
                     <p className="min-h-[1.2em]">{coachResponseLines[2] || ' '}</p>
                   </div>
                 ) : (
-                  <p>{t('landing.preview.coachIdle')}</p>
+                  <p className="leading-[1.68]">{t('landing.preview.coachIdle')}</p>
                 )}
               </div>
             </div>
