@@ -3,7 +3,7 @@
 **Recovery-first coding practice with contextual AI mentor guidance.**
 
 <p align="center">
-  <img src="docs/readme-assets/pebblecode-logo-horizontal-light-removebg-preview.png" alt="PebbleCode" width="640" />
+  <img src="docs/readme-assets/pebble-branding-removebg-preview.png" alt="PebbleCode" width="640" />
 </p>
 
 PebbleCode is a recovery-first coding practice platform that combines an IDE-like session workflow, contextual AI mentoring, multilingual learning support, and measurable progression insights in one product surface.
