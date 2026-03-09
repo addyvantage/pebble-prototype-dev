@@ -281,6 +281,35 @@ const solutions: UnitSolution[] = [
       c: `#include <stdio.h>\n#include <string.h>\n\nint main(void) {\n  char s[100005];\n  char t[100005];\n\n  if (!fgets(s, sizeof(s), stdin)) {\n    printf(\"false\");\n    return 0;\n  }\n  if (!fgets(t, sizeof(t), stdin)) {\n    printf(\"false\");\n    return 0;\n  }\n\n  s[strcspn(s, \"\\r\\n\")] = '\\0';\n  t[strcspn(t, \"\\r\\n\")] = '\\0';\n\n  if (strlen(s) != strlen(t)) {\n    printf(\"false\");\n    return 0;\n  }\n\n  int freq[256] = {0};\n  for (size_t i = 0; s[i]; i++) freq[(unsigned char)s[i]]++;\n  for (size_t i = 0; t[i]; i++) {\n    freq[(unsigned char)t[i]]--;\n    if (freq[(unsigned char)t[i]] < 0) {\n      printf(\"false\");\n      return 0;\n    }\n  }\n\n  printf(\"true\");\n  return 0;\n}`,
     },
   },
+  {
+    unitId: 'sql-combine-two-tables',
+    title: 'How to solve',
+    intuition: 'Start from `Person` and use a left join so people without an address still remain in the result.',
+    approach: [
+      'Select the required columns from `Person`.',
+      'Left join `Address` on `personId`.',
+      'Return `city` and `state` directly from the joined table.',
+    ],
+    complexity: { time: 'O(n + m)', space: 'O(1) extra query space' },
+    implementations: {
+      sql: `SELECT p.firstName,\n       p.lastName,\n       a.city,\n       a.state\nFROM Person AS p\nLEFT JOIN Address AS a\n  ON p.personId = a.personId;`,
+    },
+  },
+  {
+    unitId: 'sql-second-highest-salary',
+    title: 'How to solve',
+    intuition: 'You need the second distinct salary, not just the second row after sorting.',
+    approach: [
+      'Select distinct salary values.',
+      'Order them from highest to lowest.',
+      'Skip the top salary and return the next one.',
+      'Wrap the subquery so missing second values become `NULL`.',
+    ],
+    complexity: { time: 'O(n log n)', space: 'O(n) for the distinct sort set' },
+    implementations: {
+      sql: `SELECT (\n  SELECT DISTINCT salary\n  FROM Employee\n  ORDER BY salary DESC\n  LIMIT 1 OFFSET 1\n) AS SecondHighestSalary;`,
+    },
+  },
 ]
 
 const solutionByUnitId = new Map(solutions.map((solution) => [solution.unitId, solution]))

@@ -86,17 +86,17 @@ export class BackendStack extends cdk.Stack {
       }),
     )
 
-    // ── Runner Lambda (Python 3.12) ────────────────────────────────────────────
+    // ── Runner Lambda (container image) ───────────────────────────────────────
     //
-    // Uses the Lambda Python 3.12 runtime which has python3 available for
-    // subprocess execution. No external dependencies — self-contained handler.
-    const runnerFn = new lambda.Function(this, 'PebbleRunnerFunction', {
+    // Uses a custom Lambda image so the deployed runner can execute the same
+    // core language set exposed in the Session UI: Python, JavaScript, C++17,
+    // Java 17, and C. SQL continues to use the app-level checker path.
+    const runnerFn = new lambda.DockerImageFunction(this, 'PebbleRunnerFunction', {
       functionName: 'PebbleRunnerFunction',
-      description: 'Pebble Runner — executes Python code in a sandboxed subprocess',
-      runtime: lambda.Runtime.PYTHON_3_12,
-      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/run')),
-      handler: 'index.handler',
-      memorySize: 512,
+      description: 'Pebble Runner — executes Python, JavaScript, C++17, Java 17, and C in isolated subprocesses',
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '../../runner/container')),
+      architecture: lambda.Architecture.X86_64,
+      memorySize: 1024,
       timeout: cdk.Duration.seconds(30),
     })
 
