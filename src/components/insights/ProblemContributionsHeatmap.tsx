@@ -82,9 +82,9 @@ export function ProblemContributionsHeatmap() {
         : '-'
 
     return (
-        <Card className="flex flex-col xl:flex-row overflow-hidden bg-pebble-chip-surface/30">
+        <Card className="grid overflow-hidden bg-pebble-chip-surface/30 xl:grid-cols-[minmax(0,1fr)_280px]">
             {/* Left Side: Heatmap */}
-            <div className="flex-1 p-5 lg:p-6 pb-4">
+            <div className="min-w-0 p-5 pb-4 lg:p-6">
                 <div className="mb-6">
                     <h3 className={`text-base font-semibold text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>
                         {title}
@@ -94,7 +94,7 @@ export function ProblemContributionsHeatmap() {
                     </p>
                 </div>
 
-                <div className="flex-1 w-full overflow-x-auto pb-4 scrollbar-hide" dir="ltr">
+                <div className="w-full min-w-0 overflow-x-auto pb-4 scrollbar-hide" dir="ltr">
                     <PebbleCalendarHeatmap
                         data={data}
                         labels={{
@@ -108,7 +108,8 @@ export function ProblemContributionsHeatmap() {
             </div>
 
             {/* Right Side: Highlights Panel */}
-            <div className="w-full xl:w-[280px] shrink-0 border-t xl:border-t-0 xl:border-l border-pebble-border/25 bg-pebble-canvas/60 p-6 flex flex-col justify-center gap-7">
+            <div className="w-full border-t border-pebble-border/25 bg-pebble-canvas/60 p-6 xl:min-w-[280px] xl:border-l xl:border-t-0">
+                <div className="flex h-full flex-col justify-center gap-7">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-pebble-text-secondary mb-1">
                         <Activity className="w-4 h-4" />
@@ -141,6 +142,7 @@ export function ProblemContributionsHeatmap() {
                         <span className="text-sm text-pebble-text-muted">{statSolves}</span>
                     </div>
                     <p className="text-xs text-pebble-text-muted mt-1">{mostActiveDateStr}</p>
+                </div>
                 </div>
             </div>
         </Card>

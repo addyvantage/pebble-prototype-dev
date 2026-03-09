@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { PlacementLanguage } from '../../data/onboardingData'
-import type { ProblemExample, SqlTableSchema } from '../../data/problemsBank'
-import { getLocalizedUnitSolution, type UnitSolution } from '../../data/solutionsBank'
+import type { ProblemExample, ProblemLanguage, SqlTableSchema } from '../../data/problemsBank'
+import {
+  getAvailableSolutionLanguages,
+  getLocalizedUnitSolution,
+  resolveUnitSolutionImplementation,
+} from '../../data/solutionsBank'
 import type { UnitSubmission } from '../../lib/submissionsStore'
 import { useI18n } from '../../i18n/useI18n'
 import { DifficultyPill } from '../ui/DifficultyPill'
@@ -25,7 +29,7 @@ type ProblemStatementPanelProps = {
   difficulty?: 'Easy' | 'Medium' | 'Hard'
   difficultyLabel: string
   tags: string[]
-  language: PlacementLanguage | 'sql'
+  language: ProblemLanguage
   trackLanguage?: PlacementLanguage
   functionMode?: boolean
   submissions: UnitSubmission[]
@@ -42,71 +46,13 @@ function classNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(' ')
 }
 
-const LANGUAGE_LABELS: Record<PlacementLanguage | 'sql', string> = {
+const LANGUAGE_LABELS: Record<ProblemLanguage, string> = {
   python: 'Python',
   javascript: 'JavaScript',
-  cpp: 'C++',
-  java: 'Java',
-  c: 'C',
+  cpp: 'C++17',
+  java: 'Java 17',
+  c: 'C (GNU)',
   sql: 'SQL',
-}
-
-const SOLUTION_LANGUAGE_ORDER: PlacementLanguage[] = ['python', 'javascript', 'cpp', 'java', 'c']
-
-function resolvePreferredSolutionLanguage(
-  language: PlacementLanguage | 'sql',
-  trackLanguage?: PlacementLanguage,
-) {
-  return language === 'sql' ? (trackLanguage ?? 'python') : language
-}
-
-function resolveAvailableSolutionLanguages(solution: UnitSolution | null) {
-  if (!solution) {
-    return [] as PlacementLanguage[]
-  }
-  return SOLUTION_LANGUAGE_ORDER.filter((lang) => Boolean(solution.implementations[lang]?.trim()))
-}
-
-function resolveSolutionImplementation(input: {
-  solution: UnitSolution | null
-  preferredLanguage: PlacementLanguage
-  fallbackLanguage: PlacementLanguage
-  availableLanguages: PlacementLanguage[]
-}) {
-  const { solution, preferredLanguage, fallbackLanguage, availableLanguages } = input
-  if (!solution) {
-    return {
-      code: null,
-      codeLanguage: null as PlacementLanguage | null,
-      usedFallback: false,
-    }
-  }
-
-  const preferredCode = solution.implementations[preferredLanguage]?.trim()
-  if (preferredCode) {
-    return {
-      code: preferredCode,
-      codeLanguage: preferredLanguage,
-      usedFallback: false,
-    }
-  }
-
-  const fallbackCode = solution.implementations[fallbackLanguage]?.trim()
-  if (fallbackCode) {
-    return {
-      code: fallbackCode,
-      codeLanguage: fallbackLanguage,
-      usedFallback: true,
-    }
-  }
-
-  const nextLanguage = availableLanguages[0] ?? null
-  const nextCode = nextLanguage ? solution.implementations[nextLanguage]?.trim() ?? null : null
-  return {
-    code: nextCode || null,
-    codeLanguage: nextLanguage,
-    usedFallback: Boolean(nextCode),
-  }
 }
 
 export function ProblemStatementPanel({
@@ -139,15 +85,15 @@ export function ProblemStatementPanel({
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('')
 
   const solution = useMemo(() => getLocalizedUnitSolution(unitId, lang), [lang, unitId])
-  const preferredSolutionLanguage = resolvePreferredSolutionLanguage(language, trackLanguage)
-  const fallbackSolutionLanguage: PlacementLanguage = trackLanguage ?? 'python'
+  const preferredSolutionLanguage = language
+  const fallbackSolutionLanguage: PlacementLanguage | null = trackLanguage ?? null
   const resolvedExamples = examples?.map((item) => ({
     input: item.input,
     expected: item.output,
   })) ?? tests.slice(0, 2)
 
   const availableSolutionLanguages = useMemo(
-    () => resolveAvailableSolutionLanguages(solution),
+    () => getAvailableSolutionLanguages(solution),
     [solution],
   )
 
@@ -167,13 +113,12 @@ export function ProblemStatementPanel({
 
   const selectedSolution = useMemo(
     () =>
-      resolveSolutionImplementation({
+      resolveUnitSolutionImplementation({
         solution,
-        preferredLanguage: preferredSolutionLanguage,
+        requestedLanguage: preferredSolutionLanguage,
         fallbackLanguage: fallbackSolutionLanguage,
-        availableLanguages: availableSolutionLanguages,
       }),
-    [availableSolutionLanguages, fallbackSolutionLanguage, preferredSolutionLanguage, solution],
+    [fallbackSolutionLanguage, preferredSolutionLanguage, solution],
   )
   const selectedSolutionCode = selectedSolution.code
   const lastAcceptedSubmission = useMemo(
@@ -415,18 +360,18 @@ export function ProblemStatementPanel({
 
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="rounded-full border border-pebble-accent/40 bg-pebble-accent/14 px-3 py-1.5 text-[11px] font-semibold text-pebble-text-primary">
-                      {selectedSolution.codeLanguage ? LANGUAGE_LABELS[selectedSolution.codeLanguage] : LANGUAGE_LABELS[preferredSolutionLanguage]}
+                      {LANGUAGE_LABELS[preferredSolutionLanguage]}
                     </span>
                     {selectedSolution.usedFallback ? (
                       <span className="rounded-full border border-pebble-warning/35 bg-pebble-warning/12 px-3 py-1.5 text-[11px] font-medium text-pebble-warning">
-                        Fallback
+                        {selectedSolution.codeLanguage ? `Showing ${LANGUAGE_LABELS[selectedSolution.codeLanguage]}` : 'Fallback'}
                       </span>
                     ) : null}
                   </div>
 
                   {selectedSolution.usedFallback ? (
                     <p className={classNames('text-xs text-pebble-text-secondary', proseClass)}>
-                      Solution for {LANGUAGE_LABELS[preferredSolutionLanguage]} is not available yet.
+                      Solution for {LANGUAGE_LABELS[preferredSolutionLanguage]} is not available yet. Showing {selectedSolution.codeLanguage ? LANGUAGE_LABELS[selectedSolution.codeLanguage] : 'another available language'} instead.
                     </p>
                   ) : null}
 
@@ -439,7 +384,7 @@ export function ProblemStatementPanel({
                     </pre>
                   ) : (
                     <div className="session-inset rounded-2xl p-4 text-sm text-pebble-text-secondary">
-                      Solution not available in this language yet.
+                      No implementation is published yet for {LANGUAGE_LABELS[preferredSolutionLanguage]}. The intuition and approach above still apply.
                     </div>
                   )}
                 </section>

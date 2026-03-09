@@ -34,21 +34,21 @@ export function StruggleNudgeBar({
         : t('chat.nudge.level3')
 
   return (
-    <div className="rounded-xl border border-pebble-border/34 bg-pebble-overlay/[0.10] p-3 shadow-[0_8px_22px_rgba(2,8,23,0.22)] backdrop-blur-sm">
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-pebble-accent/35 bg-pebble-accent/16 text-pebble-accent">
+    <div className="rounded-xl border border-pebble-border/34 bg-pebble-overlay/[0.10] p-2.5 shadow-[0_8px_22px_rgba(2,8,23,0.22)] backdrop-blur-sm">
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-pebble-accent/35 bg-pebble-accent/16 text-pebble-accent">
           <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className={`text-[12.5px] font-semibold text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>{t('chat.needNudge')}</p>
-          <p className={`mt-0.5 text-[11.5px] leading-relaxed text-pebble-text-secondary ${isRTL ? 'rtlText' : ''}`}>{message}</p>
+          <p className={`text-[12px] font-semibold leading-4 text-pebble-text-primary ${isRTL ? 'rtlText' : ''}`}>{t('chat.needNudge')}</p>
+          <p className={`mt-0.5 text-[11px] leading-5 text-pebble-text-secondary ${isRTL ? 'rtlText' : ''}`}>{message}</p>
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
         <Button
           variant="secondary"
           size="sm"
-          className="h-7 px-2.5 text-xs"
+          className="h-[26px] px-2.5 text-[11px]"
           onClick={onDismiss}
           disabled={busy}
         >
@@ -58,7 +58,7 @@ export function StruggleNudgeBar({
           {level === 1 ? (
             <Button
               size="sm"
-              className="h-7 px-3 text-xs"
+              className="h-[26px] px-3 text-[11px]"
               onClick={() => onAction('hint')}
               disabled={busy}
             >
@@ -69,7 +69,7 @@ export function StruggleNudgeBar({
             <>
               <Button
                 size="sm"
-                className="h-7 px-3 text-xs"
+                className="h-[26px] px-3 text-[11px]"
                 onClick={() => onAction('explain')}
                 disabled={busy}
               >
@@ -78,7 +78,7 @@ export function StruggleNudgeBar({
               <Button
                 variant="secondary"
                 size="sm"
-                className="h-7 px-3 text-xs"
+                className="h-[26px] px-3 text-[11px]"
                 onClick={() => onAction('next')}
                 disabled={busy}
               >
@@ -89,7 +89,7 @@ export function StruggleNudgeBar({
           {level === 3 ? (
             <Button
               size="sm"
-              className="h-7 px-3 text-xs"
+              className="h-[26px] px-3 text-[11px]"
               onClick={() => onAction('solution')}
               disabled={busy}
             >

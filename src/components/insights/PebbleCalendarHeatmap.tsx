@@ -33,11 +33,8 @@ function formatMonthShort(d: Date) {
 function formatTooltipDate(d: Date) {
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
 }
-
-
-
-const DAY_SIZE = 16 // base; we’ll scale with CSS
-const DAY_GAP = 4
+const DAY_SIZE = "clamp(10px, 0.8vw, 13px)"
+const DAY_GAP = "clamp(2px, 0.25vw, 3px)"
 
 export function PebbleCalendarHeatmap({
     data,
@@ -129,8 +126,8 @@ export function PebbleCalendarHeatmap({
             className="w-full"
             style={
                 {
-                    ["--hm-box" as any]: `${DAY_SIZE}px`,
-                    ["--hm-gap" as any]: `${DAY_GAP}px`,
+                    ["--hm-box" as any]: DAY_SIZE,
+                    ["--hm-gap" as any]: DAY_GAP,
                 } as React.CSSProperties
             }
         >
@@ -143,7 +140,7 @@ export function PebbleCalendarHeatmap({
                         formatCaption: (date) => formatMonthShort(date),
                     }}
                     classNames={{
-                        months: "flex w-full gap-2",
+                        months: "inline-flex min-w-max gap-1.5",
                         month: "space-y-2 flex flex-col",
                         month_caption: "flex justify-start pl-2 text-xs text-pebble-text-muted font-medium w-full",
                         nav: "hidden",
@@ -163,10 +160,10 @@ export function PebbleCalendarHeatmap({
             <div className="mt-3 flex items-center justify-end gap-2 text-[11px] text-pebble-text-secondary">
                 <span>{labels.less ?? ""}</span>
                 <div className="flex items-center gap-[4px]">
-                    <div className="h-4 w-4 rounded-[4px] bg-pebble-chip-surface/70 border border-pebble-border/20" />
-                    <div className="h-4 w-4 rounded-[4px] bg-pebble-accent/18 border border-pebble-border/25" />
-                    <div className="h-4 w-4 rounded-[4px] bg-pebble-accent/35 border border-pebble-border/25" />
-                    <div className="h-4 w-4 rounded-[4px] bg-pebble-accent/65 border border-pebble-accent/35" />
+                    <div className="h-3.5 w-3.5 rounded-[4px] bg-pebble-chip-surface/70 border border-pebble-border/20" />
+                    <div className="h-3.5 w-3.5 rounded-[4px] bg-pebble-accent/18 border border-pebble-border/25" />
+                    <div className="h-3.5 w-3.5 rounded-[4px] bg-pebble-accent/35 border border-pebble-border/25" />
+                    <div className="h-3.5 w-3.5 rounded-[4px] bg-pebble-accent/65 border border-pebble-accent/35" />
                 </div>
                 <span>{labels.more ?? ""}</span>
             </div>

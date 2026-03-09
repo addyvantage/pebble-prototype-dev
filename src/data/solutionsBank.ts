@@ -1,6 +1,9 @@
 import type { PlacementLanguage } from './onboardingData'
+import type { ProblemLanguage } from './problemsBank'
 import type { LanguageCode } from '../i18n/languages'
 import { SOLUTION_COPY, type LocalizedSolutionCopy } from '../i18n/solutionCopy'
+
+export type SolutionLanguage = ProblemLanguage
 
 export type UnitSolution = {
   unitId: string
@@ -11,9 +14,17 @@ export type UnitSolution = {
     time: string
     space: string
   }
-  implementations: Partial<Record<PlacementLanguage, string>>
+  implementations: Partial<Record<SolutionLanguage, string>>
   localized?: Partial<Record<LanguageCode, LocalizedSolutionCopy>>
 }
+
+export type ResolvedUnitSolutionImplementation = {
+  code: string | null
+  codeLanguage: SolutionLanguage | null
+  usedFallback: boolean
+}
+
+export const SOLUTION_LANGUAGE_ORDER: SolutionLanguage[] = ['python', 'javascript', 'cpp', 'java', 'c', 'sql']
 
 const solutions: UnitSolution[] = [
   {
@@ -277,6 +288,55 @@ const warnedMissingSolutionCopy = new Set<string>()
 
 export function getUnitSolution(unitId: string) {
   return solutionByUnitId.get(unitId) ?? null
+}
+
+export function getAvailableSolutionLanguages(solution: UnitSolution | null) {
+  if (!solution) {
+    return [] as SolutionLanguage[]
+  }
+  return SOLUTION_LANGUAGE_ORDER.filter((language) => Boolean(solution.implementations[language]?.trim()))
+}
+
+export function resolveUnitSolutionImplementation(input: {
+  solution: UnitSolution | null
+  requestedLanguage: SolutionLanguage
+  fallbackLanguage?: PlacementLanguage | null
+}) {
+  const { solution, requestedLanguage, fallbackLanguage = null } = input
+  if (!solution) {
+    return {
+      code: null,
+      codeLanguage: null,
+      usedFallback: false,
+    } satisfies ResolvedUnitSolutionImplementation
+  }
+
+  const requestedCode = solution.implementations[requestedLanguage]?.trim()
+  if (requestedCode) {
+    return {
+      code: requestedCode,
+      codeLanguage: requestedLanguage,
+      usedFallback: false,
+    } satisfies ResolvedUnitSolutionImplementation
+  }
+
+  const normalizedFallback = fallbackLanguage ?? null
+  const fallbackCode = normalizedFallback ? solution.implementations[normalizedFallback]?.trim() : null
+  if (fallbackCode) {
+    return {
+      code: fallbackCode,
+      codeLanguage: normalizedFallback,
+      usedFallback: true,
+    } satisfies ResolvedUnitSolutionImplementation
+  }
+
+  const availableLanguage = getAvailableSolutionLanguages(solution)[0] ?? null
+  const availableCode = availableLanguage ? solution.implementations[availableLanguage]?.trim() ?? null : null
+  return {
+    code: availableCode || null,
+    codeLanguage: availableLanguage,
+    usedFallback: Boolean(availableCode && availableLanguage && availableLanguage !== requestedLanguage),
+  } satisfies ResolvedUnitSolutionImplementation
 }
 
 export function getLocalizedUnitSolution(unitId: string, lang: LanguageCode) {

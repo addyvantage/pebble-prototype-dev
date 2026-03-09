@@ -2059,9 +2059,7 @@ export function SessionPage() {
   function executeReset() {
     if (!currentUnit) return
 
-    const resetCode = activeProblem
-      ? activeProblemStarter
-      : currentFunctionConfig?.starterStub ?? currentUnit.starterCode
+    const resetCode = resolveSessionTemplate(currentUnit, sessionLanguage)
 
     previousCodeRef.current = resetCode
     queueLiveCodeSnapshot(resetCode, true)
@@ -2276,6 +2274,24 @@ export function SessionPage() {
     : currentUnit.id === 'hello-world'
       ? [sessionLanguageLabel, t('tags.stdoutBasics'), t('tags.practice')]
       : [sessionLanguageLabel, t('tags.practice'), t('tags.runtimeVerified')]
+  const sessionHeaderIconButtonClass = 'h-9 w-9 rounded-[13px] border-pebble-border/35 bg-pebble-overlay/[0.08] p-0 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16] active:scale-[0.98]'
+  const inlineModalOverlayClass = theme === 'dark'
+    ? 'bg-[rgba(5,10,20,0.62)] backdrop-blur-[4px]'
+    : 'bg-[rgba(15,23,42,0.24)] backdrop-blur-[3px]'
+  const inlineModalShellClass = theme === 'dark'
+    ? 'border-[rgba(150,168,205,0.22)] bg-[linear-gradient(180deg,rgba(57,67,97,0.96)_0%,rgba(36,43,66,0.98)_100%)] shadow-[0_34px_92px_rgba(2,8,23,0.56),0_12px_32px_rgba(8,15,35,0.28),inset_0_1px_0_rgba(255,255,255,0.04)]'
+    : 'border-pebble-border/28 bg-[linear-gradient(180deg,rgba(252,253,255,0.99)_0%,rgba(240,246,253,0.97)_100%)] shadow-[0_28px_72px_rgba(55,72,110,0.18),0_10px_28px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.82)]'
+  const inlineModalSectionClass = theme === 'dark'
+    ? 'rounded-[16px] border border-[rgba(150,168,205,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_100%)] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+    : 'rounded-[16px] border border-pebble-border/18 bg-[linear-gradient(180deg,rgba(255,255,255,0.8)_0%,rgba(247,250,255,0.66)_100%)] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]'
+  const inlineModalCloseButtonClass = theme === 'dark'
+    ? 'rounded-xl border border-[rgba(150,168,205,0.22)] bg-[rgba(255,255,255,0.04)] px-2.5 py-1.5 text-xs font-medium text-pebble-text-secondary transition hover:bg-[rgba(255,255,255,0.08)] hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
+    : 'rounded-xl border border-pebble-border/24 bg-white/75 px-2.5 py-1.5 text-xs font-medium text-pebble-text-secondary transition hover:bg-white hover:text-pebble-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/40'
+  const inlineModalToggleClass = (selected: boolean) => selected
+    ? 'border-pebble-accent/50 bg-pebble-accent/18 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_10px_24px_rgba(37,99,235,0.12)]'
+    : theme === 'dark'
+      ? 'border-[rgba(150,168,205,0.18)] bg-[rgba(255,255,255,0.04)] text-pebble-text-secondary hover:bg-[rgba(255,255,255,0.08)]'
+      : 'border-pebble-border/22 bg-white/72 text-pebble-text-secondary hover:bg-white'
   return (
     <section
       className={`session-shell flex h-[100dvh] flex-col overflow-hidden ${pagePrefs.compactDensity ? 'text-[13px]' : ''}`}
@@ -2643,9 +2659,9 @@ export function SessionPage() {
                     size="sm"
                     title={t('editor.resetCode')}
                     onClick={handleResetCode}
-                    className="h-8 w-8 rounded-xl border-pebble-border/35 bg-pebble-overlay/[0.08] p-0 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16]"
+                    className={sessionHeaderIconButtonClass}
                   >
-                    <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                    <RotateCcw className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                   </Button>
                   <Button
                     type="button"
@@ -2654,9 +2670,9 @@ export function SessionPage() {
                     title={t('topBar.sessionSettings')}
                     aria-label={t('a11y.openSessionSettings')}
                     onClick={() => setSessionSettingsOpen(true)}
-                    className="h-8 w-8 rounded-xl border-pebble-border/35 bg-pebble-overlay/[0.08] p-0 text-pebble-text-primary hover:border-pebble-border/50 hover:bg-pebble-overlay/[0.16]"
+                    className={sessionHeaderIconButtonClass}
                   >
-                    <Settings2 className="h-4 w-4" aria-hidden="true" />
+                    <Settings2 className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                   </Button>
 
                   <Button
@@ -2795,26 +2811,31 @@ export function SessionPage() {
       />
 
       {pageSettingsOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="pebble-modal-shell w-full max-w-md p-4">
+        <div className={`fixed inset-0 z-40 flex items-center justify-center p-4 ${inlineModalOverlayClass}`}>
+          <div className={`pebble-modal-shell w-full max-w-md p-5 ${inlineModalShellClass}`}>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-pebble-text-primary">{t('settings.pageTitle')}</h2>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
+                  {t('settings.workspacePreferences')}
+                </p>
+                <h2 className="text-base font-semibold text-pebble-text-primary">{t('settings.pageTitle')}</h2>
+              </div>
               <button
                 type="button"
                 onClick={() => setPageSettingsOpen(false)}
-                className="pebble-modal-close border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2 py-1 text-xs text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16]"
+                className={`pebble-modal-close ${inlineModalCloseButtonClass}`}
               >
                 {t('actions.close')}
               </button>
             </div>
 
             <div className="mt-4 space-y-3 text-sm text-pebble-text-secondary">
-              <div className="space-y-1.5">
+              <div className={`space-y-2 ${inlineModalSectionClass}`}>
                 <span className="text-xs font-semibold uppercase tracking-[0.08em] text-pebble-text-muted">{t('settings.theme')}</span>
                 <div
                   role="tablist"
                   aria-label={t('settings.theme')}
-                  className="pebble-modal-section grid grid-cols-2 gap-2 border border-pebble-border/30 bg-pebble-overlay/[0.06] p-1"
+                  className="pebble-modal-section grid grid-cols-2 gap-2 border border-pebble-border/18 bg-pebble-overlay/[0.04] p-1.5"
                 >
                   {(['dark', 'light'] as const).map((mode) => {
                     const selected = theme === mode
@@ -2826,10 +2847,7 @@ export function SessionPage() {
                         aria-selected={selected}
                         aria-pressed={selected}
                         onClick={() => setTheme(mode)}
-                        className={`pebble-modal-control inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/50 ${selected
-                          ? 'border border-pebble-accent/50 bg-pebble-accent/18 text-pebble-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                          : 'border border-transparent text-pebble-text-secondary hover:bg-pebble-overlay/[0.12]'
-                          }`}
+                        className={`pebble-modal-control inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-accent/50 ${inlineModalToggleClass(selected)}`}
                       >
                         {selected ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
                         {mode === 'dark' ? t('settings.themeDark') : t('settings.themeLight')}
@@ -2839,33 +2857,27 @@ export function SessionPage() {
                 </div>
               </div>
 
-              <label className="flex items-center justify-between gap-3">
+              <label className={`flex items-center justify-between gap-3 ${inlineModalSectionClass}`}>
                 <span>{t('settings.reduceMotion')}</span>
                 <button
                   type="button"
                   onClick={() =>
                     setPagePrefs((prev) => ({ ...prev, reduceMotion: !prev.reduceMotion }))
                   }
-                  className={`pebble-modal-control border px-2.5 py-1 text-xs transition ${pagePrefs.reduceMotion
-                    ? 'border-pebble-accent/45 bg-pebble-accent/18 text-pebble-text-primary'
-                    : 'border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
-                    }`}
+                  className={`pebble-modal-control rounded-xl border px-3 py-1.5 text-xs font-medium transition ${inlineModalToggleClass(pagePrefs.reduceMotion)}`}
                 >
                   {pagePrefs.reduceMotion ? t('actions.on') : t('actions.off')}
                 </button>
               </label>
 
-              <label className="flex items-center justify-between gap-3">
+              <label className={`flex items-center justify-between gap-3 ${inlineModalSectionClass}`}>
                 <span>{t('settings.density')}</span>
                 <button
                   type="button"
                   onClick={() =>
                     setPagePrefs((prev) => ({ ...prev, compactDensity: !prev.compactDensity }))
                   }
-                  className={`pebble-modal-control border px-2.5 py-1 text-xs transition ${pagePrefs.compactDensity
-                    ? 'border-pebble-accent/45 bg-pebble-accent/18 text-pebble-text-primary'
-                    : 'border-pebble-border/35 bg-pebble-overlay/[0.08] text-pebble-text-secondary hover:bg-pebble-overlay/[0.16]'
-                    }`}
+                  className={`pebble-modal-control rounded-xl border px-3 py-1.5 text-xs font-medium transition ${inlineModalToggleClass(pagePrefs.compactDensity)}`}
                 >
                   {pagePrefs.compactDensity ? t('settings.densityCompact') : t('settings.densityComfortable')}
                 </button>
@@ -2876,21 +2888,26 @@ export function SessionPage() {
       )}
 
       {sessionSettingsOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-pebble-border/35 bg-pebble-panel/95 p-4 shadow-[0_20px_60px_rgba(2,8,23,0.32)]">
+        <div className={`fixed inset-0 z-40 flex items-center justify-center p-4 ${inlineModalOverlayClass}`}>
+          <div className={`w-full max-w-md rounded-[24px] border p-5 ${inlineModalShellClass}`}>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-pebble-text-primary">{t('settings.sessionTitle')}</h2>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pebble-text-muted">
+                  {t('settings.workspacePreferences')}
+                </p>
+                <h2 className="text-base font-semibold text-pebble-text-primary">{t('settings.sessionTitle')}</h2>
+              </div>
               <button
                 type="button"
                 onClick={() => setSessionSettingsOpen(false)}
-                className="rounded-lg border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2 py-1 text-xs text-pebble-text-secondary transition hover:bg-pebble-overlay/[0.16]"
+                className={inlineModalCloseButtonClass}
               >
                 {t('actions.close')}
               </button>
             </div>
 
             <div className="mt-4 space-y-3 text-sm text-pebble-text-secondary">
-              <label className="flex items-center justify-between gap-3">
+              <label className={`flex items-center justify-between gap-3 ${inlineModalSectionClass}`}>
                 <span>{t('settings.editorFontSize')}</span>
                 <input
                   type="range"
@@ -2899,16 +2916,16 @@ export function SessionPage() {
                   step={1}
                   value={editorFontSize}
                   onChange={(event) => setEditorFontSize(Number(event.target.value))}
-                  className="w-40 accent-blue-500"
+                  className="w-40 accent-[rgb(var(--pebble-accent))]"
                 />
               </label>
 
-              <label className="flex items-center justify-between gap-3">
+              <label className={`flex items-center justify-between gap-3 ${inlineModalSectionClass}`}>
                 <span>{t('settings.wordWrap')}</span>
                 <button
                   type="button"
                   onClick={() => setWordWrapEnabled((prev) => !prev)}
-                  className="rounded-lg border border-pebble-border/35 bg-pebble-overlay/[0.08] px-2.5 py-1 text-xs text-pebble-text-primary transition hover:bg-pebble-overlay/[0.16]"
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${inlineModalToggleClass(wordWrapEnabled)}`}
                 >
                   {wordWrapEnabled ? t('actions.on') : t('actions.off')}
                 </button>

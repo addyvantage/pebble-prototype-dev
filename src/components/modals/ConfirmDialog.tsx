@@ -71,7 +71,7 @@ export function ConfirmDialog({
         >
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/45 backdrop-blur-sm"
+                className="absolute inset-0 bg-[rgba(6,10,18,0.52)] backdrop-blur-[3px]"
                 aria-hidden="true"
                 onClick={onClose}
             />
@@ -83,8 +83,7 @@ export function ConfirmDialog({
                 aria-labelledby={titleId}
                 className={[
                     'relative z-10 w-full max-w-[380px]',
-                    'pebble-modal-shell backdrop-blur-xl',
-                    'p-6 flex flex-col gap-4',
+                    'pebble-confirm-dialog p-6 flex flex-col gap-4',
                     'animate-[fadeInScale_180ms_ease-out]',
                 ].join(' ')}
             >
@@ -103,7 +102,7 @@ export function ConfirmDialog({
 
                 {/* Don't ask again */}
                 {dontAskKey && (
-                    <label className="flex cursor-pointer items-center gap-2.5 text-sm text-pebble-text-secondary">
+                    <label className="pebble-confirm-checkbox-row flex cursor-pointer items-center gap-2.5 px-3 py-2.5 text-sm text-pebble-text-secondary">
                         <input
                             type="checkbox"
                             checked={dontAsk}
@@ -121,9 +120,9 @@ export function ConfirmDialog({
                         type="button"
                         onClick={onClose}
                         className={[
-                            'pebble-modal-control border border-pebble-border/35 bg-pebble-overlay/[0.08]',
+                            'pebble-modal-control border border-pebble-border/35 bg-pebble-panel/80',
                             'px-4 py-2 text-sm font-medium text-pebble-text-secondary',
-                            'transition hover:bg-pebble-overlay/[0.16] hover:text-pebble-text-primary',
+                            'shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition hover:bg-pebble-overlay/[0.12] hover:text-pebble-text-primary',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-border/50',
                         ].join(' ')}
                     >
@@ -134,9 +133,9 @@ export function ConfirmDialog({
                         type="button"
                         onClick={handleConfirm}
                         className={[
-                            'pebble-modal-control border border-pebble-warning/40 bg-pebble-warning/15',
+                            'pebble-modal-control border border-pebble-warning/40 bg-pebble-warning/18',
                             'px-4 py-2 text-sm font-semibold text-pebble-warning',
-                            'transition hover:bg-pebble-warning/22',
+                            'shadow-[0_12px_26px_rgba(245,158,11,0.16)] transition hover:bg-pebble-warning/24',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pebble-warning/40',
                         ].join(' ')}
                     >
